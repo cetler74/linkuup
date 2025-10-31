@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: biosearch-backend
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT backend.app:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://your-frontend-domain.com
+    healthCheckPath: /api/health
+
+  - type: pserv
+    name: biosearch-database
+    env: postgresql
+    plan: starter
+
+databases:
+  - name: biosearch-db
+    databaseName: biosearch
+    user: biosearch_user

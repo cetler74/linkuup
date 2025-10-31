@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Test</title>
+</head>
+<body>
+    <h1>Authentication Test</h1>
+    <div id="status"></div>
+    <button onclick="testAuth()">Test Authentication</button>
+    <button onclick="testCreatePlace()">Test Create Place</button>
+    <button onclick="clearAuth()">Clear Auth</button>
+    
+    <script>
+        const API_BASE = 'http://localhost:5001/api/v1';
+        
+        async function testAuth() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = 'Testing authentication...';
+            
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    statusDiv.innerHTML = '❌ No auth token found in localStorage';
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    statusDiv.innerHTML = `✅ Authenticated as: ${userData.email} (Type: ${userData.user_type})`;
+                } else {
+                    const error = await response.json();
+                    statusDiv.innerHTML = `❌ Auth failed: ${error.detail}`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ Network error: ${error.message}`;
+            }
+        }
+        
+        async function testCreatePlace() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = 'Testing place creation...';
+            
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    statusDiv.innerHTML = '❌ No auth token found';
+                    return;
+                }
+                
+                const placeData = {
+                    nome: 'Test Salon',
+                    tipo: 'salon',
+                    cidade: 'Test City',
+                    booking_enabled: true
+                };
+                
+                const response = await fetch(`${API_BASE}/owner/places/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(placeData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    statusDiv.innerHTML = `✅ Place created: ${result.nome} (ID: ${result.id})`;
+                } else {
+                    const error = await response.json();
+                    statusDiv.innerHTML = `❌ Create failed: ${error.detail} (Status: ${response.status})`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ Network error: ${error.message}`;
+            }
+        }
+        
+        function clearAuth() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('refresh_token');
+            document.getElementById('status').innerHTML = '🧹 Auth tokens cleared';
+        }
+        
+        // Show current token status on load
+        window.onload = function() {
+            const token = localStorage.getItem('auth_token');
+            const statusDiv = document.getElementById('status');
+            if (token) {
+                statusDiv.innerHTML = `🔑 Token found: ${token.substring(0, 20)}...`;
+            } else {
+                statusDiv.innerHTML = '❌ No auth token found';
+            }
+        };
+    </script>
+</body>
+</html>

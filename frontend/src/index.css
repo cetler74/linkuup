@@ -1,0 +1,523 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&display=swap');
+/* stylelint-disable at-rule-no-unknown */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* FullCalendar Styles */
+.fc {
+  font-family: 'Open Sans', sans-serif;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.fc-toolbar-title {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  color: #333333;
+}
+
+.fc-button {
+  background-color: #F5F5F5;
+  border-color: #E0E0E0;
+  color: #333333;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+.fc-button:hover {
+  background-color: #1E90FF;
+  border-color: #1E90FF;
+  color: white;
+}
+
+.fc-button:focus {
+  box-shadow: 0 0 0 2px rgba(30, 144, 255, 0.2);
+}
+
+.fc-button-active {
+  background-color: #1E90FF;
+  border-color: #1E90FF;
+  color: white;
+}
+
+.fc-daygrid-day {
+  background-color: white;
+}
+
+.fc-daygrid-day:hover {
+  background-color: #F5F5F5;
+}
+
+.fc-day-today {
+  background-color: #E3F2FD;
+}
+
+.fc-timegrid-slot {
+  border-color: #E0E0E0;
+}
+
+.fc-timegrid-slot-label {
+  color: #666666;
+  font-size: 12px;
+}
+
+.fc-timegrid-axis {
+  border-color: #E0E0E0;
+}
+
+.fc-col-header-cell {
+  background-color: #F5F5F5;
+  color: #333333;
+  font-weight: 600;
+  border-color: #E0E0E0;
+}
+
+.fc-event {
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 4px;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.fc-event-title {
+  font-weight: 600;
+  color: white;
+}
+
+.fc-event-time {
+  color: white;
+  font-size: 11px;
+}
+
+.fc-daygrid-event {
+  margin: 1px 0;
+}
+
+.fc-timegrid-event {
+  margin: 1px 0;
+}
+
+.fc-now-indicator-line {
+  border-color: #FF5A5F;
+  border-width: 2px;
+}
+
+@layer base {
+  html {
+    font-family: 'Open Sans', sans-serif;
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    background-color: #F5F5F5; /* Light gray background */
+    @apply font-body text-charcoal antialiased;
+    line-height: 1.6;
+  }
+  
+  /* Override body background for search page to show shader effect */
+  .search-page {
+    background: #ffffff !important;
+  }
+  
+  .search-page body {
+    background: #ffffff !important;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-bold tracking-tight text-charcoal;
+  }
+  
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+  }
+  
+  h2 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+  }
+  
+  h3 {
+    @apply text-2xl md:text-3xl lg:text-4xl;
+  }
+  
+  h4 {
+    @apply text-xl md:text-2xl lg:text-3xl;
+  }
+  
+  h5 {
+    @apply text-lg md:text-xl lg:text-2xl;
+  }
+  
+  h6 {
+    @apply text-base md:text-lg lg:text-xl;
+  }
+}
+
+@layer components {
+  /* Modern booking platform button styles */
+  .btn-primary {
+    @apply bg-bright-blue hover:bg-blue-600 active:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+  }
+  
+  .btn-secondary {
+    @apply bg-coral-red hover:bg-red-500 active:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+  }
+  
+  .btn-outline {
+    @apply bg-transparent hover:bg-bright-blue text-bright-blue hover:text-white font-semibold py-3 px-6 rounded-lg border-2 border-bright-blue transition-all duration-200;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+  }
+  
+  .btn-accent {
+    @apply bg-lime-green hover:bg-green-500 active:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
+  }
+}
+
+@layer utilities {
+  /* Marquee animations */
+  @keyframes marquee {
+    0% {
+      transform: translateX(0%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+
+  @keyframes marquee-reverse {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(0%);
+    }
+  }
+
+  .animate-marquee {
+    animation: marquee 20s linear infinite;
+  }
+
+  .animate-marquee-slow {
+    animation: marquee 60s linear infinite;
+  }
+
+  .animate-marquee-fast {
+    animation: marquee 15s linear infinite;
+  }
+
+  .animate-marquee-reverse {
+    animation: marquee-reverse 20s linear infinite;
+  }
+  
+  .btn-warning {
+    @apply bg-soft-yellow hover:bg-yellow-400 active:bg-yellow-500 text-charcoal font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+  }
+  
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-lg shadow-form border border-medium-gray p-6 text-charcoal;
+  }
+  
+  .card-elevated {
+    @apply bg-white rounded-lg shadow-elevated border border-medium-gray p-6 text-charcoal;
+  }
+  
+  /* Modern salon card hover effect */
+  .salon-card {
+    @apply bg-white rounded-lg shadow-card border border-medium-gray p-6 transition-all duration-300 ease-out transform text-charcoal;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .salon-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(30, 144, 255, 0.05) 0%, rgba(163, 213, 93, 0.05) 50%, rgba(255, 90, 95, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+    border-radius: 0.5rem;
+    z-index: 1;
+  }
+  
+  .salon-card:hover::before {
+    opacity: 1;
+  }
+  
+  .salon-card:hover {
+    @apply shadow-elevated scale-105 border-bright-blue -translate-y-2;
+    box-shadow: 0 8px 24px rgba(30, 144, 255, 0.15), 0 0 0 1px rgba(30, 144, 255, 0.2);
+  }
+  
+  .salon-card > * {
+    position: relative;
+    z-index: 2;
+  }
+  
+  /* Input styles with modern design */
+  .input-field {
+    @apply w-full py-3 border border-medium-gray rounded-lg focus:ring-2 focus:ring-bright-blue focus:border-bright-blue transition-all duration-200 bg-light-gray text-charcoal text-base placeholder:text-sm placeholder:text-charcoal/60;
+    min-height: 48px;
+    font-family: 'Open Sans', sans-serif;
+    box-shadow: 0 0 0 0 rgba(30, 144, 255, 0);
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Input field with left icon */
+  .input-field.pl-10 {
+    padding-left: 2.5rem;
+  }
+  
+  /* Input field with right icon */
+  .input-field.pr-10 {
+    padding-right: 2.5rem;
+  }
+  
+  /* Input field with both icons */
+  .input-field.pl-10.pr-10 {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+  
+  .input-field:focus {
+    box-shadow: 0 0 4px rgba(30, 144, 255, 0.4);
+  }
+  
+  /* Text styles */
+  .text-hero {
+    @apply text-5xl md:text-6xl font-bold tracking-tight text-charcoal font-display;
+  }
+  
+  .text-section {
+    @apply text-3xl md:text-4xl font-bold tracking-tight text-charcoal font-display;
+  }
+  
+  .text-subsection {
+    @apply text-xl md:text-2xl font-semibold tracking-tight text-charcoal font-display;
+  }
+  
+  /* Spacing utilities */
+  .section-padding {
+    @apply py-16 md:py-24;
+  }
+  
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Modern gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, #1E90FF 0%, #1877D2 100%);
+  }
+  
+  .gradient-secondary {
+    background: linear-gradient(135deg, #FF5A5F 0%, #E53E3E 100%);
+  }
+  
+  .gradient-accent {
+    background: linear-gradient(135deg, #A3D55D 0%, #68D391 100%);
+  }
+  
+  .gradient-warning {
+    background: linear-gradient(135deg, #FFD43B 0%, #F6E05E 100%);
+  }
+
+  /* Hero background */
+  .bg-hero {
+    background-size: cover;
+    background-position: center;
+    background-attachment: scroll;
+    background-repeat: no-repeat;
+  }
+  
+  /* Hero section styles with modern aesthetic */
+  .hero-title {
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight font-display;
+  }
+  
+  .hero-subtitle {
+    @apply text-lg sm:text-xl md:text-2xl text-white/90 leading-relaxed font-body;
+  }
+  
+  .btn-hero {
+    @apply bg-coral-red hover:bg-red-500 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 inline-flex items-center space-x-3;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+  }
+  
+  .btn-hero-arrow {
+    @apply w-5 h-5 transition-transform duration-300 group-hover:translate-x-1;
+  }
+  
+  .testimonial-card {
+    @apply bg-white/95 backdrop-blur-sm border border-medium-gray rounded-lg p-6 shadow-elevated;
+  }
+  
+  .btn-login {
+    @apply bg-bright-blue hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+  }
+  
+  /* Language selector styling */
+  select.language-selector {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+  }
+  
+  select.language-selector:hover {
+    background: rgba(201, 162, 74, 0.2) !important;
+  }
+  
+  select.language-selector:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  
+  select.language-selector option {
+    background: transparent !important;
+    color: inherit !important;
+    border: none !important;
+    outline: none !important;
+  }
+  
+  select.language-selector option:checked {
+    background: transparent !important;
+    color: inherit !important;
+  }
+  
+  select.language-selector option:hover {
+    background: rgba(201, 162, 74, 0.2) !important;
+  }
+
+  /* Modern theme for react-big-calendar */
+  .modern-calendar .rbc-calendar {
+    background-color: #FFFFFF !important;
+    color: #333333 !important;
+    border: 1px solid #E0E0E0 !important;
+    border-radius: 8px !important;
+  }
+
+  .modern-calendar .rbc-header {
+    background-color: #1E90FF !important;
+    color: white !important;
+    border-bottom: 1px solid #1877D2 !important;
+    font-weight: 600 !important;
+  }
+
+  .modern-calendar .rbc-month-view {
+    background-color: #FFFFFF !important;
+  }
+
+  .modern-calendar .rbc-date-cell {
+    color: #333333 !important;
+  }
+
+  .modern-calendar .rbc-off-range-bg {
+    background-color: #F5F5F5 !important;
+  }
+
+  .modern-calendar .rbc-today {
+    background-color: #A3D55D !important;
+    color: white !important;
+  }
+
+  .modern-calendar .rbc-time-view {
+    background-color: #FFFFFF !important;
+  }
+
+  .modern-calendar .rbc-time-header {
+    background-color: #1E90FF !important;
+    border-bottom: 1px solid #1877D2 !important;
+  }
+
+  .modern-calendar .rbc-time-header-content {
+    color: white !important;
+    font-weight: 600 !important;
+  }
+
+  .modern-calendar .rbc-time-slot {
+    color: #333333 !important;
+  }
+
+  .modern-calendar .rbc-timeslot-group {
+    border-bottom: 1px solid #E0E0E0 !important;
+  }
+
+  .modern-calendar .rbc-day-slot {
+    background-color: #FFFFFF !important;
+  }
+
+  .modern-calendar .rbc-time-content {
+    background-color: #FFFFFF !important;
+  }
+
+  .modern-calendar .rbc-current-time-indicator {
+    background-color: #FF5A5F !important;
+  }
+
+  .modern-calendar .rbc-toolbar {
+    background-color: #F5F5F5 !important;
+    color: #333333 !important;
+    border-bottom: 1px solid #E0E0E0 !important;
+    border-radius: 8px 8px 0 0 !important;
+  }
+
+  .modern-calendar .rbc-toolbar button {
+    background-color: #FFFFFF !important;
+    color: #333333 !important;
+    border: 1px solid #E0E0E0 !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+  }
+
+  .modern-calendar .rbc-toolbar button:hover {
+    background-color: #1E90FF !important;
+    color: white !important;
+    border-color: #1877D2 !important;
+  }
+
+  .modern-calendar .rbc-toolbar button.rbc-active {
+    background-color: #1E90FF !important;
+    color: white !important;
+    border-color: #1877D2 !important;
+  }
+
+  .modern-calendar .rbc-toolbar-label {
+    color: #333333 !important;
+    font-weight: 600 !important;
+  }
+}
+/* stylelint-enable at-rule-no-unknown */

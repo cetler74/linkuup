@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manage Employees</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1173d4",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="flex h-full grow">
+<div class="flex flex-col h-full bg-white dark:bg-background-dark border-r border-gray-200 dark:border-gray-800 w-64 p-4">
+<div class="flex flex-col gap-4 flex-grow">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="The Salon company logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDB5NhnC9haD8u9luzrDFvU0kGE51ESkXWdn7k-kFs4TCGNfWWSY_Qyi1r8twfloFk4-42XYgsAxqWnJ142bylQ07gK3HidvRcxgeNtUhtqCFqiL8j0CLOTjQWvqi0owEzjCoYOcN-hHGdL7dCXro4jybKttA_XYWRyI7d9wv2ed3a0kGpYs2KlMWab3ZvQd2udnVx7GTCX3rZPsFyME9vX0LZFkrfP25dfnlJ4NoxNVE8EzHtYcoU3aKj6rhorMDov4YYqZayxbBg");'></div>
+<div class="flex flex-col">
+<h1 class="text-gray-900 dark:text-white text-base font-medium leading-normal">The Salon</h1>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">business@email.com</p>
+</div>
+</div>
+<div class="flex flex-col gap-2 mt-6">
+<a class="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<p class="text-sm font-medium leading-normal">Bookings</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">group</span>
+<p class="text-sm font-medium leading-normal">Employees</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</a>
+</div>
+</div>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">New Booking</span>
+</button>
+</div>
+<main class="flex-1 p-8">
+<div class="max-w-7xl mx-auto">
+<div class="flex flex-wrap justify-between gap-4 items-center mb-8">
+<div class="flex flex-col gap-2">
+<h1 class="text-gray-900 dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Manage Employees</h1>
+<p class="text-gray-500 dark:text-gray-400 text-base font-normal leading-normal">Add, edit, and delete employee profiles and manage their working hours.</p>
+</div>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] gap-2">
+<span class="material-symbols-outlined">add</span>
+<span class="truncate">Add Employee</span>
+</button>
+</div>
+<div class="mb-6 flex flex-col sm:flex-row gap-4">
+<div class="flex-1">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-gray-500 dark:text-gray-400 flex border-none bg-white dark:bg-background-dark items-center justify-center pl-4 rounded-l-lg border-r-0 border border-gray-200 dark:border-gray-700">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary h-full placeholder:text-gray-500 dark:placeholder:text-gray-400 px-4 rounded-l-none border-l-0 text-base font-normal leading-normal bg-white dark:bg-background-dark border border-gray-200 dark:border-gray-700 focus:border-primary" placeholder="Search for an employee" value=""/>
+</div>
+</label>
+</div>
+<div class="flex gap-2">
+<button class="flex h-12 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white dark:bg-background-dark border border-gray-200 dark:border-gray-700 px-4">
+<p class="text-gray-900 dark:text-white text-sm font-medium leading-normal">All Roles</p>
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400">arrow_drop_down</span>
+</button>
+<button class="flex h-12 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white dark:bg-background-dark border border-gray-200 dark:border-gray-700 px-4">
+<p class="text-gray-900 dark:text-white text-sm font-medium leading-normal">Sort By</p>
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400">arrow_drop_down</span>
+</button>
+</div>
+</div>
+<div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-background-dark">
+<div class="overflow-x-auto">
+<table class="w-full">
+<thead>
+<tr class="bg-gray-50 dark:bg-gray-900/50">
+<th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+<th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+<th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
+<th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
+<th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+<tr>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="flex-shrink-0 h-10 w-10">
+<img class="h-10 w-10 rounded-full" data-alt="Profile picture of Jane Doe" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkMHpNrh_QPF3uicdPXF65FJjqcwAIVb78dM8Ex0NloCElAmLWKaEugK3UdIk2ebsXvT70JyThrHvif7PQqOSyK1nWFiNuCOhp0kjhFhrFsZ_sis_6gXqrldsn-7bHKYlgW81kMeivvaOQPY187jC5SsSkQXHiO2Xs6sS9s74878KpObLCqoNQ2SlvCZunEi07nSdAkpsUPu4CQyQmkcWgGTlt4R7E1giJ9sK7j5mG3VaIRi6lmMHWnt-zpNvl-rzSELUcqrSweAs"/>
+</div>
+<div class="ml-4">
+<div class="text-sm font-medium text-gray-900 dark:text-white">Jane Doe</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">Stylist</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">jane.doe@example.com</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">123-456-7890</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+<div class="flex items-center gap-4">
+<a class="text-primary hover:text-primary/80" href="#">Edit</a>
+<a class="text-red-600 hover:text-red-800" href="#">Delete</a>
+<a class="text-primary hover:text-primary/80" href="#">Manage Hours</a>
+</div>
+</td>
+</tr>
+<tr>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="flex-shrink-0 h-10 w-10">
+<img class="h-10 w-10 rounded-full" data-alt="Profile picture of John Smith" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-AVIJ8MMt-D1RGcvO9ptrlFzuos4ep3FTMl4QDDkhOYD0XCoiFeYN6lQhc0Pj8BLLv3p7nIJHw-lPmERW-UWLom6KjPJHB8Xd5vjv3T5mkJ_lmOC7j-V8v0SZ3qX6CKLWOk38Y7aMAZJR5Zcm4RazuUe6QYGK0k2Lm5ii3JBlZveEJJVEUxm_-_M73zu_noIzwpw1-ykIwCvIjRdsC5D71EQ--AgNofeKFN5wrUI2gYYB1menydFTBJoFat4PEYD_4Q6onFsEReY"/>
+</div>
+<div class="ml-4">
+<div class="text-sm font-medium text-gray-900 dark:text-white">John Smith</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">Receptionist</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">john.smith@example.com</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">098-765-4321</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+<div class="flex items-center gap-4">
+<a class="text-primary hover:text-primary/80" href="#">Edit</a>
+<a class="text-red-600 hover:text-red-800" href="#">Delete</a>
+<a class="text-primary hover:text-primary/80" href="#">Manage Hours</a>
+</div>
+</td>
+</tr>
+<tr>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="flex-shrink-0 h-10 w-10">
+<img class="h-10 w-10 rounded-full" data-alt="Profile picture of Peter Jones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4c0gQ3_mxt0jDtq4h99cXcG78n5dpI1yzz7zteSZntEwAGddVKL_X2fCHEIQzxKSmUQ8FH6tWre84x76Cjds9ZiXLrIUjxtp_Gn-MRpmaEBzP8AvLUlDVjxCDrOTSwgA2lblCo--pyFXP8vltzzGzwtZlPtLTy_dtNm-QIEUtgolIFK5Ddv8f16I_WNf1HQIAJ1JT27r-tY2wnD1ozzunLiJwRetUf-czFPAil6gVzTUPO1yEajwngAwWPUKx7QyM6qFR92npQ_Q"/>
+</div>
+<div class="ml-4">
+<div class="text-sm font-medium text-gray-900 dark:text-white">Peter Jones</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">Stylist</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">peter.jones@example.com</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">111-222-3333</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+<div class="flex items-center gap-4">
+<a class="text-primary hover:text-primary/80" href="#">Edit</a>
+<a class="text-red-600 hover:text-red-800" href="#">Delete</a>
+<a class="text-primary hover:text-primary/80" href="#">Manage Hours</a>
+</div>
+</td>
+</tr>
+<tr>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="flex-shrink-0 h-10 w-10">
+<img class="h-10 w-10 rounded-full" data-alt="Profile picture of Sarah Miller" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHLmnPB10pqOUwm7MZzjJRplGioQ8SK0dwQeJZp4_Z7znbknqO_uBQjd6SC32GfrE91LTUZ8azNGHEC9Od5GRXeiBkjg_OOfnNIRn7Of0GjNVevpsR1dGMalqiz0gEcSVQvCj4iV_Ba9U9UaBChCUWUfmwY8o0n8R6ZuEMl2ttRkpWZONKyYkSy3tLQZJBzVsUOSHmrHw69aSZrby6bfcago7Ns-_4rfVFTfFhlp1Jjcsbq7nURCTICwGIK-EJ6BncywTTSu7DjNo"/>
+</div>
+<div class="ml-4">
+<div class="text-sm font-medium text-gray-900 dark:text-white">Sarah Miller</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">Stylist</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">sarah.miller@example.com</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">444-555-6666</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+<div class="flex items-center gap-4">
+<a class="text-primary hover:text-primary/80" href="#">Edit</a>
+<a class="text-red-600 hover:text-red-800" href="#">Delete</a>
+<a class="text-primary hover:text-primary/80" href="#">Manage Hours</a>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

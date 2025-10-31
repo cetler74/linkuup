@@ -1,0 +1,4 @@
+The database of this project is Postgres linkuup_db
+---
+alwaysApply: true
+---

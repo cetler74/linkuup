@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; }
+        input { padding: 8px; width: 300px; }
+        button { padding: 10px 20px; margin: 5px; }
+        .status { margin: 20px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>Login Test</h1>
+    
+    <div class="form-group">
+        <label for="email">Email:</label>
+        <input type="email" id="email" value="test@example.com">
+    </div>
+    
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <input type="password" id="password" value="password123">
+    </div>
+    
+    <button onclick="login()">Login</button>
+    <button onclick="checkAuth()">Check Auth Status</button>
+    <button onclick="clearAuth()">Clear Auth</button>
+    
+    <div id="status" class="status info">
+        Ready to test login...
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:5001/api/v1';
+        
+        async function login() {
+            const statusDiv = document.getElementById('status');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            statusDiv.innerHTML = 'Logging in...';
+            statusDiv.className = 'status info';
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('auth_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                    
+                    statusDiv.innerHTML = `✅ Login successful! User: ${data.user.email} (Type: ${data.user.user_type})`;
+                    statusDiv.className = 'status success';
+                } else {
+                    const error = await response.json();
+                    statusDiv.innerHTML = `❌ Login failed: ${error.detail}`;
+                    statusDiv.className = 'status error';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ Network error: ${error.message}`;
+                statusDiv.className = 'status error';
+            }
+        }
+        
+        async function checkAuth() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = 'Checking authentication...';
+            statusDiv.className = 'status info';
+            
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    statusDiv.innerHTML = '❌ No auth token found';
+                    statusDiv.className = 'status error';
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    statusDiv.innerHTML = `✅ Authenticated as: ${userData.email} (Type: ${userData.user_type}, Owner: ${userData.is_owner})`;
+                    statusDiv.className = 'status success';
+                } else {
+                    const error = await response.json();
+                    statusDiv.innerHTML = `❌ Auth check failed: ${error.detail}`;
+                    statusDiv.className = 'status error';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ Network error: ${error.message}`;
+                statusDiv.className = 'status error';
+            }
+        }
+        
+        function clearAuth() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('refresh_token');
+            document.getElementById('status').innerHTML = '🧹 Auth tokens cleared';
+            document.getElementById('status').className = 'status info';
+        }
+        
+        // Check auth status on load
+        window.onload = function() {
+            checkAuth();
+        };
+    </script>
+</body>
+</html>

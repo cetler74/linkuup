@@ -1,0 +1,57 @@
+# FastAPI Stack
+fastapi==0.115.0
+uvicorn[standard]==0.34.0
+sqlalchemy[asyncio]==2.0.43
+asyncpg==0.30.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20
+slowapi==0.1.9
+email-validator==2.2.0
+aiosmtplib==3.0.2
+
+# Database
+psycopg2-binary==2.9.10
+
+# Image processing
+pillow==11.3.0
+
+# Environment
+python-dotenv==1.0.1
+
+# Caching
+redis==5.0.1
+
+# Data processing
+pandas==2.3.2
+numpy==2.3.2
+
+# HTTP requests
+requests==2.32.3
+
+# Payments (compatible with Python 3.13)
+stripe==13.1.0
+
+# WhatsApp integration
+twilio>=8.0.0
+
+# Google API (keep existing)
+google-api-python-client==2.181.0
+google-auth==2.40.3
+google-auth-oauthlib==1.2.2
+google-auth-httplib2==0.2.0
+
+# Other utilities
+beautifulsoup4==4.13.5
+lxml==6.0.1
+openpyxl==3.1.5
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+httpx==0.28.1
+factory-boy==3.3.1
+faker==33.1.0

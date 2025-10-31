@@ -1,0 +1,60 @@
+The image shows a modern, upbeat booking service website with a bright, tech-forward design. The color palette and typography are clean, energetic, and professional — ideal for a multi-industry booking platform.
+
+Here’s the detailed breakdown:
+
+Color Scheme
+Primary Color – Bright Blue (#1E90FF)
+
+Used in the hero background and key highlights.
+Conveys trust, innovation, and friendliness.
+Secondary Color – Coral Red (#FF5A5F)
+
+Used for call-to-action buttons like “Book now.”
+Adds energy and draws attention to interactive elements.
+Accent Colors:
+
+Lime Green (#A3D55D): Used in some cards and icons for freshness and variety.
+Soft Yellow (#FFD43B): Adds warmth and balance to the palette.
+Light Gray (#F5F5F5): Used for background sections and form fields.
+Charcoal Gray (#333333): Used for text and icons to ensure readability.
+Neutral Colors:
+
+White (#FFFFFF): Used for text on dark backgrounds and as the main background for content areas.
+Medium Gray (#E0E0E0): Used for dividers, borders, and subtle shading.
+Typography
+Primary Font – Poppins (Sans-serif)
+
+Used for headings and main titles.
+Rounded, geometric, and modern — gives a friendly, approachable tone.
+Secondary Font – Open Sans (Sans-serif)
+
+Used for body text and smaller details.
+Clean and highly legible, perfect for digital interfaces.
+Font Weights:
+
+Headings: Bold (600–700)
+Body Text: Regular (400)
+Buttons / Labels: Semi-bold (500–600)
+Form Design (Shading, Colors, and Fonts)
+Form Background:
+
+Color: White (#FFFFFF)
+Shadow: Subtle drop shadow (0px 2px 8px rgba(0, 0, 0, 0.1)) for depth.
+Border Radius: 8px for a soft, modern look.
+Input Fields:
+
+Background: Light Gray (#F5F5F5)
+Border: 1px solid #E0E0E0
+Text Color: Charcoal Gray (#333333)
+Placeholder Text: Medium Gray (#9E9E9E)
+Focus State: Border changes to Bright Blue (#1E90FF) with a soft glow (box-shadow: 0 0 4px rgba(30, 144, 255, 0.4)).
+Buttons:
+
+Primary Button: Bright Blue (#1E90FF) with white text.
+Hover State: Slightly darker blue (#1877D2).
+Secondary Button: Coral Red (#FF5A5F) for key actions like “Book Now.”
+Font in Forms:
+
+Font Family: Open Sans
+Font Size: 14–16px
+Weight: Regular (400) for input text, Semi-bold (500) for labels.

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Auth</title>
+</head>
+<body>
+    <h1>Setting Authentication Token</h1>
+    <p>This page will set the authentication token and redirect to the places page.</p>
+
+    <script>
+        const accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNiIsImV4cCI6MTc2MTIyMjk4MH0._08WcXtNT3ZdHQu9yEcEl8wGBLAnn888pcJKwlmRk3U";
+        const refreshToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNiIsImV4cCI6MTc2MzgxMTM4MCwidHlwZSI6InJlZnJlc2gifQ.un-UwVdW0Ct0FERCS0WevEWIafEh72mPFMPPHG3VbUY";
+
+        localStorage.setItem('auth_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+        console.log('Authentication tokens set in localStorage.');
+
+        // Redirect to the places management page
+        window.location.href = '/owner/places';
+    </script>
+</body>
+</html>

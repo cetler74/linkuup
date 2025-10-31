@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Booking Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4A90E2",
+                        "background-light": "#F5F5F5",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-screen w-full flex-col group/design-root overflow-hidden">
+<div class="layout-container flex h-full grow">
+<!-- SideNavBar -->
+<div class="flex flex-col gap-4 p-4 bg-white dark:bg-background-dark border-r border-gray-200 dark:border-gray-700 w-64">
+<div class="flex gap-3 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB6IkIpmNSOjP1iKVeeMqGc0C0bP_Bfw0Zlp2Clr7lz_HhdIfNOp9A_vakiN5AYdASIdZAlyfPdTeX8EvkMrOZfRnV3DElHR7Ho4cT7_rnxdAVa0K9kGHcX1ksgIwFGNZh8BZILfbBvY8UYEwmTMWqAO7BWZUkK6JFw1dDpsa8o0gsQdjLnB-Qi1OkpQgow-DyFVL69rc9xy-xzY9hphH494aw-nLkGOFf9xvC84ymDm2wnBY4gZT5N1wqxn8ppzAno9koZJV_kezU");'></div>
+<div class="flex flex-col">
+<h1 class="text-gray-900 dark:text-white text-base font-medium leading-normal">Appointment Scheduler</h1>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Your Business Name</p>
+</div>
+</div>
+<div class="flex flex-col gap-2 mt-4">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/20 text-primary">
+<span class="material-symbols-outlined">calendar_month</span>
+<p class="text-sm font-medium leading-normal">Bookings</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+<span class="material-symbols-outlined">group</span>
+<p class="text-sm font-medium leading-normal">Customers</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+<span class="material-symbols-outlined">bar_chart</span>
+<p class="text-sm font-medium leading-normal">Reporting</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</div>
+</div>
+<div class="mt-auto">
+<button class="w-full bg-primary text-white py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:bg-primary/90">
+<span class="material-symbols-outlined">add</span>
+                        New Booking
+                    </button>
+</div>
+</div>
+<!-- Main Content -->
+<div class="flex-1 flex flex-col">
+<!-- PageHeading -->
+<header class="flex flex-wrap justify-between items-center gap-4 p-6 bg-white dark:bg-background-dark border-b border-gray-200 dark:border-gray-700">
+<p class="text-gray-900 dark:text-white text-2xl font-bold leading-tight tracking-tight min-w-72">Booking Management</p>
+<div class="flex items-center gap-4">
+<!-- SearchBar -->
+<div class="w-80">
+<label class="flex flex-col min-w-40 h-10 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-gray-500 dark:text-gray-400 flex border-none bg-gray-100 dark:bg-gray-800 items-center justify-center pl-3 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-gray-900 dark:text-white focus:outline-0 focus:ring-0 border-none bg-gray-100 dark:bg-gray-800 h-full placeholder:text-gray-500 dark:placeholder:text-gray-400 pl-2 text-sm font-normal" placeholder="Search bookings, customers..." value=""/>
+</div>
+</label>
+</div>
+<!-- SegmentedButtons -->
+<div class="flex h-10 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-3 has-[:checked]:bg-white dark:has-[:checked]:bg-gray-700 has-[:checked]:shadow-sm has-[:checked]:text-gray-900 dark:has-[:checked]:text-white text-gray-500 dark:text-gray-400 text-sm font-medium">
+<span class="truncate">Day</span>
+<input class="invisible w-0" name="view" type="radio" value="Day"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-3 has-[:checked]:bg-white dark:has-[:checked]:bg-gray-700 has-[:checked]:shadow-sm has-[:checked]:text-gray-900 dark:has-[:checked]:text-white text-gray-500 dark:text-gray-400 text-sm font-medium">
+<span class="truncate">Week</span>
+<input checked="" class="invisible w-0" name="view" type="radio" value="Week"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-3 has-[:checked]:bg-white dark:has-[:checked]:bg-gray-700 has-[:checked]:shadow-sm has-[:checked]:text-gray-900 dark:has-[:checked]:text-white text-gray-500 dark:text-gray-400 text-sm font-medium">
+<span class="truncate">Month</span>
+<input class="invisible w-0" name="view" type="radio" value="Month"/>
+</label>
+</div>
+</div>
+</header>
+<main class="flex-1 flex p-6 gap-6 overflow-hidden">
+<!-- Calendar View -->
+<div class="flex-1 flex flex-col bg-white dark:bg-background-dark rounded-xl shadow-sm">
+<div class="flex items-center p-4 border-b border-gray-200 dark:border-gray-700">
+<button class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<p class="text-gray-900 dark:text-white text-lg font-semibold flex-1 text-center">October 2 - 8, 2023</p>
+<button class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+<button class="ml-4 text-sm text-gray-700 dark:text-gray-300 font-medium py-1.5 px-3 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800">
+                                Today
+                            </button>
+</div>
+<div class="flex-1 overflow-auto p-4">
+<div class="grid grid-cols-7 gap-px h-full bg-gray-200 dark:bg-gray-700">
+<!-- Day Headers -->
+<div class="text-center py-2 bg-white dark:bg-background-dark"><span class="text-xs font-bold text-gray-500 dark:text-gray-400">MON</span><p class="text-lg font-semibold text-gray-800 dark:text-gray-200">2</p></div>
+<div class="text-center py-2 bg-white dark:bg-background-dark"><span class="text-xs font-bold text-gray-500 dark:text-gray-400">TUE</span><p class="text-lg font-semibold text-gray-800 dark:text-gray-200">3</p></div>
+<div class="text-center py-2 bg-white dark:bg-background-dark"><span class="text-xs font-bold text-gray-500 dark:text-gray-400">WED</span><p class="text-lg font-semibold text-gray-800 dark:text-gray-200">4</p></div>
+<div class="text-center py-2 bg-primary/20"><span class="text-xs font-bold text-primary">THU</span><p class="text-lg font-semibold text-primary">5</p></div>
+<div class="text-center py-2 bg-white dark:bg-background-dark"><span class="text-xs font-bold text-gray-500 dark:text-gray-400">FRI</span><p class="text-lg font-semibold text-gray-800 dark:text-gray-200">6</p></div>
+<div class="text-center py-2 bg-white dark:bg-background-dark"><span class="text-xs font-bold text-gray-500 dark:text-gray-400">SAT</span><p class="text-lg font-semibold text-gray-800 dark:text-gray-200">7</p></div>
+<div class="text-center py-2 bg-white dark:bg-background-dark"><span class="text-xs font-bold text-gray-500 dark:text-gray-400">SUN</span><p class="text-lg font-semibold text-gray-800 dark:text-gray-200">8</p></div>
+<!-- Calendar Grid with appointments -->
+<div class="bg-white dark:bg-background-dark relative p-1 space-y-1">
+</div>
+<div class="bg-white dark:bg-background-dark relative p-1 space-y-1">
+<div class="bg-purple-200 text-purple-800 rounded p-1.5 text-xs cursor-pointer hover:shadow-lg">
+<p class="font-semibold">Jane Doe</p>
+<p>Group Yoga</p>
+<p>9:00 - 10:00 AM</p>
+</div>
+</div>
+<div class="bg-white dark:bg-background-dark relative p-1 space-y-1">
+</div>
+<div class="bg-primary/10 dark:bg-primary/20 relative p-1 space-y-1">
+<div class="bg-green-200 text-green-800 rounded p-1.5 text-xs cursor-pointer hover:shadow-lg">
+<p class="font-semibold">Alex Ray</p>
+<p>Consultation</p>
+<p>11:00 - 11:30 AM</p>
+</div>
+<div class="bg-yellow-200 text-yellow-800 rounded p-1.5 text-xs cursor-pointer hover:shadow-lg">
+<p class="font-semibold">Sam Smith</p>
+<p>Check-up</p>
+<p>2:00 - 2:45 PM</p>
+</div>
+</div>
+<div class="bg-white dark:bg-background-dark relative p-1 space-y-1">
+<div class="bg-teal-200 text-teal-800 rounded p-1.5 text-xs cursor-pointer hover:shadow-lg">
+<p class="font-semibold">Recurring: Staff Meeting</p>
+<p>9:00 - 9:30 AM</p>
+</div>
+</div>
+<div class="bg-white dark:bg-background-dark relative p-1 space-y-1"></div>
+<div class="bg-white dark:bg-background-dark relative p-1 space-y-1"></div>
+</div>
+</div>
+</div>
+<!-- Side Panel -->
+<div class="w-96 flex-shrink-0 flex flex-col gap-6">
+<!-- CalendarPicker -->
+<div class="bg-white dark:bg-background-dark rounded-xl shadow-sm p-4">
+<div class="flex items-center justify-between">
+<button class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300">
+<span class="material-symbols-outlined text-base">chevron_left</span>
+</button>
+<p class="text-gray-900 dark:text-white text-base font-bold leading-tight">October 2023</p>
+<button class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300">
+<span class="material-symbols-outlined text-base">chevron_right</span>
+</button>
+</div>
+<div class="grid grid-cols-7 mt-2">
+<p class="text-gray-600 dark:text-gray-400 text-xs font-bold flex h-10 w-full items-center justify-center">S</p>
+<p class="text-gray-600 dark:text-gray-400 text-xs font-bold flex h-10 w-full items-center justify-center">M</p>
+<p class="text-gray-600 dark:text-gray-400 text-xs font-bold flex h-10 w-full items-center justify-center">T</p>
+<p class="text-gray-600 dark:text-gray-400 text-xs font-bold flex h-10 w-full items-center justify-center">W</p>
+<p class="text-gray-600 dark:text-gray-400 text-xs font-bold flex h-10 w-full items-center justify-center">T</p>
+<p class="text-gray-600 dark:text-gray-400 text-xs font-bold flex h-10 w-full items-center justify-center">F</p>
+<p class="text-gray-600 dark:text-gray-400 text-xs font-bold flex h-10 w-full items-center justify-center">S</p>
+<!-- Calendar Days -->
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 col-start-1 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">1</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">2</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">3</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">4</button>
+<button class="h-10 w-full text-white text-sm font-medium bg-primary rounded-full">5</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">6</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">7</button>
+<!-- Remaining days... -->
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">8</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">9</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">10</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">11</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">12</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">13</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">14</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">15</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">16</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">17</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">18</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">19</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">20</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">21</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">22</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">23</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">24</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">25</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">26</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">27</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">28</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">29</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">30</button>
+<button class="h-10 w-full text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">31</button>
+</div>
+</div>
+<!-- Filters -->
+<div class="bg-white dark:bg-background-dark rounded-xl shadow-sm p-4">
+<h3 class="text-gray-900 dark:text-white font-semibold mb-3">Filters</h3>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="staff">Staff</label>
+<select class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white" id="staff">
+<option>All Staff</option>
+<option>Dr. Emily Carter</option>
+<option>Dr. John Harris</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="service">Service</label>
+<select class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white" id="service">
+<option>All Services</option>
+<option>Consultation</option>
+<option>Check-up</option>
+<option>Group Yoga</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</div>
+</body></html>

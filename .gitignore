@@ -3,6 +3,12 @@ node_modules/
 venv/
 __pycache__/
 
+# Node.js installation files
+node-v*/
+node*.tar.gz
+node*.pkg
+node-installer.pkg
+
 # Build outputs
 dist/
 build/

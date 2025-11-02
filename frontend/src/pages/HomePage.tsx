@@ -120,15 +120,15 @@ const HomePage: React.FC = () => {
         <div className="absolute top-0 left-0 right-0 z-20">
           <Header />
         </div>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left Side - Main Content */}
             <div className="space-y-8">
-              <h1 className="hero-title text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight">
+              <h1 className="hero-title text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight mb-8">
                 {t('home.heroTitle')}
               </h1>
               
-              <p className="hero-subtitle text-lg md:text-xl lg:text-2xl max-w-2xl">
+              <p className="hero-subtitle text-lg md:text-xl lg:text-2xl max-w-2xl mb-6">
                 {t('home.heroSubtitle')}
               </p>
 
@@ -299,14 +299,17 @@ const HomePage: React.FC = () => {
                       </div>
                       
                       {/* Video Below Confirm Booking */}
-                      <div className="mt-3 w-full">
+                      <div className="mt-3 w-full flex justify-center">
                         <video
                           key={currentVideoIndex}
                           autoPlay
                           muted
                           playsInline
-                          className="w-full rounded-lg object-cover shadow-lg"
-                          style={{ maxHeight: '120px' }}
+                          className="rounded-lg object-cover shadow-lg"
+                          style={{ 
+                            width: '80%',
+                            aspectRatio: '3/4'
+                          }}
                           onEnded={() => {
                             setCurrentVideoIndex((prev) => (prev + 1) % videos.length);
                           }}

@@ -19,7 +19,8 @@ const HomePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const [currentLang, setCurrentLang] = useState(i18n.language);
 
   // Video array for mobile phone mockup
   const videos = [
@@ -69,6 +70,20 @@ const HomePage: React.FC = () => {
     fetchSalons();
   }, []);
 
+  // Update state when language changes to force re-render
+  useEffect(() => {
+    const handleLanguageChange = (lng: string) => {
+      console.log('Language changed to:', lng);
+      setCurrentLang(lng);
+    };
+
+    i18n.on('languageChanged', handleLanguageChange);
+
+    return () => {
+      i18n.off('languageChanged', handleLanguageChange);
+    };
+  }, [i18n]);
+
   // Auto-rotate carousel every 2 seconds
   useEffect(() => {
     if (salons.length === 0) return;
@@ -110,30 +125,30 @@ const HomePage: React.FC = () => {
             {/* Left Side - Main Content */}
             <div className="space-y-8">
               <h1 className="hero-title text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight">
-                Book Smarter. Grow Faster.
+                {t('home.heroTitle')}
               </h1>
               
               <p className="hero-subtitle text-lg md:text-xl lg:text-2xl max-w-2xl">
-                All-in-one booking platform built to help any business—from salons to studios, clinics to coaches—manage appointments, attract clients, and stay fully booked.
+                {t('home.heroSubtitle')}
               </p>
 
               <p className="text-white/90 text-base md:text-lg max-w-2xl leading-relaxed">
-                Say goodbye to messaging chaos and missed opportunities. With our platform, scheduling becomes effortless, clients can book anytime, and your day stays perfectly organized. Focus on what you do best—while we handle the rest.
+                {t('home.heroDescription')}
               </p>
 
               {/* Call to Action */}
               <div className="flex flex-col sm:flex-row gap-4 max-w-2xl">
                 <Link 
                   to="/join" 
-                  className="btn-secondary px-8 py-4 text-lg font-semibold"
+                  className="btn-secondary px-8 py-2 text-lg font-semibold"
                 >
-                  Get Started Today
+                  {t('home.getStartedToday')}
                 </Link>
                 <Link 
                   to="/about" 
-                  className="btn-outline px-8 py-4 text-lg font-semibold border-white text-white hover:bg-white hover:text-bright-blue"
+                  className="btn-outline px-8 py-2 text-lg font-semibold border-white text-white hover:bg-white hover:text-bright-blue"
                 >
-                  Learn More
+                  {t('home.learnMore')}
                 </Link>
               </div>
 
@@ -267,19 +282,19 @@ const HomePage: React.FC = () => {
                     {/* Mobile Screen Content */}
                     <div className="p-4 space-y-4">
                       <div className="text-center">
-                        <h3 className="font-bold text-charcoal text-lg">Book Your Appointment</h3>
+                        <h3 className="font-bold text-charcoal text-lg">{t('home.bookYourAppointment')}</h3>
                       </div>
                       
                       {/* Floating UI Elements */}
                       <div className="space-y-3">
                         <div className="bg-bright-blue text-white p-3 rounded-lg text-sm font-medium hover:animate-bounce cursor-pointer transition-all duration-200 hover:scale-105">
-                          Select Service
+                          {t('home.selectService')}
                         </div>
                         <div className="bg-lime-green text-white p-3 rounded-lg text-sm font-medium hover:animate-bounce cursor-pointer transition-all duration-200 hover:scale-105">
-                          Choose Time
+                          {t('home.chooseTime')}
                         </div>
                         <div className="bg-coral-red text-white p-3 rounded-lg text-sm font-medium hover:animate-bounce cursor-pointer transition-all duration-200 hover:scale-105">
-                          Confirm Booking
+                          {t('home.confirmBooking')}
                         </div>
                       </div>
                       
@@ -297,7 +312,7 @@ const HomePage: React.FC = () => {
                           }}
                         >
                           <source src={videos[currentVideoIndex]} type="video/mp4" />
-                          Your browser does not support the video tag.
+                          {t('home.videoNotSupported')}
                         </video>
                       </div>
                       
@@ -342,10 +357,10 @@ const HomePage: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal mb-4">
-              Everything You Need to Succeed
+              {t('home.everythingYouNeed')}
             </h2>
             <p className="text-lg text-charcoal/70 max-w-2xl mx-auto">
-              Powerful features designed to streamline your business operations
+              {t('home.featuresSubtitle')}
             </p>
           </div>
           
@@ -355,48 +370,48 @@ const HomePage: React.FC = () => {
               <div className="w-16 h-16 bg-bright-blue rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-white text-2xl">📅</span>
               </div>
-              <h3 className="text-xl font-semibold text-charcoal mb-2">Flexible Booking System</h3>
-              <p className="text-charcoal/70">Adapts to any business type or schedule with customizable availability</p>
+              <h3 className="text-xl font-semibold text-charcoal mb-2">{t('home.flexibleBookingSystem')}</h3>
+              <p className="text-charcoal/70">{t('home.flexibleBookingDesc')}</p>
             </div>
             
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-lime-green rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-white text-2xl">💳</span>
               </div>
-              <h3 className="text-xl font-semibold text-charcoal mb-2">Instant Payments</h3>
-              <p className="text-charcoal/70">Online payments and automatic confirmations for seamless transactions</p>
+              <h3 className="text-xl font-semibold text-charcoal mb-2">{t('home.instantPayments')}</h3>
+              <p className="text-charcoal/70">{t('home.instantPaymentsDesc')}</p>
             </div>
             
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-coral-red rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-white text-2xl">🔄</span>
               </div>
-              <h3 className="text-xl font-semibold text-charcoal mb-2">Real-time Sync</h3>
-              <p className="text-charcoal/70">Availability sync across all your services keeps everything up-to-date</p>
+              <h3 className="text-xl font-semibold text-charcoal mb-2">{t('home.realtimeSync')}</h3>
+              <p className="text-charcoal/70">{t('home.realtimeSyncDesc')}</p>
             </div>
             
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-soft-yellow rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-white text-2xl">👥</span>
               </div>
-              <h3 className="text-xl font-semibold text-charcoal mb-2">Client Management</h3>
-              <p className="text-charcoal/70">Tools that keep your customers coming back with personalized experiences</p>
+              <h3 className="text-xl font-semibold text-charcoal mb-2">{t('home.clientManagement')}</h3>
+              <p className="text-charcoal/70">{t('home.clientManagementDesc')}</p>
             </div>
             
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-bright-blue rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-white text-2xl">🎨</span>
               </div>
-              <h3 className="text-xl font-semibold text-charcoal mb-2">Customizable Profiles</h3>
-              <p className="text-charcoal/70">Highlight your brand and services with fully customizable business profiles</p>
+              <h3 className="text-xl font-semibold text-charcoal mb-2">{t('home.customizableProfiles')}</h3>
+              <p className="text-charcoal/70">{t('home.customizableProfilesDesc')}</p>
             </div>
             
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-lime-green rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-white text-2xl">📱</span>
               </div>
-              <h3 className="text-xl font-semibold text-charcoal mb-2">Mobile Optimized</h3>
-              <p className="text-charcoal/70">Perfect booking experience on any device, anywhere, anytime</p>
+              <h3 className="text-xl font-semibold text-charcoal mb-2">{t('home.mobileOptimized')}</h3>
+              <p className="text-charcoal/70">{t('home.mobileOptimizedDesc')}</p>
             </div>
           </div>
         </div>
@@ -407,10 +422,10 @@ const HomePage: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal mb-4">
-              Ready to Simplify Your Bookings?
+              {t('home.readyToSimplify')}
             </h2>
             <p className="text-lg text-charcoal/70 max-w-2xl mx-auto mb-8">
-              Get started today and see how easy it is to grow with a smarter scheduling system.
+              {t('home.ctaDescription')}
             </p>
           </div>
           
@@ -421,10 +436,10 @@ const HomePage: React.FC = () => {
                 <div className="w-16 h-16 bg-bright-blue rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-white text-2xl">✂️</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Salons & Barbers</h3>
-                <p className="text-charcoal/70 mb-6">Perfect for hair salons, barbershops, and beauty studios</p>
+                <h3 className="text-2xl font-bold mb-4">{t('home.salonsBarbers')}</h3>
+                <p className="text-charcoal/70 mb-6">{t('home.salonsBarbersDesc')}</p>
                 <button className="bg-bright-blue text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors">
-                  Get Started
+                  {t('home.getStarted')}
                 </button>
               </div>
             </div>
@@ -434,10 +449,10 @@ const HomePage: React.FC = () => {
                 <div className="w-16 h-16 bg-lime-green rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-white text-2xl">🏥</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Clinics & Medical</h3>
-                <p className="text-charcoal/70 mb-6">Ideal for medical spas, clinics, and wellness centers</p>
+                <h3 className="text-2xl font-bold mb-4">{t('home.clinicsMedical')}</h3>
+                <p className="text-charcoal/70 mb-6">{t('home.clinicsMedicalDesc')}</p>
                 <button className="bg-lime-green text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors">
-                  Get Started
+                  {t('home.getStarted')}
                 </button>
               </div>
             </div>
@@ -447,10 +462,10 @@ const HomePage: React.FC = () => {
                 <div className="w-16 h-16 bg-coral-red rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-white text-2xl">💪</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Fitness & Coaching</h3>
-                <p className="text-charcoal/70 mb-6">Great for personal trainers, coaches, and fitness studios</p>
+                <h3 className="text-2xl font-bold mb-4">{t('home.fitnessCoaching')}</h3>
+                <p className="text-charcoal/70 mb-6">{t('home.fitnessCoachingDesc')}</p>
                 <button className="bg-coral-red text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors">
-                  Get Started
+                  {t('home.getStarted')}
                 </button>
               </div>
             </div>
@@ -459,14 +474,14 @@ const HomePage: React.FC = () => {
           {/* Main CTA */}
           <div className="text-center mt-12">
             <div className="bg-white rounded-lg shadow-elevated p-8 max-w-2xl mx-auto border border-medium-gray">
-              <h3 className="text-2xl font-bold text-charcoal mb-4">Start Your Free Trial Today</h3>
-              <p className="text-charcoal/70 mb-6">No credit card required. Set up your booking system in minutes.</p>
+              <h3 className="text-2xl font-bold text-charcoal mb-4">{t('home.startFreeTrial')}</h3>
+              <p className="text-charcoal/70 mb-6">{t('home.startFreeTrialDesc')}</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button className="btn-secondary px-8 py-4 text-lg font-semibold">
-                  Start Free Trial
+                <button className="btn-secondary px-8 py-2 text-lg font-semibold">
+                  {t('home.startFreeTrialButton')}
                 </button>
-                <button className="btn-outline px-8 py-4 text-lg font-semibold">
-                  Schedule Demo
+                <button className="btn-outline px-8 py-2 text-lg font-semibold">
+                  {t('home.scheduleDemo')}
                 </button>
               </div>
             </div>

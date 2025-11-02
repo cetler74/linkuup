@@ -7,7 +7,7 @@ interface User {
   email: string;
   name: string;
   customer_id?: string;
-  user_type?: 'customer' | 'business_owner';
+  user_type?: 'customer' | 'business_owner' | 'platform_admin';
   token?: string;
   is_admin?: boolean;
 }
@@ -115,10 +115,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(newUser);
       
       // Redirect based on user type
-      if (newUser.user_type === 'business_owner' || userData.is_owner) {
-        return '/owner/dashboard';
-      } else if (newUser.is_admin) {
+      if (newUser.user_type === 'platform_admin' || newUser.is_admin) {
         return '/admin/dashboard';
+      } else if (newUser.user_type === 'business_owner' || userData.is_owner) {
+        return '/owner/dashboard';
       } else {
         // Customers stay on homepage
         return '/';
@@ -144,10 +144,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(newUser);
       
       // Redirect based on user type
-      if (newUser.user_type === 'business_owner' || response.user.is_owner) {
-        return '/owner/dashboard';
-      } else if (newUser.is_admin) {
+      if (newUser.user_type === 'platform_admin' || newUser.is_admin) {
         return '/admin/dashboard';
+      } else if (newUser.user_type === 'business_owner' || response.user.is_owner) {
+        return '/owner/dashboard';
       } else {
         // Customers stay on homepage
         return '/';
@@ -192,7 +192,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loginWithFacebook,
     loading,
     isAuthenticated: !!user,
-    isAdmin: !!user?.is_admin,
+    isAdmin: !!user?.is_admin || user?.user_type === 'platform_admin',
     isBusinessOwner: user?.user_type === 'business_owner',
     isCustomer: user?.user_type === 'customer',
   };

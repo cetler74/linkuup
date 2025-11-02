@@ -1,13 +1,39 @@
 from logging.config import fileConfig
+import os
+from pathlib import Path
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    # Try multiple paths for .env file
+    env_paths = [
+        Path(__file__).parent.parent / '.env',  # backend/.env
+        Path(__file__).parent.parent.parent / '.env',  # project root/.env
+        Path.cwd() / '.env',  # current directory
+    ]
+    for env_path in env_paths:
+        if env_path.exists():
+            load_dotenv(env_path)
+            break
+except ImportError:
+    pass  # dotenv not installed, continue without it
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Override sqlalchemy.url with DATABASE_URL from environment if available
+database_url = os.getenv('DATABASE_URL')
+if database_url:
+    # Convert postgresql+asyncpg:// to postgresql:// for alembic (Alembic uses sync driver)
+    database_url = database_url.replace('postgresql+asyncpg://', 'postgresql://')
+    config.set_main_option('sqlalchemy.url', database_url)
+    print(f"Using DATABASE_URL from environment: {database_url.split('@')[1] if '@' in database_url else 'configured'}")  # Don't print full password
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

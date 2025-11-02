@@ -206,8 +206,8 @@ interface AvailabilityResponse {
   slots_with_campaigns?: Record<string, CampaignInfo[]>;
 }
 
-// Use hardcoded API base URL for development
-const API_BASE_URL = 'http://localhost:5001/api/v1';
+// Use environment variable or fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
 
 // Backend base URL for images (without /api/v1)
 const BACKEND_BASE_URL = API_BASE_URL.replace('/api/v1', '');

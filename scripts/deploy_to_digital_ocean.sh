@@ -1,15 +1,16 @@
 #!/bin/bash
 
-# BioSearch2 Digital Ocean Deployment Script
+# LinkUup Digital Ocean Deployment Script
 # This script automates the deployment process to a Digital Ocean droplet
 
 set -e  # Exit on any error
 
 # Configuration
-DROPLET_IP="${DROPLET_IP:-}"
-DROPLET_USER="${DROPLET_USER:-biosearch}"
-APP_NAME="BioSearch2"
-REPO_URL="${REPO_URL:-https://github.com/your-username/BioSearch2.git}"
+DROPLET_IP="${DROPLET_IP:-64.226.117.67}"
+DROPLET_USER="${DROPLET_USER:-linkuup}"
+APP_NAME="Linkuup"
+# Use HTTPS by default to avoid SSH key issues
+REPO_URL="${REPO_URL:-https://github.com/cetler74/linkuup.git}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -47,7 +48,8 @@ test_ssh_connection() {
         print_error "Please ensure:"
         print_error "1. SSH key is properly configured"
         print_error "2. Droplet is running"
-        print_error "3. User $DROPLET_USER exists on the droplet"
+        print_error "3. User $DROPLET_USER exists on the droplet (will be created if running as root)"
+        print_warning "You may need to connect as root first to create the user"
         exit 1
     fi
     print_status "SSH connection successful"
@@ -60,14 +62,14 @@ install_system_dependencies() {
         # Update system
         sudo apt update && sudo apt upgrade -y
         
-        # Install Node.js 18
+        # Install Node.js 20 (LTS)
         if ! command -v node &> /dev/null; then
-            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
             sudo apt-get install -y nodejs
         fi
         
-        # Install Python 3.11
-        sudo apt install -y python3.11 python3.11-venv python3.11-dev
+        # Install Python (Ubuntu 25.04 uses Python 3.13)
+        sudo apt install -y python3 python3-venv python3-dev python3-pip
         
         # Install PostgreSQL
         sudo apt install -y postgresql postgresql-contrib
@@ -78,8 +80,8 @@ install_system_dependencies() {
         # Install Git
         sudo apt install -y git
         
-        # Install other dependencies
-        sudo apt install -y build-essential libpq-dev
+        # Install other dependencies for Python packages
+        sudo apt install -y build-essential libpq-dev pkg-config libffi-dev
         
         # Install PM2 globally
         sudo npm install -g pm2
@@ -96,22 +98,26 @@ configure_postgresql() {
         sudo -u postgres psql << 'PSQL'
             DO $$
             BEGIN
-                IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'biosearch_db') THEN
-                    CREATE DATABASE biosearch_db;
+                IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'linkuup_db') THEN
+                    CREATE DATABASE linkuup_db;
                 END IF;
             END
             $$;
             
             DO $$
             BEGIN
-                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'biosearch_user') THEN
-                    CREATE USER biosearch_user WITH PASSWORD 'biosearch_secure_password_2024';
-                    GRANT ALL PRIVILEGES ON DATABASE biosearch_db TO biosearch_user;
-                    ALTER USER biosearch_user CREATEDB;
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'linkuup_user') THEN
+                    CREATE USER linkuup_user WITH PASSWORD 'linkuup_secure_password_2024_change_this';
+                    GRANT ALL PRIVILEGES ON DATABASE linkuup_db TO linkuup_user;
+                    ALTER USER linkuup_user CREATEDB;
+                    ALTER DATABASE linkuup_db OWNER TO linkuup_user;
                 END IF;
             END
             $$;
 PSQL
+        
+        # Update pg_hba.conf to allow local connections
+        sudo sed -i 's/local   all             all                                     peer/local   all             all                                     md5/' /etc/postgresql/*/main/pg_hba.conf || true
         
         # Restart PostgreSQL
         sudo systemctl restart postgresql
@@ -123,25 +129,41 @@ EOF
 deploy_application() {
     print_status "Deploying application code..."
     ssh $DROPLET_USER@$DROPLET_IP << EOF
+        # Create app directory
+        mkdir -p ~/$APP_NAME
+        
         # Clone or update repository
-        if [ -d "$APP_NAME" ]; then
-            cd $APP_NAME
+        if [ -d ~/$APP_NAME/.git ]; then
+            cd ~/$APP_NAME
             git pull origin main
         else
+            cd ~
+            if [ -d $APP_NAME ]; then
+                rm -rf $APP_NAME
+            fi
             git clone $REPO_URL $APP_NAME
             cd $APP_NAME
         fi
         
         # Set up Python environment
         if [ ! -d "venv" ]; then
-            python3.11 -m venv venv
+            python3 -m venv venv
         fi
         source venv/bin/activate
-        pip install --upgrade pip
+        pip install --upgrade pip setuptools wheel
         pip install -r backend/requirements.txt
         
         # Set up frontend
         cd frontend
+        
+        # Create production environment file
+        cat > .env.production << 'FRONTEND_ENV'
+VITE_API_BASE_URL=http://64.226.117.67/api/v1
+VITE_GOOGLE_MAPS_API_KEY=
+VITE_REVENUECAT_API_KEY=
+VITE_STRIPE_PUBLISHABLE_KEY=
+FRONTEND_ENV
+        
         npm install
         npm run build
         cd ..
@@ -153,50 +175,66 @@ EOF
 # Configure environment
 configure_environment() {
     print_status "Configuring environment..."
-    ssh $DROPLET_USER@$DROPLET_IP << 'EOF'
-        cd BioSearch2
+    APP_NAME_VALUE="$APP_NAME"
+    ssh $DROPLET_USER@$DROPLET_IP << EOF
+        cd ~/$APP_NAME_VALUE/backend
         
         # Create production environment file if it doesn't exist
         if [ ! -f ".env" ]; then
             cat > .env << 'ENVEOF'
-DATABASE_URL=postgresql://biosearch_user:biosearch_secure_password_2024@localhost:5432/biosearch_db
-FLASK_ENV=production
-FLASK_DEBUG=False
-SECRET_KEY=biosearch_production_secret_key_2024_change_this
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USE_TLS=True
-MAIL_USERNAME=your_email@gmail.com
-MAIL_PASSWORD=your_gmail_app_password
-MAIL_DEFAULT_SENDER=your_email@gmail.com
-CORS_ORIGIN=https://your-domain.com,https://www.your-domain.com
-APP_HOST=0.0.0.0
-APP_PORT=5001
+# Database Configuration - FastAPI with async SQLAlchemy
+DATABASE_URL=postgresql+asyncpg://linkuup_user:linkuup_secure_password_2024_change_this@localhost:5432/linkuup_db
+
+# FastAPI Configuration
+SECRET_KEY=linkuup_production_secret_key_2024_change_this_to_very_secure_random_string
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=30
+
+# CORS Configuration
+BACKEND_CORS_ORIGINS=["http://64.226.117.67","http://localhost:5173","http://localhost:3000"]
+
+# Rate Limiting
+RATE_LIMIT_AUTH_LOGIN=5/minute
+RATE_LIMIT_AUTH_REGISTER=3/hour
+RATE_LIMIT_MOBILE_READ=500/hour
+RATE_LIMIT_WRITE=100/hour
+RATE_LIMIT_STANDARD=300/hour
+
+# Email Configuration (Brevo)
+BREVO_API_KEY=
+BREVO_SENDER_EMAIL=noreply@linkuup.com
+BREVO_SENDER_NAME=LinkUup
+
+# Stripe Configuration (Production)
+STRIPE_SECRET_KEY=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_BASIC=
+STRIPE_PRICE_PRO=
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=5001
 ENVEOF
             echo "Environment file created. Please update with your actual values."
+        else
+            echo "Environment file already exists. Please verify configuration."
         fi
         
         echo "Environment configured"
 EOF
 }
 
-# Set up database
+# Set up database with Alembic
 setup_database() {
     print_status "Setting up database..."
-    ssh $DROPLET_USER@$DROPLET_IP << 'EOF'
-        cd BioSearch2
-        source venv/bin/activate
+    ssh $DROPLET_USER@$DROPLET_IP << EOF
+        cd ~/$APP_NAME/backend
+        source ../venv/bin/activate
         
-        # Create database tables
-        cd backend
-        python3 -c "
-import sys
-sys.path.append('.')
-from app import app, db
-with app.app_context():
-    db.create_all()
-    print('Database tables created successfully')
-"
+        # Run Alembic migrations
+        alembic upgrade head
         
         echo "Database setup completed"
 EOF
@@ -205,26 +243,51 @@ EOF
 # Configure Nginx
 configure_nginx() {
     print_status "Configuring Nginx..."
-    ssh $DROPLET_USER@$DROPLET_IP << 'EOF'
-        # Create Nginx configuration
-        sudo tee /etc/nginx/sites-available/biosearch > /dev/null << 'NGINXEOF'
+    NGINX_USER="$DROPLET_USER"
+    NGINX_APP="$APP_NAME"
+    ssh $DROPLET_USER@$DROPLET_IP << EOF
+        # Create Nginx configuration with variable substitution
+        cat > /tmp/linkuup_nginx.conf << 'NGINXEOF'
 server {
     listen 80;
-    server_name _;
+    server_name 64.226.117.67;
+    
+    client_max_body_size 20M;
     
     # Frontend (React build)
     location / {
-        root /home/biosearch/BioSearch2/frontend/dist;
-        try_files $uri $uri/ /index.html;
+        root /home/NGINX_USER_PLACEHOLDER/NGINX_APP_PLACEHOLDER/frontend/dist;
+        try_files \$uri \$uri/ /index.html;
+        index index.html;
     }
     
     # Backend API
     location /api/ {
         proxy_pass http://127.0.0.1:5001;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+    }
+    
+    # Uploads
+    location /uploads/ {
+        alias /home/NGINX_USER_PLACEHOLDER/NGINX_APP_PLACEHOLDER/backend/uploads/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Static files caching
+    location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
+        root /home/NGINX_USER_PLACEHOLDER/NGINX_APP_PLACEHOLDER/frontend/dist;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
     }
     
     # Security headers
@@ -232,17 +295,23 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'" always;
 }
 NGINXEOF
+        # Replace placeholders
+        sed -i "s/NGINX_USER_PLACEHOLDER/$NGINX_USER/g" /tmp/linkuup_nginx.conf
+        sed -i "s/NGINX_APP_PLACEHOLDER/$NGINX_APP/g" /tmp/linkuup_nginx.conf
+        # Copy to nginx sites-available
+        sudo cp /tmp/linkuup_nginx.conf /etc/nginx/sites-available/linkuup
         
         # Enable the site
-        sudo ln -sf /etc/nginx/sites-available/biosearch /etc/nginx/sites-enabled/
+        sudo ln -sf /etc/nginx/sites-available/linkuup /etc/nginx/sites-enabled/
         sudo rm -f /etc/nginx/sites-enabled/default
         
         # Test and restart Nginx
         sudo nginx -t
         sudo systemctl restart nginx
+        sudo systemctl enable nginx
         
         echo "Nginx configured successfully"
 EOF
@@ -251,20 +320,24 @@ EOF
 # Set up PM2 process management
 setup_pm2() {
     print_status "Setting up PM2 process management..."
-    ssh $DROPLET_USER@$DROPLET_IP << 'EOF'
-        cd BioSearch2
+    ssh $DROPLET_USER@$DROPLET_IP << EOF
+        cd ~/$APP_NAME
         
         # Copy PM2 configuration
-        cp ecosystem.config.js ~/
+        cp ecosystem.config.js ~/ecosystem.config.js
+        
+        # Update paths in ecosystem.config.js if needed
+        sed -i "s|/home/linkuup/Linkuup|/home/$DROPLET_USER/$APP_NAME|g" ~/ecosystem.config.js
         
         # Stop existing processes
         pm2 stop all 2>/dev/null || true
         pm2 delete all 2>/dev/null || true
         
         # Start the application
-        pm2 start ~/ecosystem.config.js
+        cd ~
+        pm2 start ecosystem.config.js
         pm2 save
-        pm2 startup systemd -u biosearch --hp /home/biosearch
+        pm2 startup systemd -u linkuup --hp /home/linkuup
         
         echo "PM2 configured successfully"
 EOF
@@ -275,7 +348,7 @@ configure_firewall() {
     print_status "Configuring firewall..."
     ssh $DROPLET_USER@$DROPLET_IP << 'EOF'
         # Configure UFW firewall
-        sudo ufw --force reset
+        sudo ufw --force reset || true
         sudo ufw default deny incoming
         sudo ufw default allow outgoing
         sudo ufw allow ssh
@@ -290,18 +363,23 @@ EOF
 create_log_directories() {
     print_status "Creating log directories..."
     ssh $DROPLET_USER@$DROPLET_IP << 'EOF'
-        sudo mkdir -p /var/log/biosearch
-        sudo chown biosearch:biosearch /var/log/biosearch
-        sudo chmod 755 /var/log/biosearch
+        sudo mkdir -p /var/log/linkuup
+        sudo chown linkuup:linkuup /var/log/linkuup
+        sudo chmod 755 /var/log/linkuup
         
-        echo "Log directories created"
+        # Create uploads directory
+        mkdir -p ~/$APP_NAME/backend/uploads
+        mkdir -p ~/$APP_NAME/backend/image_cache
+        
+        echo "Log and upload directories created"
 EOF
 }
 
 # Main deployment function
 main() {
-    print_status "Starting BioSearch2 deployment to Digital Ocean..."
+    print_status "Starting LinkUup deployment to Digital Ocean..."
     print_status "Target: $DROPLET_USER@$DROPLET_IP"
+    print_status "Repository: $REPO_URL"
     
     check_requirements
     test_ssh_connection
@@ -318,10 +396,15 @@ main() {
     print_status "Deployment completed successfully!"
     print_status "Your application should be accessible at: http://$DROPLET_IP"
     print_warning "Next steps:"
-    print_warning "1. Update .env file with your actual configuration values"
-    print_warning "2. Set up SSL certificate with Let's Encrypt"
-    print_warning "3. Configure your domain DNS to point to $DROPLET_IP"
-    print_warning "4. Test the application thoroughly"
+    print_warning "1. Update backend/.env file with your actual configuration values:"
+    print_warning "   - SECRET_KEY (generate a secure random string)"
+    print_warning "   - Database password"
+    print_warning "   - BREVO_API_KEY (for email)"
+    print_warning "   - Stripe keys (if using payments)"
+    print_warning "2. Restart the application: ssh $DROPLET_USER@$DROPLET_IP 'pm2 restart linkuup-backend'"
+    print_warning "3. Set up SSL certificate with Let's Encrypt (recommended)"
+    print_warning "4. Configure your domain DNS to point to $DROPLET_IP (if you have one)"
+    print_warning "5. Test the application thoroughly"
 }
 
 # Run main function

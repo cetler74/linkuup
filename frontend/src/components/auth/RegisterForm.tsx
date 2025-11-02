@@ -25,7 +25,7 @@ interface RegisterFormProps {
   onRegistrationSuccess?: (user: any, userType: string) => void;
 }
 
-type RegistrationStep = 'form' | 'pricing' | 'success';
+type RegistrationStep = 'type_selection' | 'form' | 'pricing' | 'success';
 
 const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const [formData, setFormData] = useState<RegisterRequest>({
@@ -42,8 +42,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [userType, setUserType] = useState<'customer' | 'business_owner' | null>(null);
-  const [currentStep, setCurrentStep] = useState<RegistrationStep>('form');
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>('type_selection');
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
+  const [showManualFormForOwner, setShowManualFormForOwner] = useState(false);
   const isSubmittingRef = useRef(false);
   const { register, loginWithGoogle, loginWithFacebook } = useAuth();
   const { t } = useTranslation();
@@ -54,10 +55,32 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     if (isSubmittingRef.current) return;
     setError('');
 
-    // Require plan selection first for business owners
-    if (formData.user_type === 'business_owner' && !selectedPlan) {
-      setCurrentStep('pricing');
+    // Validate Data Consent
+    if (!formData.gdpr_data_processing_consent) {
+      setError('You must consent to data processing to continue');
       return;
+    }
+
+    // For customers: password is required only if not using OAuth
+    if (formData.user_type === 'customer' && !formData.password) {
+      setError('Password is required for manual registration');
+      return;
+    }
+
+    // For business owners: First Name, Last Name, Email, Password are required for manual registration
+    if (formData.user_type === 'business_owner') {
+      if (!formData.first_name || !formData.last_name || !formData.email) {
+        setError('Please fill in First Name, Last Name, and Email');
+        return;
+      }
+      if (!formData.password) {
+        setError('Password is required for manual registration');
+        return;
+      }
+      if (!selectedPlan) {
+        setError('Please select a plan');
+        return;
+      }
     }
 
     isSubmittingRef.current = true;
@@ -108,16 +131,164 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
 
   const handlePlanSelect = (plan: PricingPlan) => {
     setSelectedPlan(plan);
-    // After plan selection, return to form to submit registration
-    setCurrentStep('form');
+    // After plan selection, show registration form for manual registration or allow OAuth
+    // The PricingSelection component will show OAuth buttons if data consent is checked
+  };
+
+  const handleDataConsentChange = (consent: boolean) => {
+    setFormData({
+      ...formData,
+      gdpr_data_processing_consent: consent,
+    });
   };
 
   const handleBackToForm = () => {
-    setCurrentStep('form');
+    setCurrentStep('type_selection');
     setError('');
   };
 
+  const handleUserTypeSelect = (type: 'customer' | 'business_owner') => {
+    setFormData({
+      ...formData,
+      user_type: type,
+    });
+    if (type === 'business_owner') {
+      setCurrentStep('pricing');
+    } else {
+      setCurrentStep('form');
+    }
+  };
+
+  // Handle card hover for background effects (used for type selection container)
+  const handleTypeSelectionMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    window.dispatchEvent(new CustomEvent('cardHover', { 
+      detail: { 
+        hovered: true,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      } 
+    }));
+  };
+
+  const handleTypeSelectionMouseLeave = () => {
+    window.dispatchEvent(new CustomEvent('cardHover', { 
+      detail: { hovered: false } 
+    }));
+  };
+
   // Render different steps based on current step
+  if (currentStep === 'type_selection') {
+    return (
+      <div className="w-full max-w-4xl mx-auto">
+        <div 
+          className="bg-white rounded-lg shadow-2xl p-6 sm:p-8 md:p-10"
+          onMouseEnter={handleTypeSelectionMouseEnter}
+          onMouseLeave={handleTypeSelectionMouseLeave}
+        >
+          <div className="mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-2" style={{color: '#2a2a2e'}}>
+              {t('auth.register')}
+            </h2>
+            <p className="text-center text-gray-600 mt-2">
+              I am registering as:
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            {/* Customer Option */}
+            <button
+              type="button"
+              onClick={() => handleUserTypeSelect('customer')}
+              className="p-8 border-2 border-gray-300 rounded-lg hover:border-gray-900 hover:shadow-lg transition-all duration-200 text-left group"
+              style={{borderColor: formData.user_type === 'customer' ? '#2a2a2e' : undefined}}
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                window.dispatchEvent(new CustomEvent('cardHover', { 
+                  detail: { 
+                    hovered: true,
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                  } 
+                }));
+              }}
+              onMouseLeave={() => {
+                window.dispatchEvent(new CustomEvent('cardHover', { 
+                  detail: { hovered: false } 
+                }));
+              }}
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-4">
+                  <User className="h-12 w-12 mx-auto mb-4" style={{color: formData.user_type === 'customer' ? '#2a2a2e' : '#9ca3af'}} />
+                </div>
+                <h3 className="text-xl font-bold mb-2" style={{color: '#2a2a2e'}}>
+                  Customer (Looking for services)
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Find and book services from local businesses
+                </p>
+              </div>
+            </button>
+
+            {/* Business Owner Option */}
+            <button
+              type="button"
+              onClick={() => handleUserTypeSelect('business_owner')}
+              className="p-8 border-2 border-gray-300 rounded-lg hover:border-gray-900 hover:shadow-lg transition-all duration-200 text-left group"
+              style={{borderColor: formData.user_type === 'business_owner' ? '#2a2a2e' : undefined}}
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                window.dispatchEvent(new CustomEvent('cardHover', { 
+                  detail: { 
+                    hovered: true,
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                  } 
+                }));
+              }}
+              onMouseLeave={() => {
+                window.dispatchEvent(new CustomEvent('cardHover', { 
+                  detail: { hovered: false } 
+                }));
+              }}
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-4">
+                  <svg className="h-12 w-12 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{color: formData.user_type === 'business_owner' ? '#2a2a2e' : '#9ca3af'}}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-2" style={{color: '#2a2a2e'}}>
+                  Business Owner (Offering services)
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Manage your business and offer services to customers
+                </p>
+              </div>
+            </button>
+          </div>
+
+          <div className="text-center pt-6 mt-6">
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="text-sm font-medium hover:opacity-75 transition-opacity duration-200"
+              style={{color: '#2a2a2e'}}
+            >
+              {t('auth.switchToLogin')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const handleManualRegisterForOwner = () => {
+    setShowManualFormForOwner(true);
+    setCurrentStep('form');
+  };
+
   if (currentStep === 'pricing') {
     return (
       <div className="w-full max-w-6xl mx-auto">
@@ -125,15 +296,70 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
           onPlanSelect={handlePlanSelect}
           onBack={handleBackToForm}
           loading={loading}
+          dataConsent={formData.gdpr_data_processing_consent}
+          onDataConsentChange={handleDataConsentChange}
+          onOAuthGoogle={() => {
+            if (!formData.gdpr_data_processing_consent) {
+              setError('You must consent to data processing to continue');
+              return;
+            }
+            if (!selectedPlan) {
+              setError('Please select a plan first');
+              return;
+            }
+            loginWithGoogle('business_owner', selectedPlan.id);
+          }}
+          onOAuthFacebook={() => {
+            if (!formData.gdpr_data_processing_consent) {
+              setError('You must consent to data processing to continue');
+              return;
+            }
+            if (!selectedPlan) {
+              setError('Please select a plan first');
+              return;
+            }
+            loginWithFacebook('business_owner', selectedPlan.id);
+          }}
+          showOAuth={true}
+          error={error}
+          onManualRegister={handleManualRegisterForOwner}
+          showManualForm={showManualFormForOwner}
         />
       </div>
     );
   }
 
+  // Handle card hover for background effects
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    window.dispatchEvent(new CustomEvent('cardHover', { 
+      detail: { 
+        hovered: true,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      } 
+    }));
+  };
+
+  const handleMouseLeave = () => {
+    window.dispatchEvent(new CustomEvent('cardHover', { 
+      detail: { hovered: false } 
+    }));
+  };
+
+  // Show form for customers or business owners doing manual registration
+  if (formData.user_type !== 'customer' && !showManualFormForOwner) {
+    return null;
+  }
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       {/* Form Container - More rectangular design */}
-      <div className="bg-white rounded-lg shadow-2xl p-6 sm:p-8 md:p-10">
+      <div 
+        className="bg-white rounded-lg shadow-2xl p-6 sm:p-8 md:p-10"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <div className="mb-6 sm:mb-8">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-2" style={{color: '#2a2a2e'}}>
             {t('auth.register')}
@@ -214,81 +440,75 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
             </div>
           </div>
 
-          <div>
-            <label htmlFor="user_type" className="block text-sm font-medium mb-2" style={{color: '#2a2a2e'}}>
-              I am registering as:
-            </label>
-            <select
-              id="user_type"
-              name="user_type"
-              required
-              value={formData.user_type}
-              onChange={handleChange}
-              className="w-full px-3 py-3 sm:py-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-200 text-gray-900 text-sm sm:text-base"
-            >
-              <option value="customer">Customer (Looking for services)</option>
-              <option value="business_owner">Business Owner (Offering services)</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-2" style={{color: '#2a2a2e'}}>
-              {t('auth.password')}
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="new-password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full pl-10 pr-10 py-3 sm:py-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-200 text-gray-900 text-sm sm:text-base"
-                placeholder={t('auth.password')}
-              />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
+          {/* Password field - required for manual registration */}
+          {(formData.user_type === 'customer' || showManualFormForOwner) && (
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium mb-2" style={{color: '#2a2a2e'}}>
+                {t('auth.password')} {formData.user_type === 'customer' && <span className="text-gray-500 text-xs">(optional if using OAuth)</span>}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required={showManualFormForOwner}
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-10 py-3 sm:py-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-200 text-gray-900 text-sm sm:text-base"
+                  placeholder={t('auth.password')}
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
           </div>
 
           {/* OAuth Buttons */}
-          <OAuthButtons 
-            onGoogleLogin={() => {
-              const userType = formData.user_type || 'customer';
-              // For business owners, require plan selection before OAuth
-              if (userType === 'business_owner' && !selectedPlan) {
-                setCurrentStep('pricing');
-                return;
-              }
-              loginWithGoogle(userType, selectedPlan?.id);
-            }}
-            onFacebookLogin={() => {
-              const userType = formData.user_type || 'customer';
-              // For business owners, require plan selection before OAuth
-              if (userType === 'business_owner' && !selectedPlan) {
-                setCurrentStep('pricing');
-                return;
-              }
-              loginWithFacebook(userType, selectedPlan?.id);
-            }}
-            loading={loading}
-          />
+          {formData.user_type === 'customer' && (
+            <OAuthButtons 
+              onGoogleLogin={() => {
+                if (!formData.gdpr_data_processing_consent) {
+                  setError('You must consent to data processing to continue');
+                  return;
+                }
+                // For customers, OAuth can be used after form fields are filled (but password is optional)
+                if (!formData.first_name || !formData.last_name || !formData.email) {
+                  setError('Please fill in First Name, Last Name, and Email');
+                  return;
+                }
+                loginWithGoogle('customer');
+              }}
+              onFacebookLogin={() => {
+                if (!formData.gdpr_data_processing_consent) {
+                  setError('You must consent to data processing to continue');
+                  return;
+                }
+                // For customers, OAuth can be used after form fields are filled (but password is optional)
+                if (!formData.first_name || !formData.last_name || !formData.email) {
+                  setError('Please fill in First Name, Last Name, and Email');
+                  return;
+                }
+                loginWithFacebook('customer');
+              }}
+              loading={loading}
+            />
+          )}
 
           {/* GDPR Consent Section */}
               <div className="space-y-4 border-t pt-6 mt-6">
@@ -314,7 +534,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                     {t('gdpr.dataProcessing')} <span className="text-red-500">*</span>
                   </label>
                   <p className="text-gray-600 text-xs mt-1">
-                    {t('gdpr.dataProcessingText')}
+                    I consent to my personal data being processed and used internally by LinkUup to provide the requested services, including account management, bookings and service-related communication.
                   </p>
                 </div>
               </div>
@@ -353,14 +573,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
             </div>
           </div>
 
+          {/* Register button - for customers or business owners doing manual registration */}
           <div className="pt-2">
             <button
               type="submit"
-              disabled={loading || !formData.gdpr_data_processing_consent}
+              disabled={loading || !formData.gdpr_data_processing_consent || !formData.first_name || !formData.last_name || !formData.email || (formData.user_type === 'customer' && !formData.password) || (formData.user_type === 'business_owner' && !formData.password)}
               className="w-full py-3 sm:py-4 px-4 text-white font-semibold rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm sm:text-base"
               style={{backgroundColor: '#2a2a2e'}}
             >
-              {loading ? t('auth.loading') : (formData.user_type === 'business_owner' && !selectedPlan ? 'Choose Plan' : t('auth.register'))}
+              {loading ? t('auth.loading') : t('auth.register')}
             </button>
           </div>
 

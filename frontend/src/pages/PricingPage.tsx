@@ -19,11 +19,12 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import Footer from '../components/common/Footer';
-// Removed: import Header from '../components/common/Header';
+import Header from '../components/common/Header';
 
 const PricingPage: React.FC = () => {
   const { t } = useTranslation();
   const pricingSectionRef = useRef<HTMLElement>(null);
+  const heroSectionRef = useRef<HTMLElement>(null);
   const [isContactFormOpen, setIsContactFormOpen] = useState(false);
   const [contactForm, setContactForm] = useState({
     name: '',
@@ -33,6 +34,24 @@ const PricingPage: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
+
+  // Parallax scroll effect - hero section scrolls at half speed
+  useEffect(() => {
+    const handleScroll = () => {
+      if (heroSectionRef.current) {
+        const scrollY = window.scrollY;
+        // Move at half speed (0.5x scroll speed)
+        const parallaxOffset = scrollY * 0.5;
+        heroSectionRef.current.style.transform = `translateY(${parallaxOffset}px)`;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   // Scroll to pricing section when component mounts
   useEffect(() => {
@@ -106,9 +125,17 @@ const PricingPage: React.FC = () => {
 
   return (
     <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden">
-      {/* Hero Section - header is now handled by layout */}
-      <section className="relative bg-gradient-to-br from-bright-blue to-blue-600 min-h-screen flex items-center">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {/* Hero Section - header overlays this section, scrolls at half speed */}
+      <section 
+        ref={heroSectionRef}
+        className="relative bg-gradient-to-br from-bright-blue to-blue-600 min-h-screen flex items-center"
+        style={{ willChange: 'transform' }}
+      >
+        {/* Header positioned at the beginning of this section */}
+        <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm shadow-sm">
+          <Header />
+        </div>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 pt-24">
           <div className="max-w-4xl mx-auto text-center text-white">
             <div className="mb-8">
               <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-6 py-3 mb-6">
@@ -137,7 +164,6 @@ const PricingPage: React.FC = () => {
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold text-charcoal mb-2">Basic</h3>
                   <div className="mb-4">
-                    <span className="text-sm text-charcoal/70 line-through">€5,95</span>
                     <div className="text-4xl font-bold text-charcoal">€5,95</div>
                     <div className="text-charcoal/70">per month</div>
                   </div>

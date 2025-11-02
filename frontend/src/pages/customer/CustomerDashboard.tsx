@@ -155,7 +155,7 @@ const CustomerDashboard: React.FC = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="col-span-8 space-y-6 overflow-y-auto">
+        <div className="col-span-10 space-y-6 overflow-y-auto">
           {/* Header Card */}
           <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form">
             <div className="flex items-center justify-between">
@@ -236,64 +236,6 @@ const CustomerDashboard: React.FC = () => {
                 ))}
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Right Sidebar Card */}
-        <div className="col-span-2 bg-white border border-medium-gray rounded-lg p-6 pb-6 h-fit shadow-form">
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <div>
-              <h3 className="text-lg font-semibold text-charcoal mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>Quick Actions ⚡</h3>
-              <div className="space-y-2">
-                <button
-                  onClick={() => navigate('/search')}
-                  className="w-full justify-start text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
-                >
-                  <Search className="mr-3 h-4 w-4" />
-                  Browse Salons
-                </button>
-                <button
-                  onClick={() => navigate('/customer/bookings')}
-                  className="w-full justify-start text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
-                >
-                  <Calendar className="mr-3 h-4 w-4" />
-                  My Bookings
-                </button>
-                <button
-                  onClick={() => navigate('/customer/rewards')}
-                  className="w-full justify-start text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
-                >
-                  <Gift className="mr-3 h-4 w-4" />
-                  Rewards
-                </button>
-              </div>
-            </div>
-
-            {/* Stats Summary */}
-            <div className="bg-light-gray border border-medium-gray rounded-lg p-4">
-              <div className="text-center space-y-3">
-                <div className="text-2xl">📊</div>
-                <div>
-                  <h4 className="text-charcoal font-semibold" style={{ fontFamily: 'Poppins, sans-serif' }}>Your Stats</h4>
-                  <p className="text-charcoal/70 text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>Booking Summary</p>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between text-charcoal/80" style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                    <span>Upcoming:</span>
-                    <span className="font-semibold">{stats.upcomingCount}</span>
-                  </div>
-                  <div className="flex justify-between text-charcoal/80" style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                    <span>Total:</span>
-                    <span className="font-semibold">{stats.totalBookings}</span>
-                  </div>
-                  <div className="flex justify-between text-charcoal/80" style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                    <span>Points:</span>
-                    <span className="font-semibold">{stats.rewardsPoints}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

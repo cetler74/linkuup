@@ -20,6 +20,7 @@ const SearchResultsWithImages: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [showFilters, setShowFilters] = useState(false);
+  const [isCardHovered, setIsCardHovered] = useState(false);
   const { t } = useTranslation();
 
   // Filter states
@@ -104,8 +105,28 @@ const SearchResultsWithImages: React.FC = () => {
 
   const hasActiveFilters = filters.search || filters.cidade || filters.regiao || filters.is_bio_diamond;
 
+  // Listen for card hover events from cards
+  useEffect(() => {
+    const handleCardHover = (e: CustomEvent) => {
+      setIsCardHovered(e.detail?.hovered || false);
+    };
+
+    window.addEventListener('cardHover', handleCardHover as EventListener);
+
+    return () => {
+      window.removeEventListener('cardHover', handleCardHover as EventListener);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      {/* Dim overlay when card is hovered */}
+      <div 
+        className={`fixed inset-0 z-[1] bg-black transition-opacity duration-300 pointer-events-none ${
+          isCardHovered ? 'opacity-[0.03]' : 'opacity-0'
+        }`}
+      />
+      <div className="relative z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8 flex items-center justify-between gap-4">
@@ -170,7 +191,24 @@ const SearchResultsWithImages: React.FC = () => {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar */}
           <div className={`lg:w-80 ${showFilters ? 'block' : 'hidden'} lg:block lg:flex-shrink-0`}>
-            <div className="bg-white rounded-lg shadow-form p-6 lg:sticky lg:top-8 border border-medium-gray">
+            <div 
+              className="bg-white rounded-lg shadow-form p-6 lg:sticky lg:top-8 border border-medium-gray filter-sidebar"
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                window.dispatchEvent(new CustomEvent('cardHover', { 
+                  detail: { 
+                    hovered: true,
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                  } 
+                }));
+              }}
+              onMouseLeave={() => {
+                window.dispatchEvent(new CustomEvent('cardHover', { 
+                  detail: { hovered: false } 
+                }));
+              }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-charcoal">{t('search.filters')}</h2>
                 {hasActiveFilters && (
@@ -326,6 +364,7 @@ const SearchResultsWithImages: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

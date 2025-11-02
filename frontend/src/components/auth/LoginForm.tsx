@@ -52,10 +52,32 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
     });
   };
 
+  // Handle card hover for background effects
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    window.dispatchEvent(new CustomEvent('cardHover', { 
+      detail: { 
+        hovered: true,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      } 
+    }));
+  };
+
+  const handleMouseLeave = () => {
+    window.dispatchEvent(new CustomEvent('cardHover', { 
+      detail: { hovered: false } 
+    }));
+  };
+
   return (
     <div className="w-full max-w-lg mx-auto">
       {/* Form Container - Modern design matching forms_template */}
-      <div className="bg-white rounded-lg shadow-form p-6 sm:p-8 md:p-10">
+      <div 
+        className="bg-white rounded-lg shadow-form p-6 sm:p-8 md:p-10"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <div className="mb-6 sm:mb-8">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-2 text-charcoal font-display">
             {t('auth.login')}

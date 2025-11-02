@@ -117,9 +117,31 @@ const SalonCardWithImages: React.FC<SalonCardWithImagesProps> = ({
     setIsImageModalOpen(true);
   };
 
+  // Handle card hover for background effects
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    window.dispatchEvent(new CustomEvent('cardHover', { 
+      detail: { 
+        hovered: true,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      } 
+    }));
+  };
+
+  const handleMouseLeave = () => {
+    window.dispatchEvent(new CustomEvent('cardHover', { 
+      detail: { hovered: false } 
+    }));
+  };
+
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group">
+      <div 
+        className="salon-card bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         {/* Image Section */}
         <div className="relative h-56 sm:h-48 bg-gray-100 overflow-hidden">
           {sortedImages.length > 0 ? (

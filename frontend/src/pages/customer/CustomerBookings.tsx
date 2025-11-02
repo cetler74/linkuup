@@ -5,10 +5,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { customerAPI } from '../../utils/api';
 import BookingCard from '../../components/customer/BookingCard';
 import Header from '../../components/common/Header';
+import CustomLanguageSelector from '../../components/common/CustomLanguageSelector';
+import { useTranslation } from 'react-i18next';
 
 const CustomerBookings: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [bookings, setBookings] = useState<any[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,14 +74,14 @@ const CustomerBookings: React.FC = () => {
   };
 
   const handleCancelBooking = async (bookingId: number) => {
-    if (!confirm('Are you sure you want to cancel this booking?')) return;
+    if (!confirm(t('customerBookings.confirmCancel'))) return;
 
     try {
       await customerAPI.cancelBooking(bookingId);
       fetchBookings(); // Refresh data
     } catch (error) {
       console.error('Error cancelling booking:', error);
-      alert('Failed to cancel booking. Please try again.');
+      alert(t('customerBookings.cancelError'));
     }
   };
 
@@ -104,26 +107,19 @@ const CustomerBookings: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0">
-          <img 
-            src="/dashboard_background.png" 
-            alt="Retro Dashboard Background" 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/20"></div>
-        </div>
-        
-        {/* Header integrated into hero section */}
+      <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden bg-light-gray">
+        {/* Header */}
         <div className="relative z-10">
           <Header />
         </div>
-        
-        <div className="relative z-10 flex items-center justify-center flex-grow">
-          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p className="text-white text-center">Loading your bookings...</p>
+        {/* Floating Language Selector - positioned in safe area */}
+        <div className="fixed top-24 right-6 z-[9999]">
+          <CustomLanguageSelector />
+        </div>
+        <div className="relative z-10 flex items-center justify-center flex-grow p-8">
+          <div className="bg-white rounded-lg shadow-form p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bright-blue mx-auto mb-4"></div>
+            <p className="text-charcoal" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerBookings.loading')}</p>
           </div>
         </div>
       </div>
@@ -131,209 +127,204 @@ const CustomerBookings: React.FC = () => {
   }
 
   return (
-    <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <img 
-          src="/dashboard_background.png" 
-          alt="Retro Dashboard Background" 
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/20"></div>
-      </div>
-      
+    <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden bg-light-gray">
       {/* Header integrated into hero section */}
       <div className="relative z-10">
         <Header />
       </div>
 
+      {/* Floating Language Selector - positioned in safe area to avoid overlap with cards */}
+      <div className="fixed top-24 right-6 z-[9999]">
+        <CustomLanguageSelector />
+      </div>
+
       <div className="relative z-10 flex-grow p-6 grid grid-cols-12 gap-6 min-h-0">
         {/* Left Sidebar Card */}
-        <div className="col-span-2 backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 pb-6 h-fit flex flex-col">
+        <div className="col-span-2 bg-white border border-medium-gray rounded-lg p-6 pb-6 h-fit flex flex-col shadow-form">
           <div className="space-y-6">
             {/* Logo */}
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-white">Customer Portal</h1>
-              <p className="text-white/60 text-sm">Booking Management</p>
+              <h1 className="text-2xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('customerBookings.customerPortal')}</h1>
+              <p className="text-charcoal/70 text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerBookings.bookingManagement')}</p>
             </div>
 
             {/* User Info */}
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4">
+            <div className="bg-bright-blue/10 border border-bright-blue/20 rounded-lg p-4">
               <div className="text-center space-y-2">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto">
-                  <span className="text-white font-semibold text-lg">
+                <div className="w-12 h-12 bg-bright-blue/20 rounded-full flex items-center justify-center mx-auto">
+                  <span className="text-bright-blue font-semibold text-lg">
                     {user?.name?.charAt(0)?.toUpperCase() || 'C'}
                   </span>
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">{user?.name || 'Carlos'}</h3>
-                  <p className="text-white/70 text-sm">{user?.email || 'cetler74@gmail.com'}</p>
+                  <h3 className="text-charcoal font-semibold" style={{ fontFamily: 'Poppins, sans-serif' }}>{user?.name || 'User'}</h3>
+                  <p className="text-charcoal/70 text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>{user?.email}</p>
                 </div>
               </div>
             </div>
 
             {/* Navigation */}
             <div>
-              <h4 className="text-white/80 text-sm font-semibold uppercase tracking-wider mb-3">Quick Actions</h4>
+              <h4 className="text-charcoal/80 text-sm font-semibold uppercase tracking-wider mb-3" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerBookings.quickActions')}</h4>
               <nav className="space-y-2">
                 <button
                   onClick={() => navigate('/search')}
-                  className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+                  className="w-full justify-start text-base text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
                 >
                   <Search className="mr-3 h-5 w-5" />
-                  Browse Salons
+                  {t('customerBookings.browseSalons')}
                 </button>
                 <button
                   onClick={() => navigate('/customer/bookings')}
-                  className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg bg-white/10 text-white"
+                  className="w-full justify-start text-base text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg bg-bright-blue/10 text-bright-blue"
                 >
                   <Calendar className="mr-3 h-5 w-5" />
-                  My Bookings
+                  {t('customerBookings.myBookings')}
                 </button>
                 <button
                   onClick={() => navigate('/customer/rewards')}
-                  className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+                  className="w-full justify-start text-base text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
                 >
                   <Gift className="mr-3 h-5 w-5" />
-                  Rewards
+                  {t('customerBookings.rewards')}
                 </button>
               </nav>
             </div>
           </div>
 
-          <div className="flex-shrink-0 space-y-4 pt-4 border-t border-white/10">
+          <div className="flex-shrink-0 space-y-4 pt-4 border-t border-medium-gray">
             <button
               onClick={() => navigate('/customer/dashboard')}
-              className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+              className="w-full justify-start text-base text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
             >
               <ArrowLeft className="mr-3 h-5 w-5" />
-              Back to Dashboard
+              {t('customerBookings.backToDashboard')}
             </button>
           </div>
         </div>
 
         {/* Main Content Area */}
-        <div className="col-span-8 space-y-6 overflow-y-auto">
+        <div className="col-span-10 space-y-6 overflow-y-auto">
           {/* Header Card */}
-          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6">
+          <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-bold text-white">My Bookings</h2>
-                <p className="text-white/60">Manage your appointments and view booking details</p>
+                <h2 className="text-3xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('customerBookings.myBookings')}</h2>
+                <p className="text-charcoal/70" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerBookings.manageAppointments')}</p>
               </div>
               <button
                 onClick={fetchBookings}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 hover:bg-bright-blue/10 rounded-lg transition-colors text-charcoal/80 hover:text-bright-blue"
                 title="Refresh bookings"
               >
-                <RefreshCw className="h-6 w-6 text-white" />
+                <RefreshCw className="h-6 w-6" />
               </button>
             </div>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-3 gap-6">
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 transition-all duration-700 ease-out hover:scale-[1.02] hover:bg-white/15">
+            <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/60 text-sm">Total Bookings</p>
-                  <p className="text-2xl font-bold text-white">{statusCounts.all}</p>
+                  <p className="text-charcoal/70 text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerBookings.totalBookings')}</p>
+                  <p className="text-2xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{statusCounts.all}</p>
                 </div>
-                <Calendar className="h-8 w-8 text-blue-400" />
+                <Calendar className="h-8 w-8 text-bright-blue" />
               </div>
             </div>
 
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 transition-all duration-700 ease-out hover:scale-[1.02] hover:bg-white/15">
+            <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/60 text-sm">Confirmed</p>
-                  <p className="text-2xl font-bold text-white">{statusCounts.confirmed}</p>
+                  <p className="text-charcoal/70 text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerBookings.confirmed')}</p>
+                  <p className="text-2xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{statusCounts.confirmed}</p>
                 </div>
-                <Clock className="h-8 w-8 text-green-400" />
+                <Clock className="h-8 w-8 text-lime-green" />
               </div>
             </div>
 
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 transition-all duration-700 ease-out hover:scale-[1.02] hover:bg-white/15">
+            <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/60 text-sm">Pending</p>
-                  <p className="text-2xl font-bold text-white">{statusCounts.pending}</p>
+                  <p className="text-charcoal/70 text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerBookings.pending')}</p>
+                  <p className="text-2xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{statusCounts.pending}</p>
                 </div>
-                <Gift className="h-8 w-8 text-yellow-400" />
+                <Gift className="h-8 w-8 text-soft-yellow" />
               </div>
             </div>
           </div>
 
           {/* Filters and Search */}
-          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6">
+          <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form">
             <div className="flex flex-col md:flex-row gap-4">
               {/* Search */}
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/60" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-charcoal/60" />
                   <input
                     type="text"
-                    placeholder="Search by salon, service, or employee..."
+                    placeholder={t('customerBookings.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                    className="input-field pl-10"
                   />
                 </div>
               </div>
 
               {/* Status Filter */}
               <div className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-white/60" />
+                <Filter className="h-5 w-5 text-charcoal/60" />
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                  className="input-field"
                 >
-                  <option value="all" className="bg-gray-800">All Status</option>
-                  <option value="pending" className="bg-gray-800">Pending</option>
-                  <option value="confirmed" className="bg-gray-800">Confirmed</option>
-                  <option value="completed" className="bg-gray-800">Completed</option>
-                  <option value="cancelled" className="bg-gray-800">Cancelled</option>
+                  <option value="all">{t('customerBookings.allStatus')}</option>
+                  <option value="pending">{t('customerBookings.pending')}</option>
+                  <option value="confirmed">{t('customerBookings.confirmed')}</option>
+                  <option value="completed">{t('customerBookings.completed')}</option>
+                  <option value="cancelled">{t('customerBookings.cancelled')}</option>
                 </select>
               </div>
 
               {/* Sort */}
               <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-white/60" />
+                <Clock className="h-5 w-5 text-charcoal/60" />
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                  className="input-field"
                 >
-                  <option value="date" className="bg-gray-800">Sort by Date</option>
-                  <option value="salon" className="bg-gray-800">Sort by Salon</option>
-                  <option value="status" className="bg-gray-800">Sort by Status</option>
+                  <option value="date">{t('customerBookings.sortByDate')}</option>
+                  <option value="salon">{t('customerBookings.sortBySalon')}</option>
+                  <option value="status">{t('customerBookings.sortByStatus')}</option>
                 </select>
               </div>
             </div>
           </div>
 
           {/* Bookings List */}
-          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6">
+          <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-white">All Bookings 📅</h2>
+              <h2 className="text-xl font-semibold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('customerBookings.allBookings')}</h2>
             </div>
 
             {filteredBookings.length === 0 ? (
               <div className="text-center py-12">
-                <Calendar className="h-16 w-16 text-white/40 mx-auto mb-4" />
-                <p className="text-white/80 mb-4">
+                <Calendar className="h-16 w-16 text-charcoal/40 mx-auto mb-4" />
+                <p className="text-charcoal/70 mb-4" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                   {searchTerm || statusFilter !== 'all' 
-                    ? 'No bookings match your filters' 
-                    : 'No bookings found'
+                    ? t('customerBookings.noBookingsMatchFilters') 
+                    : t('customerBookings.noBookingsFound')
                   }
                 </p>
                 {!searchTerm && statusFilter === 'all' && (
                   <button
                     onClick={() => navigate('/search')}
-                    className="px-6 py-2 bg-white/20 hover:bg-white/30 border border-white/30 hover:border-white/40 text-white rounded-xl transition-all duration-700 ease-out hover:scale-[1.02]"
+                    className="btn-primary"
                   >
-                    Browse Salons
+                    {t('customerBookings.browseSalons')}
                   </button>
                 )}
               </div>
@@ -349,72 +340,6 @@ const CustomerBookings: React.FC = () => {
                 ))}
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Right Sidebar Card */}
-        <div className="col-span-2 backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 pb-6 h-fit">
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Quick Actions ⚡</h3>
-              <div className="space-y-2">
-                <button
-                  onClick={() => navigate('/search')}
-                  className="w-full justify-start text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
-                >
-                  <Search className="mr-3 h-4 w-4" />
-                  Browse Salons
-                </button>
-                <button
-                  onClick={() => navigate('/customer/bookings')}
-                  className="w-full justify-start text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg bg-white/10 text-white"
-                >
-                  <Calendar className="mr-3 h-4 w-4" />
-                  My Bookings
-                </button>
-                <button
-                  onClick={() => navigate('/customer/rewards')}
-                  className="w-full justify-start text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
-                >
-                  <Gift className="mr-3 h-4 w-4" />
-                  Rewards
-                </button>
-              </div>
-            </div>
-
-            {/* Stats Summary */}
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4">
-              <div className="text-center space-y-3">
-                <div className="text-2xl">📊</div>
-                <div>
-                  <h4 className="text-white font-semibold">Your Stats</h4>
-                  <p className="text-white/70 text-sm">Booking Summary</p>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between text-white/80">
-                    <span>Total:</span>
-                    <span className="font-semibold">{statusCounts.all}</span>
-                  </div>
-                  <div className="flex justify-between text-white/80">
-                    <span>Confirmed:</span>
-                    <span className="font-semibold">{statusCounts.confirmed}</span>
-                  </div>
-                  <div className="flex justify-between text-white/80">
-                    <span>Pending:</span>
-                    <span className="font-semibold">{statusCounts.pending}</span>
-                  </div>
-                  <div className="flex justify-between text-white/80">
-                    <span>Completed:</span>
-                    <span className="font-semibold">{statusCounts.completed}</span>
-                  </div>
-                  <div className="flex justify-between text-white/80">
-                    <span>Cancelled:</span>
-                    <span className="font-semibold">{statusCounts.cancelled}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

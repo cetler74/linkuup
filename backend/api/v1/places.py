@@ -73,6 +73,7 @@ async def get_place_simple(
 @router.get("/", response_model=List[PlaceResponse])
 # @limiter.limit(settings.RATE_LIMIT_MOBILE_READ)
 async def get_places(
+    search: Optional[str] = None,
     tipo: Optional[str] = None,
     cidade: Optional[str] = None,
     regiao: Optional[str] = None,
@@ -95,15 +96,27 @@ async def get_places(
         # Build query using existing 'places' table
         query = select(Place).where(Place.is_active == True)
         
+        # Apply search filter if provided
+        if search and search.strip():
+            search_term = search.strip().lower()
+            query = query.where(
+                or_(
+                    func.lower(Place.nome).contains(search_term),
+                    func.lower(Place.cidade).contains(search_term),
+                    func.lower(Place.regiao).contains(search_term),
+                    func.lower(Place.tipo).contains(search_term)
+                )
+            )
+        
         # Apply filters using existing column names
         if tipo:
             query = query.where(Place.tipo == tipo)
         
-        if cidade:
-            query = query.where(func.lower(Place.cidade) == func.lower(cidade))
+        if cidade and cidade.strip():
+            query = query.where(func.lower(Place.cidade) == func.lower(cidade.strip()))
         
-        if regiao:
-            query = query.where(func.lower(Place.regiao) == func.lower(regiao))
+        if regiao and regiao.strip():
+            query = query.where(func.lower(Place.regiao) == func.lower(regiao.strip()))
         
         if booking_enabled is not None:
             query = query.where(Place.booking_enabled == booking_enabled)

@@ -39,17 +39,25 @@ const CustomLanguageSelector: React.FC<CustomLanguageSelectorProps> = ({
     };
   }, []);
 
-  const handleLanguageChange = (langCode: string) => {
+  const handleLanguageChange = async (langCode: string) => {
     console.log('Changing language to:', langCode);
-    i18n.changeLanguage(langCode);
-    setIsOpen(false);
+    try {
+      await i18n.changeLanguage(langCode);
+      // Force a small delay to ensure language change is complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setIsOpen(false);
+      // Trigger a window event to notify all components
+      window.dispatchEvent(new Event('languagechange'));
+    } catch (error) {
+      console.error('Error changing language:', error);
+    }
   };
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between w-full px-4 py-3 text-sm text-charcoal hover:text-bright-blue transition-colors duration-200 rounded-md hover:bg-light-gray font-medium border border-medium-gray ${className.includes('w-full') ? 'bg-white' : ''}`}
+        className={`flex items-center justify-between w-full px-4 py-1.5 text-sm text-charcoal hover:text-bright-blue transition-colors duration-200 rounded-md hover:bg-light-gray font-medium border border-medium-gray ${className.includes('w-full') ? 'bg-white' : ''}`}
         aria-label="Select Language"
       >
         <span className="font-display font-semibold">

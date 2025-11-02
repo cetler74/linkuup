@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { customerAPI } from '../../utils/api';
 import Header from '../../components/common/Header';
+import CustomLanguageSelector from '../../components/common/CustomLanguageSelector';
+import { useTranslation } from 'react-i18next';
 
 interface RewardData {
   id: number;
@@ -29,6 +31,7 @@ interface RewardTransaction {
 const CustomerRewards: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const [rewards, setRewards] = useState<RewardData[]>([]);
   const [transactions, setTransactions] = useState<RewardTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,11 +95,11 @@ const CustomerRewards: React.FC = () => {
 
   const getTierThresholds = (tier: string) => {
     switch (tier) {
-      case 'bronze': return { current: 0, next: 100, nextTier: 'Silver' };
-      case 'silver': return { current: 100, next: 500, nextTier: 'Gold' };
-      case 'gold': return { current: 500, next: 1000, nextTier: 'Platinum' };
+      case 'bronze': return { current: 0, next: 100, nextTier: t('customerRewards.silver') };
+      case 'silver': return { current: 100, next: 500, nextTier: t('customerRewards.gold') };
+      case 'gold': return { current: 500, next: 1000, nextTier: t('customerRewards.platinum') };
       case 'platinum': return { current: 1000, next: null, nextTier: null };
-      default: return { current: 0, next: 100, nextTier: 'Silver' };
+      default: return { current: 0, next: 100, nextTier: t('customerRewards.silver') };
     }
   };
 
@@ -107,17 +110,19 @@ const CustomerRewards: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden bg-gray-900">
-        
-        {/* Header integrated into hero section */}
+      <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden bg-light-gray">
+        {/* Header */}
         <div className="relative z-10">
           <Header />
         </div>
-        
-        <div className="relative z-10 flex items-center justify-center flex-grow">
-          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p className="text-white text-center">Loading your rewards...</p>
+        {/* Floating Language Selector - positioned in safe area */}
+        <div className="fixed top-24 right-6 z-[9999]">
+          <CustomLanguageSelector />
+        </div>
+        <div className="relative z-10 flex items-center justify-center flex-grow p-8">
+          <div className="bg-white rounded-lg shadow-form p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bright-blue mx-auto mb-4"></div>
+            <p className="text-charcoal" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.loading')}</p>
           </div>
         </div>
       </div>
@@ -126,71 +131,75 @@ const CustomerRewards: React.FC = () => {
 
   if (rewards.length === 0) {
     return (
-      <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden bg-gray-900">
-        
+      <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden bg-light-gray">
         {/* Header integrated into hero section */}
         <div className="relative z-10">
           <Header />
         </div>
 
+        {/* Floating Language Selector - positioned in safe area to avoid overlap with cards */}
+        <div className="fixed top-24 right-6 z-[9999]">
+          <CustomLanguageSelector />
+        </div>
+
         <div className="relative z-10 flex-grow p-6 grid grid-cols-12 gap-6 min-h-0">
           {/* Left Sidebar Card */}
-          <div className="col-span-2 backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 pb-6 h-fit flex flex-col">
+          <div className="col-span-2 bg-white border border-medium-gray rounded-lg p-6 pb-6 h-fit flex flex-col shadow-form">
             <div className="space-y-6">
               {/* Logo */}
               <div className="text-center">
-                <h1 className="text-2xl font-bold text-white">Rewards & Loyalty</h1>
-                <p className="text-white/60 text-sm">Track your points and benefits</p>
+                <h1 className="text-2xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('customerRewards.rewardsLoyalty')}</h1>
+                <p className="text-charcoal/70 text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.trackPoints')}</p>
               </div>
 
               {/* User Info */}
-              <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4">
+              <div className="bg-bright-blue/10 border border-bright-blue/20 rounded-lg p-4">
                 <div className="text-center space-y-2">
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto">
-                    <span className="text-white font-semibold text-lg">
+                  <div className="w-12 h-12 bg-bright-blue/20 rounded-full flex items-center justify-center mx-auto">
+                    <span className="text-bright-blue font-semibold text-lg">
                       {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">{user?.name || 'User'}</h3>
-                    <p className="text-white/70 text-sm">{user?.email}</p>
+                    <h3 className="text-charcoal font-semibold" style={{ fontFamily: 'Poppins, sans-serif' }}>{user?.name || 'User'}</h3>
+                    <p className="text-charcoal/70 text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>{user?.email}</p>
                   </div>
                 </div>
               </div>
 
               {/* Navigation */}
               <div>
-                <h4 className="text-white/80 text-sm font-semibold uppercase tracking-wider mb-3">Quick Actions</h4>
+                <h4 className="text-charcoal/80 text-sm font-semibold uppercase tracking-wider mb-3" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.quickActions')}</h4>
                 <nav className="space-y-2">
                   <button
                     onClick={() => navigate('/search')}
-                    className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+                    className="w-full justify-start text-base text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
                   >
                     <Search className="mr-3 h-5 w-5" />
-                    Browse Salons
+                    {t('customerRewards.browseSalons')}
                   </button>
                   <button
                     onClick={() => navigate('/customer/dashboard')}
-                    className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+                    className="w-full justify-start text-base text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
                   >
                     <Calendar className="mr-3 h-5 w-5" />
-                    Dashboard
+                    {t('customerRewards.dashboard')}
                   </button>
                   <button
                     onClick={() => navigate('/customer/bookings')}
-                    className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+                    className="w-full justify-start text-base text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
                   >
                     <Calendar className="mr-3 h-5 w-5" />
-                    My Bookings
+                    {t('customerRewards.myBookings')}
                   </button>
                 </nav>
               </div>
             </div>
 
-            <div className="flex-shrink-0 space-y-4 pt-4 border-t border-white/10">
+            <div className="flex-shrink-0 space-y-4 pt-4 border-t border-medium-gray">
               <button
                 onClick={handleLogout}
-                className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+                className="w-full justify-start text-base text-charcoal/80 hover:bg-coral-red/10 hover:text-coral-red transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
               >
                 <LogOut className="mr-3 h-5 w-5" />
                 Logout
@@ -199,82 +208,38 @@ const CustomerRewards: React.FC = () => {
           </div>
 
           {/* Main Content Area */}
-          <div className="col-span-8 space-y-6 overflow-y-auto">
+          <div className="col-span-10 space-y-6 overflow-y-auto">
             {/* Header Card */}
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6">
+            <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-3xl font-bold text-white">Rewards & Loyalty 🎁</h2>
-                  <p className="text-white/60">Track your points and benefits</p>
+                  <h2 className="text-3xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('customerRewards.rewardsLoyalty')} 🎁</h2>
+                  <p className="text-charcoal/70" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.trackPoints')}</p>
                 </div>
                 <button
                   onClick={() => navigate('/customer/dashboard')}
-                  className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 border border-white/30 hover:border-white/40 text-white rounded-xl transition-all duration-200"
+                  className="btn-outline flex items-center"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
+                  {t('customerRewards.backToDashboard')}
                 </button>
               </div>
             </div>
 
             {/* Empty State */}
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-12">
+            <div className="bg-white border border-medium-gray rounded-lg p-12 shadow-form">
               <div className="text-center">
-                <Gift className="h-16 w-16 text-white/40 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-white mb-2">No Rewards Yet</h2>
-                <p className="text-white/80 mb-6">
-                  You haven't earned any rewards points yet. Complete bookings to start earning!
+                <Gift className="h-16 w-16 text-charcoal/40 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-charcoal mb-2 font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('customerRewards.noRewardsYet')}</h2>
+                <p className="text-charcoal/70 mb-6" style={{ fontFamily: 'Open Sans, sans-serif' }}>
+                  {t('customerRewards.noRewardsDescription')}
                 </p>
                 <button
                   onClick={() => navigate('/search')}
-                  className="px-6 py-3 bg-white/20 hover:bg-white/30 border border-white/30 hover:border-white/40 text-white rounded-xl transition-all duration-700 ease-out hover:scale-[1.02]"
+                  className="btn-primary"
                 >
-                  Browse Services
+                  {t('customerRewards.browseServices')}
                 </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Sidebar Card */}
-          <div className="col-span-2 backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 pb-6 h-fit">
-            <div className="space-y-6">
-              {/* Quick Actions */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Quick Actions ⚡</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => navigate('/search')}
-                    className="w-full justify-start text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
-                  >
-                    <Search className="mr-3 h-4 w-4" />
-                    Browse Salons
-                  </button>
-                  <button
-                    onClick={() => navigate('/customer/dashboard')}
-                    className="w-full justify-start text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
-                  >
-                    <Calendar className="mr-3 h-4 w-4" />
-                    Dashboard
-                  </button>
-                  <button
-                    onClick={() => navigate('/customer/bookings')}
-                    className="w-full justify-start text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
-                  >
-                    <Calendar className="mr-3 h-4 w-4" />
-                    My Bookings
-                  </button>
-                </div>
-              </div>
-
-              {/* Stats Summary */}
-              <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4">
-                <div className="text-center space-y-3">
-                  <div className="text-2xl">🎁</div>
-                  <div>
-                    <h4 className="text-white font-semibold">Start Earning</h4>
-                    <p className="text-white/70 text-sm">Complete bookings to earn points</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -287,68 +252,63 @@ const CustomerRewards: React.FC = () => {
   const thresholds = getTierThresholds(currentReward.tier);
 
   return (
-    <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <img 
-          src="/rewards_dashboard.png" 
-          alt="Rewards Dashboard Background" 
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/30"></div>
-      </div>
-      
+    <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden bg-light-gray">
       {/* Header integrated into hero section */}
       <div className="relative z-10">
         <Header />
       </div>
 
+      {/* Floating Language Selector - positioned in safe area to avoid overlap with cards */}
+      <div className="fixed top-24 right-6 z-[9999]">
+        <CustomLanguageSelector />
+      </div>
+
       <div className="relative z-10 flex-grow p-6 grid grid-cols-12 gap-6 min-h-0">
         {/* Left Sidebar Card */}
-        <div className="col-span-2 backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 pb-6 h-fit flex flex-col">
+        <div className="col-span-2 bg-white border border-medium-gray rounded-lg p-6 pb-6 h-fit flex flex-col shadow-form">
           <div className="space-y-6">
             {/* Logo */}
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-white">Rewards & Loyalty</h1>
-              <p className="text-white/60 text-sm">Track your points and benefits</p>
+              <h1 className="text-2xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('customerRewards.rewardsLoyalty')}</h1>
+              <p className="text-charcoal/70 text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.trackPoints')}</p>
             </div>
 
             {/* User Info */}
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4">
+            <div className="bg-bright-blue/10 border border-bright-blue/20 rounded-lg p-4">
               <div className="text-center space-y-2">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto">
-                  <span className="text-white font-semibold text-lg">
+                <div className="w-12 h-12 bg-bright-blue/20 rounded-full flex items-center justify-center mx-auto">
+                  <span className="text-bright-blue font-semibold text-lg">
                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </span>
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">{user?.name || 'User'}</h3>
-                  <p className="text-white/70 text-sm">{user?.email}</p>
+                  <h3 className="text-charcoal font-semibold" style={{ fontFamily: 'Poppins, sans-serif' }}>{user?.name || 'User'}</h3>
+                  <p className="text-charcoal/70 text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>{user?.email}</p>
                 </div>
               </div>
             </div>
 
             {/* Navigation */}
             <div>
-              <h4 className="text-white/80 text-sm font-semibold uppercase tracking-wider mb-3">Quick Actions</h4>
+              <h4 className="text-charcoal/80 text-sm font-semibold uppercase tracking-wider mb-3" style={{ fontFamily: 'Open Sans, sans-serif' }}>Quick Actions</h4>
               <nav className="space-y-2">
                 <button
                   onClick={() => navigate('/search')}
-                  className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+                  className="w-full justify-start text-base text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
                 >
                   <Search className="mr-3 h-5 w-5" />
                   Browse Salons
                 </button>
                 <button
                   onClick={() => navigate('/customer/dashboard')}
-                  className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+                  className="w-full justify-start text-base text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
                 >
                   <Calendar className="mr-3 h-5 w-5" />
                   Dashboard
                 </button>
                 <button
                   onClick={() => navigate('/customer/bookings')}
-                  className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+                  className="w-full justify-start text-base text-charcoal/80 hover:bg-bright-blue/10 hover:text-bright-blue transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
                 >
                   <Calendar className="mr-3 h-5 w-5" />
                   My Bookings
@@ -357,10 +317,10 @@ const CustomerRewards: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-shrink-0 space-y-4 pt-4 border-t border-white/10">
+          <div className="flex-shrink-0 space-y-4 pt-4 border-t border-medium-gray">
             <button
               onClick={handleLogout}
-              className="w-full justify-start text-base text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
+              className="w-full justify-start text-base text-charcoal/80 hover:bg-coral-red/10 hover:text-coral-red transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
             >
               <LogOut className="mr-3 h-5 w-5" />
               Logout
@@ -369,29 +329,29 @@ const CustomerRewards: React.FC = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="col-span-8 space-y-6 overflow-y-auto">
+        <div className="col-span-10 space-y-6 overflow-y-auto">
           {/* Header Card */}
-          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6">
+          <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-bold text-white">Rewards & Loyalty 🎁</h2>
-                <p className="text-white/60">Track your points and benefits</p>
+                <h2 className="text-3xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('customerRewards.rewardsLoyalty')} 🎁</h2>
+                <p className="text-charcoal/70" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.trackPoints')}</p>
               </div>
               <button
                 onClick={() => navigate('/customer/dashboard')}
-                className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 border border-white/30 hover:border-white/40 text-white rounded-xl transition-all duration-200"
+                className="btn-outline flex items-center"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                {t('customerRewards.backToDashboard')}
               </button>
             </div>
           </div>
 
           {/* Place Selector */}
           {rewards.length > 1 && (
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6">
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                Select Business
+            <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form">
+              <label className="block text-sm font-medium text-charcoal mb-2" style={{ fontFamily: 'Open Sans, sans-serif' }}>
+                {t('customerRewards.selectBusiness')}
               </label>
               <select
                 value={selectedPlace || ''}
@@ -400,10 +360,10 @@ const CustomerRewards: React.FC = () => {
                   setSelectedPlace(placeId);
                   fetchTransactions(placeId);
                 }}
-                className="w-full max-w-md px-3 py-2 bg-white/20 border border-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-white placeholder-white/60"
+                className="input-field"
               >
                 {rewards.map((reward) => (
-                  <option key={reward.place_id} value={reward.place_id} className="bg-gray-800 text-white">
+                  <option key={reward.place_id} value={reward.place_id}>
                     Business {reward.place_id}
                   </option>
                 ))}
@@ -413,62 +373,66 @@ const CustomerRewards: React.FC = () => {
 
           {/* Rewards Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 text-center transition-all duration-700 ease-out hover:scale-[1.02] hover:bg-white/15">
+            <div className="bg-white border border-medium-gray rounded-lg p-6 text-center shadow-form transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated">
               <div className="flex items-center justify-center mb-2">
-                <Star className="h-6 w-6 text-yellow-400 mr-2" />
-                <p className="text-sm text-white/60">Current Points</p>
+                <Star className="h-6 w-6 text-soft-yellow mr-2" />
+                <p className="text-sm text-charcoal/70" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.currentPoints')}</p>
               </div>
-              <p className="text-4xl font-bold text-white">{currentReward.points_balance}</p>
+              <p className="text-4xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{currentReward.points_balance}</p>
             </div>
 
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 text-center transition-all duration-700 ease-out hover:scale-[1.02] hover:bg-white/15">
+            <div className="bg-white border border-medium-gray rounded-lg p-6 text-center shadow-form transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated">
               <div className="flex items-center justify-center mb-2">
-                <Award className="h-6 w-6 text-purple-400 mr-2" />
-                <p className="text-sm text-white/60">Current Tier</p>
+                <Award className="h-6 w-6 text-lime-green mr-2" />
+                <p className="text-sm text-charcoal/70" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.currentTier')}</p>
               </div>
               <span className={`inline-flex px-3 py-1 text-lg font-bold rounded-full border ${getTierColor(currentReward.tier)}`}>
                 {currentReward.tier.charAt(0).toUpperCase() + currentReward.tier.slice(1)}
               </span>
             </div>
 
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 text-center transition-all duration-700 ease-out hover:scale-[1.02] hover:bg-white/15">
+            <div className="bg-white border border-medium-gray rounded-lg p-6 text-center shadow-form transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated">
               <div className="flex items-center justify-center mb-2">
-                <TrendingUp className="h-6 w-6 text-green-400 mr-2" />
-                <p className="text-sm text-white/60">Total Earned</p>
+                <TrendingUp className="h-6 w-6 text-bright-blue mr-2" />
+                <p className="text-sm text-charcoal/70" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.totalEarned')}</p>
               </div>
-              <p className="text-4xl font-bold text-white">{currentReward.total_points_earned}</p>
+              <p className="text-4xl font-bold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{currentReward.total_points_earned}</p>
             </div>
           </div>
 
           {/* Tier Progress */}
           {thresholds.next && (
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Progress to {thresholds.nextTier}</h3>
-              <div className="w-full bg-white/20 rounded-full h-3 mb-2">
+            <div className="bg-white border border-medium-gray rounded-lg p-6 shadow-form">
+              <h3 className="text-lg font-semibold text-charcoal mb-4 font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('customerRewards.progressTo', { tier: thresholds.nextTier })}</h3>
+              <div className="w-full bg-light-gray rounded-full h-3 mb-2">
                 <div 
-                  className="bg-gradient-to-r from-blue-400 to-purple-500 h-3 rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-bright-blue to-lime-green h-3 rounded-full transition-all duration-300"
                   style={{ 
                     width: `${Math.min(100, ((currentReward.total_points_earned - thresholds.current) / (thresholds.next - thresholds.current)) * 100)}%` 
                   }}
                 ></div>
               </div>
-              <p className="text-sm text-white/60">
-                {currentReward.total_points_earned - thresholds.current} / {thresholds.next - thresholds.current} points to {thresholds.nextTier}
+              <p className="text-sm text-charcoal/70" style={{ fontFamily: 'Open Sans, sans-serif' }}>
+                {t('customerRewards.pointsToTier', { 
+                  current: currentReward.total_points_earned - thresholds.current,
+                  next: thresholds.next - thresholds.current,
+                  tier: thresholds.nextTier
+                })}
               </p>
             </div>
           )}
 
           {/* Transaction History */}
-          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl">
-            <div className="px-6 py-4 border-b border-white/20">
-              <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
+          <div className="bg-white border border-medium-gray rounded-lg shadow-form">
+            <div className="px-6 py-4 border-b border-medium-gray">
+              <h3 className="text-lg font-semibold text-charcoal font-display" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('customerRewards.recentActivity')}</h3>
             </div>
-            <div className="divide-y divide-white/20">
+            <div className="divide-y divide-medium-gray">
               {transactions.length === 0 ? (
-                <div className="p-6 text-center text-white/60">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 text-white/40" />
-                  <p>No transactions yet</p>
-                  <p className="text-sm">Complete bookings to start earning points!</p>
+                <div className="p-6 text-center text-charcoal/70">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-charcoal/40" />
+                  <p style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.noTransactions')}</p>
+                  <p className="text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>{t('customerRewards.completeBookingsPoints')}</p>
                 </div>
               ) : (
                 transactions.map((transaction) => (
@@ -477,8 +441,8 @@ const CustomerRewards: React.FC = () => {
                       <div className="flex items-center">
                         <div className={`p-2 rounded-full ${
                           transaction.transaction_type === 'earned' 
-                            ? 'bg-green-500/20 text-green-400 border border-green-400/30' 
-                            : 'bg-red-500/20 text-red-400 border border-red-400/30'
+                            ? 'bg-lime-green/20 text-lime-green border border-lime-green/30' 
+                            : 'bg-coral-red/20 text-coral-red border border-coral-red/30'
                         }`}>
                           {transaction.transaction_type === 'earned' ? (
                             <Star className="h-5 w-5" />
@@ -487,86 +451,28 @@ const CustomerRewards: React.FC = () => {
                           )}
                         </div>
                         <div className="ml-4">
-                          <p className="text-sm font-medium text-white">
+                          <p className="text-sm font-medium text-charcoal" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                             {transaction.description}
                           </p>
-                          <p className="text-sm text-white/60">
+                          <p className="text-sm text-charcoal/70" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                             {new Date(transaction.created_at).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className={`text-sm font-medium ${
-                          transaction.points_change > 0 ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {transaction.points_change > 0 ? '+' : ''}{transaction.points_change} points
+                          transaction.points_change > 0 ? 'text-lime-green' : 'text-coral-red'
+                        }`} style={{ fontFamily: 'Open Sans, sans-serif' }}>
+                            {transaction.points_change > 0 ? '+' : ''}{transaction.points_change} {t('customerRewards.points')}
                         </p>
-                        <p className="text-sm text-white/60">
-                          Balance: {transaction.points_balance_after}
+                        <p className="text-sm text-charcoal/70" style={{ fontFamily: 'Open Sans, sans-serif' }}>
+                          {t('customerRewards.balance')}: {transaction.points_balance_after}
                         </p>
                       </div>
                     </div>
                   </div>
                 ))
               )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Sidebar Card */}
-        <div className="col-span-2 backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 pb-6 h-fit">
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Quick Actions ⚡</h3>
-              <div className="space-y-2">
-                <button
-                  onClick={() => navigate('/search')}
-                  className="w-full justify-start text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
-                >
-                  <Search className="mr-3 h-4 w-4" />
-                  Browse Salons
-                </button>
-                <button
-                  onClick={() => navigate('/customer/dashboard')}
-                  className="w-full justify-start text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
-                >
-                  <Calendar className="mr-3 h-4 w-4" />
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => navigate('/customer/bookings')}
-                  className="w-full justify-start text-white/80 hover:bg-white/10 hover:text-white transition-all duration-700 ease-out hover:scale-[1.02] h-11 flex items-center px-3 rounded-lg"
-                >
-                  <Calendar className="mr-3 h-4 w-4" />
-                  My Bookings
-                </button>
-              </div>
-            </div>
-
-            {/* Stats Summary */}
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4">
-              <div className="text-center space-y-3">
-                <div className="text-2xl">🎁</div>
-                <div>
-                  <h4 className="text-white font-semibold">Your Rewards</h4>
-                  <p className="text-white/70 text-sm">Points Summary</p>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between text-white/80">
-                    <span>Current:</span>
-                    <span className="font-semibold">{stats.totalPoints}</span>
-                  </div>
-                  <div className="flex justify-between text-white/80">
-                    <span>Earned:</span>
-                    <span className="font-semibold">{stats.totalEarned}</span>
-                  </div>
-                  <div className="flex justify-between text-white/80">
-                    <span>Redeemed:</span>
-                    <span className="font-semibold">{stats.totalRedeemed}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

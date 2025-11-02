@@ -1,263 +1,165 @@
-# BioSearch2 Digital Ocean Deployment - Quick Start Guide
+# LinkUup Digital Ocean Deployment - Quick Start
 
-## 🚀 Quick Deployment (5 Minutes)
+## 🚀 Deploy in 5 Minutes
 
-### Prerequisites
-- Digital Ocean account
-- Domain name (optional)
-- SSH key configured
+### Prerequisites Check
+- [x] DigitalOcean droplet at `64.226.117.67` is running
+- [x] SSH access configured (with SSH key)
+- [x] Code pushed to GitHub: `git@github.com:cetler74/linkuup.git`
 
-### Step 1: Create Digital Ocean Droplet
-1. **Create Droplet**:
-   - OS: Ubuntu 22.04 LTS
-   - Size: 2GB RAM, 1 vCPU, 50GB SSD (minimum)
-   - Add your SSH key
-   - Enable backups
-   - Choose region closest to your users
+### Step 1: Initial Server Access
 
-2. **Note the IP address** of your droplet
+If this is a fresh droplet, you may need to connect as root first:
 
-### Step 2: Deploy Application
 ```bash
-# Set your droplet IP
-export DROPLET_IP="YOUR_DROPLET_IP"
+# Connect as root
+ssh root@64.226.117.67
 
-# Run the deployment script
+# Create linkuup user
+adduser linkuup
+usermod -aG sudo linkuup
+
+# Copy your SSH key
+mkdir -p /home/linkuup/.ssh
+cp ~/.ssh/authorized_keys /home/linkuup/.ssh/
+chown -R linkuup:linkuup /home/linkuup/.ssh
+chmod 700 /home/linkuup/.ssh
+chmod 600 /home/linkuup/.ssh/authorized_keys
+
+# Exit and test as linkuup user
+exit
+ssh linkuup@64.226.117.67  # Should work now
+```
+
+### Step 2: Run Deployment Script
+
+From your local machine:
+
+```bash
+cd /Volumes/OWC\ Volume/Projects2025/Linkuup
+
+# Make script executable (if not already)
+chmod +x scripts/deploy_to_digital_ocean.sh
+
+# Run deployment
 ./scripts/deploy_to_digital_ocean.sh
 ```
 
-### Step 3: Set Up SSL (Optional but Recommended)
-```bash
-# Set your domain and email
-export DOMAIN="your-domain.com"
-export EMAIL="your@email.com"
+The script will automatically:
+- ✅ Install all dependencies (Node.js, Python, PostgreSQL, Nginx, PM2)
+- ✅ Set up PostgreSQL database (`linkuup_db`)
+- ✅ Clone code from GitHub
+- ✅ Install Python and Node.js dependencies
+- ✅ Build frontend
+- ✅ Run database migrations
+- ✅ Configure Nginx as reverse proxy
+- ✅ Start application with PM2
+- ✅ Configure firewall
 
-# Run SSL setup
-./scripts/setup_ssl.sh
+### Step 3: Configure Environment Variables
+
+After deployment, SSH to your server and update the environment file:
+
+```bash
+ssh linkuup@64.226.117.67
+cd ~/Linkuup/backend
+nano .env
 ```
 
-### Step 4: Configure Monitoring
-```bash
-# Set up monitoring and backups
-./scripts/monitoring_setup.sh
+**Important values to update:**
+
+```env
+# Generate secure secret key: openssl rand -hex 32
+SECRET_KEY=your_very_secure_random_string_here
+
+# Database password (change from default)
+DATABASE_URL=postgresql+asyncpg://linkuup_user:your_secure_password@localhost:5432/linkuup_db
+
+# Brevo API key for email
+BREVO_API_KEY=xkeysib-your-key-here
+
+# Stripe keys (if using payments)
+STRIPE_SECRET_KEY=sk_live_xxx
+STRIPE_PUBLISHABLE_KEY=pk_live_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
 ```
 
-## ✅ Verification Checklist
+Save and exit (`Ctrl+X`, then `Y`, then `Enter`)
 
-After deployment, verify:
+### Step 4: Restart Application
 
-- [ ] Application accessible at `http://YOUR_DROPLET_IP`
-- [ ] SSL working (if configured) at `https://your-domain.com`
-- [ ] Database connection working
-- [ ] Email notifications working
-- [ ] Monitoring dashboard accessible
-- [ ] Backups running automatically
-
-## 🔧 Post-Deployment Configuration
-
-### 1. Update Environment Variables
-Edit `/home/biosearch/BioSearch2/.env`:
 ```bash
-# Update with your actual values
-MAIL_USERNAME=your_actual_email@gmail.com
-MAIL_PASSWORD=your_actual_gmail_app_password
-SECRET_KEY=your_secure_secret_key
-CORS_ORIGIN=https://your-domain.com
+pm2 restart linkuup-backend
+pm2 logs linkuup-backend  # Check logs
 ```
 
-### 2. Import Your Data
-```bash
-# Connect to your droplet
-ssh biosearch@YOUR_DROPLET_IP
+### Step 5: Verify It Works
 
-# Import data
-cd BioSearch2
-source venv/bin/activate
-python3 scripts/import_data.py
+1. **Check status:**
+   ```bash
+   pm2 status
+   ```
+
+2. **Test API:**
+   ```bash
+   curl http://64.226.117.67/api/v1/health
+   ```
+   Should return: `{"status":"healthy","version":"1.0.0"}`
+
+3. **Visit in browser:**
+   - Frontend: http://64.226.117.67
+   - API Docs: http://64.226.117.67/api/v1/docs
+
+## 🔒 SSL/HTTPS Setup (Recommended)
+
+Once you have a domain pointing to `64.226.117.67`:
+
+```bash
+ssh linkuup@64.226.117.67
+sudo apt update
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
 ```
 
-### 3. Create Admin User
+Certbot will automatically configure HTTPS.
+
+## 📝 Next Steps
+
+1. ✅ Update environment variables in `backend/.env`
+2. ✅ Update frontend `.env.production` if you have a domain
+3. ✅ Set up SSL certificate (if you have a domain)
+4. ✅ Test all application features
+5. ✅ Set up monitoring/backups
+
+## 🆘 Troubleshooting
+
+### Application not starting?
 ```bash
-# Create admin user
-python3 scripts/create_admin.py
+pm2 logs linkuup-backend --lines 50
+pm2 restart linkuup-backend
 ```
 
-## 📊 Monitoring Your Application
-
-### View System Status
+### Database connection issues?
 ```bash
-# Run monitoring dashboard
-./monitoring_dashboard.sh
+sudo -u postgres psql -d linkuup_db -U linkuup_user
 ```
 
-### Check Logs
+### Frontend not loading?
 ```bash
-# Application logs
-pm2 logs biosearch-backend
-
-# System logs
-tail -f /var/log/biosearch/system_monitor.log
-
-# Nginx logs
-tail -f /var/log/nginx/access.log
+ls -la ~/Linkuup/frontend/dist  # Check if build exists
+sudo nginx -t  # Test Nginx config
 ```
 
-### Manual Backup
+### 502 Bad Gateway?
 ```bash
-# Run full backup
-./full_backup.sh
+pm2 status  # Check if backend is running
+curl http://127.0.0.1:5001/api/v1/health  # Test backend directly
 ```
 
-## 🚨 Troubleshooting
+## 📚 Full Documentation
 
-### Application Not Starting
-```bash
-# Check PM2 status
-pm2 status
-
-# Restart application
-pm2 restart biosearch-backend
-
-# Check logs
-pm2 logs biosearch-backend
-```
-
-### Database Issues
-```bash
-# Check PostgreSQL status
-sudo systemctl status postgresql
-
-# Connect to database
-psql -h localhost -U biosearch_user -d biosearch_db
-```
-
-### SSL Issues
-```bash
-# Check certificate status
-sudo certbot certificates
-
-# Renew certificate
-sudo certbot renew
-```
-
-### High Resource Usage
-```bash
-# Check system resources
-htop
-
-# Check disk usage
-df -h
-
-# Check memory usage
-free -h
-```
-
-## 📈 Scaling for Growth
-
-### For 50+ Salons
-1. **Upgrade Droplet**: 4GB RAM, 2 vCPU
-2. **Database Optimization**: Add indexes, connection pooling
-3. **Caching**: Implement Redis
-4. **CDN**: Use Digital Ocean Spaces
-
-### For 100+ Salons
-1. **Load Balancer**: Digital Ocean Load Balancer
-2. **Database Scaling**: Read replicas
-3. **Application Scaling**: Multiple PM2 instances
-4. **Monitoring**: Advanced monitoring tools
-
-## 💰 Cost Estimation
-
-### Monthly Costs (USD)
-- **Droplet (2GB)**: ~$12/month
-- **Backups**: ~$2.40/month
-- **Domain**: ~$1/month
-- **SSL**: Free (Let's Encrypt)
-- **Total**: ~$15.40/month
-
-### For 50 Salons PoC
-- **Concurrent Users**: 10-20
-- **Database Size**: <1GB
-- **Storage**: <10GB
-- **Bandwidth**: <100GB/month
-
-## 🔒 Security Best Practices
-
-### Implemented Security Features
-- ✅ Firewall configured (UFW)
-- ✅ Fail2ban protection
-- ✅ SSL/TLS encryption
-- ✅ Secure database configuration
-- ✅ Regular security updates
-- ✅ Automated backups
-
-### Additional Security Recommendations
-- Regular security audits
-- Monitor access logs
-- Keep system updated
-- Use strong passwords
-- Enable 2FA where possible
-
-## 📞 Support
-
-### Common Commands
-```bash
-# Restart services
-sudo systemctl restart nginx
-sudo systemctl restart postgresql
-pm2 restart all
-
-# Check service status
-sudo systemctl status nginx
-sudo systemctl status postgresql
-pm2 status
-
-# View logs
-sudo journalctl -u nginx
-sudo journalctl -u postgresql
-pm2 logs
-```
-
-### Emergency Procedures
-1. **Application Down**: `pm2 restart biosearch-backend`
-2. **Database Issues**: Check PostgreSQL status and logs
-3. **High Load**: Monitor resources and restart services
-4. **Security Breach**: Check fail2ban logs and update passwords
-
-## 📋 Maintenance Schedule
-
-### Daily
-- Monitor system resources
-- Check application health
-- Review error logs
-
-### Weekly
-- Review backup status
-- Check security logs
-- Update system packages
-
-### Monthly
-- Security audit
-- Performance review
-- Backup restoration test
-
-## 🎯 Success Metrics
-
-### Key Performance Indicators
-- **Uptime**: >99.5%
-- **Response Time**: <2 seconds
-- **Error Rate**: <1%
-- **Backup Success**: 100%
-
-### Monitoring Alerts
-- CPU usage >80%
-- Memory usage >80%
-- Disk usage >80%
-- Application down
-- Database connection issues
+See `DIGITAL_OCEAN_DEPLOYMENT.md` for detailed documentation.
 
 ---
 
-**Your BioSearch2 application is now ready for production use with up to 50 salons!** 🎉
-
-For questions or issues, refer to the detailed documentation in `DIGITAL_OCEAN_DEPLOYMENT.md`.
+**Your LinkUup app should now be live at http://64.226.117.67** 🎉

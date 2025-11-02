@@ -119,13 +119,27 @@
     line-height: 1.6;
   }
   
-  /* Override body background for search page to show shader effect */
+  /* Override body background for search page - white background */
   .search-page {
     background: #ffffff !important;
   }
   
-  .search-page body {
+  .search-page,
+  .search-page body,
+  .search-page html {
     background: #ffffff !important;
+  }
+
+  /* Enhanced content elevation for interactive background */
+  .search-page-content {
+    backdrop-filter: blur(2px);
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  .filter-sidebar {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -160,8 +174,8 @@
 @layer components {
   /* Modern booking platform button styles */
   .btn-primary {
-    @apply bg-bright-blue hover:bg-blue-600 active:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
-    min-height: 44px;
+    @apply bg-bright-blue hover:bg-blue-600 active:bg-blue-700 text-white font-semibold py-1.5 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
+    min-height: 22px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -170,8 +184,8 @@
   }
   
   .btn-secondary {
-    @apply bg-coral-red hover:bg-red-500 active:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap;
-    min-height: 44px;
+    @apply bg-coral-red hover:bg-red-500 active:bg-red-600 text-white font-semibold py-1.5 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap;
+    min-height: 22px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -180,7 +194,7 @@
   }
   
   .btn-outline {
-    @apply bg-transparent hover:bg-bright-blue text-bright-blue hover:text-white font-semibold py-3 px-6 rounded-lg border-2 border-bright-blue transition-all duration-200;
+    @apply bg-transparent hover:bg-bright-blue text-bright-blue hover:text-white font-semibold py-1.5 px-6 rounded-lg border-2 border-bright-blue transition-all duration-200;
     font-family: 'Open Sans', sans-serif;
     font-weight: 600;
   }
@@ -271,8 +285,10 @@
   }
   
   .salon-card:hover {
-    @apply shadow-elevated scale-105 border-bright-blue -translate-y-2;
-    box-shadow: 0 8px 24px rgba(30, 144, 255, 0.15), 0 0 0 1px rgba(30, 144, 255, 0.2);
+    @apply shadow-elevated border-bright-blue;
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 40px rgba(30, 144, 255, 0.15), 0 0 0 1px rgba(30, 144, 255, 0.2);
+    backdrop-filter: blur(8px);
   }
   
   .salon-card > * {

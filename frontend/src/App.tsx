@@ -11,6 +11,7 @@ import ShaderBackgroundCSS from './components/common/ShaderBackgroundCSS';
 import WebGLShaderBackground from './components/common/WebGLShaderBackground';
 import OriginalShaderBackground from './components/common/OriginalShaderBackground';
 import SimpleShaderBackground from './components/common/SimpleShaderBackground';
+import InteractiveBackground from './components/common/InteractiveBackground';
 import HomePage from './pages/HomePage';
 import SearchResultsWithImages from './pages/SearchResultsWithImages';
 import SalonDetailsWithImages from './pages/SalonDetailsWithImages';
@@ -175,6 +176,15 @@ const CustomerProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ child
 };
 
 function App() {
+  // ============================================
+  // BACKGROUND TOGGLE
+  // ============================================
+  // Toggle between interactive and simple background
+  // Set to true to use InteractiveBackground (Option 4)
+  // Set to false to use SimpleShaderBackground (original)
+  // ============================================
+  const USE_INTERACTIVE_BACKGROUND = true;
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -182,8 +192,12 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/search" element={
-                <div className="min-h-screen flex flex-col relative bg-transparent search-page">
-                  <SimpleShaderBackground opacity={0.2} />
+                <div className="min-h-screen flex flex-col relative bg-white search-page">
+                  {USE_INTERACTIVE_BACKGROUND ? (
+                    <InteractiveBackground opacity={0.4} />
+                  ) : (
+                    <SimpleShaderBackground opacity={0.2} />
+                  )}
                   <div className="relative z-10">
                     <Header />
                   </div>
@@ -225,9 +239,6 @@ function App() {
               } />
               <Route path="/pricing" element={
                 <div className="min-h-screen flex flex-col">
-                  <div className="relative z-10">
-                    <Header />
-                  </div>
                   <main className="flex-1">
                     <PricingPage />
                   </main>

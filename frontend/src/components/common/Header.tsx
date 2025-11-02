@@ -127,7 +127,7 @@ const Header: React.FC = () => {
           ) : (
             <Link
               to="/login"
-              className="bg-bright-blue text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors duration-200 font-semibold"
+              className="bg-bright-blue text-white px-6 py-1.5 rounded-lg hover:bg-blue-600 transition-colors duration-200 font-semibold"
             >
               LOGIN
             </Link>
@@ -235,7 +235,7 @@ const Header: React.FC = () => {
               <div className="pt-2 border-t border-medium-gray mt-2">
                 <Link
                   to="/login"
-                  className="block bg-bright-blue text-white text-center w-full min-h-[48px] py-3 px-4 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+                  className="block bg-bright-blue text-white text-center w-full min-h-[24px] py-1.5 px-4 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   LOGIN

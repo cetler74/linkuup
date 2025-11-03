@@ -111,9 +111,14 @@ async def create_subscription_and_get_client_secret(
             user.trial_end = now + timedelta(days=14)
             user.trial_status = "active"
             await db.commit()
-        except Exception:
-            # Do not block on local persistence issues
-            pass
+            
+            # Sync to UserPlaceSubscription records for immediate feature access
+            await sync_subscription_to_places(db, user.id, plan_code, sub, "trialing")
+        except Exception as e:
+            # Do not block on local persistence issues, but log for debugging
+            print(f"⚠️ Error persisting subscription: {e}")
+            import traceback
+            traceback.print_exc()
         return {"clientSecret": None, "subscriptionId": sub["id"], "trialStarted": True}
 
     # Collect payment now using Payment Element
@@ -129,6 +134,24 @@ async def create_subscription_and_get_client_secret(
         latest_invoice.get("payment_intent") if isinstance(latest_invoice, dict) else None
     )
     client_secret = payment_intent.get("client_secret") if isinstance(payment_intent, dict) else None
+    
+    # Persist local subscription record
+    try:
+        result = await db.execute(select(BillingSubscription).where(BillingSubscription.stripe_subscription_id == sub["id"]))
+        existing = result.scalar_one_or_none()
+        if not existing:
+            rec = BillingSubscription(
+                user_id=user.id,
+                stripe_subscription_id=sub["id"],
+                plan_code=plan_code,
+                status=sub.get("status", "incomplete"),
+                active=False,  # Will be active after payment
+            )
+            db.add(rec)
+            await db.commit()
+    except Exception as e:
+        print(f"⚠️ Error persisting subscription: {e}")
+    
     if not client_secret:
         # Fallback: treat as trial started if Stripe didn't create a PI
         return {"clientSecret": None, "subscriptionId": sub["id"], "trialStarted": True}
@@ -185,4 +208,101 @@ def change_subscription_price(stripe_subscription_id: str, new_price_id: str) ->
         expand=["latest_invoice.payment_intent"],
     )
     return updated
+
+
+async def sync_subscription_to_places(
+    db: AsyncSession,
+    user_id: int,
+    plan_code: str,
+    stripe_subscription: dict,
+    status: str,
+) -> None:
+    """Sync Stripe subscription to UserPlaceSubscription records for all user places."""
+    from models.subscription import Plan, UserPlaceSubscription, SubscriptionStatusEnum
+    from models.place_existing import Place
+    from datetime import datetime, timezone, timedelta
+    
+    try:
+        # Get the plan
+        plan_res = await db.execute(select(Plan).where(Plan.code == plan_code, Plan.is_active == True))
+        plan = plan_res.scalar_one_or_none()
+        if not plan:
+            print(f"⚠️ Plan not found for code: {plan_code}")
+            return
+        
+        # Get all active places for this user
+        places_res = await db.execute(
+            select(Place).where(Place.owner_id == user_id, Place.is_active == True)
+        )
+        places = places_res.scalars().all()
+        
+        if not places:
+            print(f"⚠️ No places found for user {user_id}")
+            return
+        
+        # Determine subscription status
+        if status in ("trialing", "active"):
+            sub_status = SubscriptionStatusEnum.TRIALING if status == "trialing" else SubscriptionStatusEnum.ACTIVE
+        else:
+            return
+        
+        # Extract timestamps from Stripe subscription
+        now = datetime.now(timezone.utc)
+        current_period_start = stripe_subscription.get("current_period_start")
+        current_period_end = stripe_subscription.get("current_period_end")
+        trial_start = stripe_subscription.get("trial_start")
+        trial_end = stripe_subscription.get("trial_end")
+        
+        period_start = datetime.fromtimestamp(current_period_start, tz=timezone.utc) if current_period_start else now
+        period_end = datetime.fromtimestamp(current_period_end, tz=timezone.utc) if current_period_end else (now + timedelta(days=30))
+        
+        trial_start_dt = datetime.fromtimestamp(trial_start, tz=timezone.utc) if trial_start else now
+        trial_end_dt = datetime.fromtimestamp(trial_end, tz=timezone.utc) if trial_end else (now + timedelta(days=plan.trial_days))
+        
+        # Create/update UserPlaceSubscription for each place
+        for place in places:
+            # Check if subscription already exists
+            sub_res = await db.execute(
+                select(UserPlaceSubscription).where(
+                    UserPlaceSubscription.user_id == user_id,
+                    UserPlaceSubscription.place_id == place.id,
+                )
+            )
+            place_sub = sub_res.scalar_one_or_none()
+            
+            if place_sub:
+                # Update existing subscription
+                place_sub.plan_id = plan.id
+                place_sub.status = sub_status
+                place_sub.current_period_start = period_start
+                place_sub.current_period_end = period_end
+                place_sub.trial_start_at = trial_start_dt
+                place_sub.trial_end_at = trial_end_dt
+            else:
+                # Create new subscription
+                place_sub = UserPlaceSubscription(
+                    user_id=user_id,
+                    place_id=place.id,
+                    plan_id=plan.id,
+                    status=sub_status,
+                    current_period_start=period_start,
+                    current_period_end=period_end,
+                    trial_start_at=trial_start_dt,
+                    trial_end_at=trial_end_dt,
+                )
+                db.add(place_sub)
+        
+        await db.commit()
+        
+        # Sync user feature permissions
+        try:
+            from api.v1.subscriptions import _sync_user_feature_permissions_for_plan
+            await _sync_user_feature_permissions_for_plan(db, user_id, plan.id)
+            print(f"✅ Synced subscription to place subscriptions and permissions for user {user_id}")
+        except Exception as e:
+            print(f"⚠️ Error syncing feature permissions: {e}")
+    except Exception as e:
+        print(f"⚠️ Error syncing subscription to places: {e}")
+        import traceback
+        traceback.print_exc()
 

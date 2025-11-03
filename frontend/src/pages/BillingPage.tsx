@@ -103,9 +103,15 @@ const BillingPage: React.FC = () => {
   const handleChangePlan = async (target: 'basic' | 'pro') => {
     try {
       setChanging(true);
+      setError(null);
       await billingAPI.changePlan(target);
-      setCurrentPlan(target);
-      setNotice(`Plan changed to ${target === 'basic' ? 'Basic' : 'Pro'}.`);
+      // Refresh subscription info
+      const sub = await billingAPI.getSubscription();
+      setCurrentPlan((sub.planCode as any) || null);
+      setSubStatus(sub.status || null);
+      setNotice(`Plan changed to ${target === 'basic' ? 'Basic' : 'Pro'}. Changes will take effect on your next billing cycle.`);
+      // Clear notice after 5 seconds
+      setTimeout(() => setNotice(null), 5000);
     } catch (e: any) {
       setError(e?.message || 'Failed to change plan');
     } finally {
@@ -135,33 +141,63 @@ const BillingPage: React.FC = () => {
     return () => { cancelled = true; };
   }, [clientSecret]);
 
+  const hasActiveSubscription = !!currentPlan;
+  const isLoadingSubscription = currentPlan === null && subStatus === null;
+
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-2">Choose your plan</h1>
+      <h1 className="text-2xl font-semibold mb-2">{hasActiveSubscription ? 'Your Subscription' : 'Choose your plan'}</h1>
       {notice && (
         <div className="mb-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">{notice}</div>
       )}
 
-      <div className="mb-4">
-        {currentPlan ? (
-          <div className="text-sm text-gray-700">Current plan: <span className="font-semibold capitalize">{currentPlan}</span>{subStatus ? ` · ${subStatus}` : ''}</div>
-        ) : (
+      {hasActiveSubscription && (
+        <div className="mb-6 card p-4 bg-indigo-50 border border-indigo-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Current Plan</div>
+              <div className="text-xl font-semibold capitalize text-indigo-900">{currentPlan}</div>
+              {subStatus && (
+                <div className="text-sm text-gray-600 mt-1">Status: <span className="capitalize">{subStatus}</span></div>
+              )}
+            </div>
+            <div className="text-right">
+              {currentPlan === 'basic' && <div className="text-2xl font-extrabold text-indigo-900">€5,95<span className="text-sm font-normal text-gray-600">/month</span></div>}
+              {currentPlan === 'pro' && <div className="text-2xl font-extrabold text-indigo-900">€10,95<span className="text-sm font-normal text-gray-600">/month</span></div>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!hasActiveSubscription && !isLoadingSubscription && (
+        <div className="mb-4">
           <div className="text-sm text-gray-600">No active plan yet.</div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
-          onClick={() => setPlanCode('basic')}
-          className={`card text-left ${planCode === 'basic' ? 'ring-2 ring-indigo-600' : ''}`}
+        <div
+          className={`card text-left cursor-pointer transition-all ${
+            planCode === 'basic' ? 'ring-2 ring-indigo-600' : ''
+          } ${
+            hasActiveSubscription && currentPlan === 'basic' ? 'border-2 border-indigo-600 bg-indigo-50' : ''
+          }`}
+          onClick={() => !hasActiveSubscription && setPlanCode('basic')}
         >
           <div className="p-5">
-            <div className="text-xl font-bold">Basic</div>
+            <div className="flex items-center justify-between">
+              <div className="text-xl font-bold">Basic</div>
+              {hasActiveSubscription && currentPlan === 'basic' && (
+                <span className="bg-indigo-600 text-white text-xs font-semibold px-2 py-1 rounded-full">Current Plan</span>
+              )}
+            </div>
             <div className="mt-2">
               <div className="text-3xl font-extrabold">€5,95</div>
               <div className="text-gray-600">per month</div>
             </div>
-            <div className="mt-3 inline-block bg-green-50 text-green-700 text-xs font-medium px-2 py-1 rounded">10 day trial</div>
+            {!hasActiveSubscription && (
+              <div className="mt-3 inline-block bg-green-50 text-green-700 text-xs font-medium px-2 py-1 rounded">10 day trial</div>
+            )}
             <ul className="mt-4 space-y-2 text-sm text-gray-700">
               <li>• Single calendar column</li>
               <li>• Free email messages</li>
@@ -169,16 +205,26 @@ const BillingPage: React.FC = () => {
               <li>• Email and chat support</li>
             </ul>
           </div>
-        </button>
+        </div>
 
-        <button
-          onClick={() => setPlanCode('pro')}
-          className={`card text-left border-2 ${planCode === 'pro' ? 'ring-2 ring-indigo-600 border-indigo-600' : 'border-transparent'}`}
+        <div
+          className={`card text-left border-2 cursor-pointer transition-all ${
+            planCode === 'pro' ? 'ring-2 ring-indigo-600 border-indigo-600' : 'border-transparent'
+          } ${
+            hasActiveSubscription && currentPlan === 'pro' ? 'border-indigo-600 bg-indigo-50' : ''
+          }`}
+          onClick={() => !hasActiveSubscription && setPlanCode('pro')}
         >
           <div className="p-5">
             <div className="flex items-center justify-between">
               <div className="text-xl font-bold">Pro</div>
-              <span className="bg-indigo-600 text-white text-xs font-semibold px-2 py-1 rounded-full">Most Popular</span>
+              <div className="flex items-center gap-2">
+                {hasActiveSubscription && currentPlan === 'pro' ? (
+                  <span className="bg-indigo-600 text-white text-xs font-semibold px-2 py-1 rounded-full">Current Plan</span>
+                ) : (
+                  <span className="bg-indigo-600 text-white text-xs font-semibold px-2 py-1 rounded-full">Most Popular</span>
+                )}
+              </div>
             </div>
             <div className="mt-2">
               <div className="text-3xl font-extrabold">€10,95</div>
@@ -194,7 +240,7 @@ const BillingPage: React.FC = () => {
               <li>• 24/7 phone and chat support</li>
             </ul>
           </div>
-        </button>
+        </div>
       </div>
 
       <div className="card p-6 space-y-3">
@@ -205,11 +251,35 @@ const BillingPage: React.FC = () => {
         {trialStarted && (
           <div className="p-2 text-green-600 text-sm">Your 14-day trial has started.</div>
         )}
+        
+        {/* Show Stripe payment form if clientSecret is set */}
         {clientSecret && stripeLibs && stripePromise ? (
           <stripeLibs.Elements options={{ clientSecret }} stripe={stripePromise}>
             <StripePaymentForm libs={stripeLibs} />
           </stripeLibs.Elements>
+        ) : hasActiveSubscription ? (
+          /* Show plan management for subscribed users */
+          <div>
+            <div className="text-sm font-medium text-gray-800 mb-3">Change Plan</div>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => handleChangePlan('basic')}
+                disabled={changing || currentPlan === 'basic'}
+                className={`btn-secondary ${currentPlan === 'basic' ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {changing ? 'Switching...' : currentPlan === 'basic' ? 'Current Plan: Basic' : 'Switch to Basic'}
+              </button>
+              <button
+                onClick={() => handleChangePlan('pro')}
+                disabled={changing || currentPlan === 'pro'}
+                className={`btn-secondary ${currentPlan === 'pro' ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {changing ? 'Switching...' : currentPlan === 'pro' ? 'Current Plan: Pro' : 'Switch to Pro'}
+              </button>
+            </div>
+          </div>
         ) : (
+          /* Show subscription flow for non-subscribed users */
           <>
             <div className="flex items-center gap-3">
               <button
@@ -219,29 +289,10 @@ const BillingPage: React.FC = () => {
               >
                 {planCode ? 'Continue' : 'Select a plan to continue'}
               </button>
-              <div className="text-sm text-gray-600">You will confirm payment on the next step.</div>
+              {planCode && (
+                <div className="text-sm text-gray-600">You will confirm payment on the next step.</div>
+              )}
             </div>
-            {currentPlan && (
-              <div className="pt-4 border-t mt-4">
-                <div className="text-sm font-medium text-gray-800 mb-2">Manage plan</div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleChangePlan('basic')}
-                    disabled={changing || currentPlan === 'basic'}
-                    className={`btn-secondary ${currentPlan === 'basic' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    Switch to Basic
-                  </button>
-                  <button
-                    onClick={() => handleChangePlan('pro')}
-                    disabled={changing || currentPlan === 'pro'}
-                    className={`btn-secondary ${currentPlan === 'pro' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    Switch to Pro
-                  </button>
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>

@@ -11,7 +11,7 @@ from core.database import get_db
 from core.dependencies import get_current_business_owner
 from core.config import settings
 from models.user import User
-from models.place_existing import Place, Booking, Service, PlaceService, PlaceEmployee
+from models.place_existing import Place, Booking, Service, PlaceService, PlaceEmployee, BookingService
 from schemas.place_existing import PlaceBookingCreate, PlaceBookingUpdate, PlaceBookingResponse
 
 router = APIRouter()
@@ -83,7 +83,6 @@ async def get_place_bookings(
                         service_name = service.name
                 
                 # Get booking services for multi-service support
-                from models.place_existing import BookingService
                 booking_services_result = await db.execute(
                     select(BookingService).where(BookingService.booking_id == booking.id)
                 )
@@ -182,295 +181,356 @@ async def create_booking(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new booking for a place"""
-    # Verify place ownership
-    result = await db.execute(
-        select(Place).where(
-            Place.id == place_id,
-            Place.owner_id == current_user.id,
-            Place.is_active == True
-        )
-    )
-    place = result.scalar_one_or_none()
-    if not place:
-        raise HTTPException(status_code=404, detail="Place not found")
-    
-    # Verify all services exist and get their details
-    from models.place_existing import BookingService
-    services = []
-    total_price = 0
-    total_duration = 0
-    
-    for service_id in booking_data.service_ids:
-        result = await db.execute(
-            select(Service).where(Service.id == service_id)
-        )
-        service = result.scalar_one_or_none()
-        if not service:
-            raise HTTPException(status_code=404, detail=f"Service with ID {service_id} not found")
-        
-        services.append({
-            'service_id': service.id,
-            'service_name': service.name,
-            'service_price': float(service.price) if service.price else 0,
-            'service_duration': service.duration or 0
-        })
-        total_price += float(service.price) if service.price else 0
-        total_duration += service.duration or 0
-    
-    # Parse booking date and time
-    from datetime import datetime, date, time
-
     try:
-        # First, try to parse both as full ISO 8601 datetime strings if 'T' is present
-        if isinstance(booking_data.booking_date, str) and 'T' in booking_data.booking_date:
-            full_date_time = datetime.fromisoformat(booking_data.booking_date.replace('Z', '+00:00'))
-            booking_date = full_date_time.date()
-        else:
-            booking_date = datetime.strptime(str(booking_data.booking_date), "%Y-%m-%d").date()
+        # Verify place ownership
+        result = await db.execute(
+            select(Place).where(
+                Place.id == place_id,
+                Place.owner_id == current_user.id,
+                Place.is_active == True
+            )
+        )
+        place = result.scalar_one_or_none()
+        if not place:
+            raise HTTPException(status_code=404, detail="Place not found")
+        
+        # Verify all services exist and get their details from PlaceService
+        services = []
+        total_price = 0
+        total_duration = 0
+        
+        if not booking_data.service_ids or len(booking_data.service_ids) == 0:
+            raise HTTPException(status_code=400, detail="At least one service is required")
+        
+        for service_id in booking_data.service_ids:
+            # First verify the service exists
+            service_result = await db.execute(
+                select(Service).where(Service.id == service_id)
+            )
+            service = service_result.scalar_one_or_none()
+            if not service:
+                raise HTTPException(status_code=404, detail=f"Service with ID {service_id} not found")
+            
+            # Get price and duration from PlaceService (service is specific to this place)
+            place_service_result = await db.execute(
+                select(PlaceService).where(
+                    PlaceService.place_id == place_id,
+                    PlaceService.service_id == service_id
+                )
+            )
+            place_service = place_service_result.scalar_one_or_none()
+            
+            if not place_service:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Service with ID {service_id} is not available for this place"
+                )
+            
+            # Safely convert price to float, handle None or invalid values
+            try:
+                service_price = float(place_service.price) if place_service.price is not None else 0
+            except (ValueError, TypeError):
+                service_price = 0
+            
+            service_duration = int(place_service.duration) if place_service.duration is not None else 0
+            
+            services.append({
+                'service_id': service.id,
+                'service_name': service.name,
+                'service_price': service_price,
+                'service_duration': service_duration
+            })
+            total_price += service_price
+            total_duration += service_duration
+        
+        # Parse booking date and time
+        from datetime import datetime, date, time
 
-        if isinstance(booking_data.booking_time, str):
-            if 'T' in booking_data.booking_time:
-                # If 'T' is present, assume it's part of a full ISO datetime string
-                booking_time = datetime.fromisoformat(booking_data.booking_time.replace('Z', '+00:00')).time()
-            elif '.' in booking_data.booking_time and 'Z' in booking_data.booking_time:
-                # Handle time strings like "10:00:00.000Z"
-                # This format expects a full time with milliseconds and timezone offset.
-                # Replace 'Z' with '+00:00' for strptime compatibility.
-                booking_time = datetime.strptime(booking_data.booking_time.replace('Z', '+00:00'), "%H:%M:%S.%f%z").time()
+        try:
+            # First, try to parse both as full ISO 8601 datetime strings if 'T' is present
+            if isinstance(booking_data.booking_date, str) and 'T' in booking_data.booking_date:
+                full_date_time = datetime.fromisoformat(booking_data.booking_date.replace('Z', '+00:00'))
+                booking_date = full_date_time.date()
             else:
-                booking_time = datetime.strptime(booking_data.booking_time, "%H:%M").time()
+                booking_date = datetime.strptime(str(booking_data.booking_date), "%Y-%m-%d").date()
+
+            if isinstance(booking_data.booking_time, str):
+                if 'T' in booking_data.booking_time:
+                    # If 'T' is present, assume it's part of a full ISO datetime string
+                    booking_time = datetime.fromisoformat(booking_data.booking_time.replace('Z', '+00:00')).time()
+                elif '.' in booking_data.booking_time and 'Z' in booking_data.booking_time:
+                    # Handle time strings like "10:00:00.000Z"
+                    # This format expects a full time with milliseconds and timezone offset.
+                    # Replace 'Z' with '+00:00' for strptime compatibility.
+                    booking_time = datetime.strptime(booking_data.booking_time.replace('Z', '+00:00'), "%H:%M:%S.%f%z").time()
+                else:
+                    booking_time = datetime.strptime(booking_data.booking_time, "%H:%M").time()
+            else:
+                booking_time = booking_data.booking_time
+
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid date or time format. Use YYYY-MM-DD for date and HH:MM for time, or ISO 8601 format. Error: {str(e)}"
+            )
+        
+        # If "any employee" is selected, find an available employee
+        if booking_data.any_employee_selected:
+            # First, get all employees for this place
+            all_employees_result = await db.execute(
+                select(PlaceEmployee).where(PlaceEmployee.place_id == place_id, PlaceEmployee.is_active == True)
+            )
+            all_employees = all_employees_result.scalars().all()
+
+            if not all_employees:
+                raise HTTPException(status_code=400, detail="No employees available for this place")
+
+            available_employee_id = None
+            for employee in all_employees:
+                # Check if this specific employee is available at the requested time
+                existing_booking_query = select(Booking).where(
+                    Booking.place_id == place_id,
+                    Booking.employee_id == employee.id,
+                    Booking.booking_date == booking_date,
+                    Booking.booking_time == booking_time,
+                    Booking.status.in_(["pending", "confirmed"])
+                )
+                result = await db.execute(existing_booking_query)
+                existing_booking = result.scalar_one_or_none()
+
+                if not existing_booking:
+                    available_employee_id = employee.id
+                    break # Found an available employee
+
+            if available_employee_id is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No employees available at this time. All employees are booked."
+                )
+            
+            # Assign the found available employee to the booking
+            booking_data.employee_id = available_employee_id
+            employee_id_to_check = available_employee_id
         else:
-            booking_time = booking_data.booking_time
+            employee_id_to_check = booking_data.employee_id
 
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid date or time format. Use YYYY-MM-DD for date and HH:MM for time, or ISO 8601 format. Error: {str(e)}"
-        )
-    
-    # If "any employee" is selected, find an available employee
-    if booking_data.any_employee_selected:
-        # First, get all employees for this place
-        all_employees_result = await db.execute(
-            select(PlaceEmployee).where(PlaceEmployee.place_id == place_id, PlaceEmployee.is_active == True)
-        )
-        all_employees = all_employees_result.scalars().all()
+        if employee_id_to_check: # Only check if an employee is selected
+            # Verify employee belongs to the place (moved here to ensure it's checked for both cases)
+            result = await db.execute(
+                select(PlaceEmployee).where(
+                    PlaceEmployee.id == employee_id_to_check,
+                    PlaceEmployee.place_id == place_id
+                )
+            )
+            employee = result.scalar_one_or_none()
+            if not employee:
+                raise HTTPException(status_code=404, detail="Employee not found")
 
-        if not all_employees:
-            raise HTTPException(status_code=400, detail="No employees available for this place")
-
-        available_employee_id = None
-        for employee in all_employees:
-            # Check if this specific employee is available at the requested time
             existing_booking_query = select(Booking).where(
                 Booking.place_id == place_id,
-                Booking.employee_id == employee.id,
+                Booking.employee_id == employee_id_to_check,
                 Booking.booking_date == booking_date,
                 Booking.booking_time == booking_time,
                 Booking.status.in_(["pending", "confirmed"])
             )
             result = await db.execute(existing_booking_query)
             existing_booking = result.scalar_one_or_none()
+            
+            if existing_booking:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Employee is already booked at this time"
+                )
+            # If a specific employee was selected and is available, update the booking_data.employee_id for later use
+            booking_data.employee_id = employee_id_to_check
 
-            if not existing_booking:
-                available_employee_id = employee.id
-                break # Found an available employee
-
-        if available_employee_id is None:
-            raise HTTPException(
-                status_code=400,
-                detail="No employees available at this time. All employees are booked."
-            )
+        # Parse recurrence end date if provided
+        recurrence_end_date = None
+        if booking_data.recurrence_end_date:
+            try:
+                recurrence_end_date = datetime.fromisoformat(booking_data.recurrence_end_date.replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                recurrence_end_date = None
         
-        # Assign the found available employee to the booking
-        booking_data.employee_id = available_employee_id
-        employee_id_to_check = available_employee_id
-    else:
-        employee_id_to_check = booking_data.employee_id
-
-    if employee_id_to_check: # Only check if an employee is selected
-        # Verify employee belongs to the place (moved here to ensure it's checked for both cases)
-        result = await db.execute(
-            select(PlaceEmployee).where(
-                PlaceEmployee.id == employee_id_to_check,
-                PlaceEmployee.place_id == place_id
+        # Determine booking color based on employee color
+        booking_color = booking_data.color_code  # Default to provided color
+        if booking_data.employee_id:
+            # Get employee color from the database
+            employee_result = await db.execute(
+                select(PlaceEmployee).where(PlaceEmployee.id == booking_data.employee_id)
             )
-        )
-        employee = result.scalar_one_or_none()
-        if not employee:
-            raise HTTPException(status_code=404, detail="Employee not found")
-
-        existing_booking_query = select(Booking).where(
-            Booking.place_id == place_id,
-            Booking.employee_id == employee_id_to_check,
-            Booking.booking_date == booking_date,
-            Booking.booking_time == booking_time,
-            Booking.status.in_(["pending", "confirmed"])
-        )
-        result = await db.execute(existing_booking_query)
-        existing_booking = result.scalar_one_or_none()
+            employee = employee_result.scalar_one_or_none()
+            if employee and employee.color_code:
+                booking_color = employee.color_code
         
-        if existing_booking:
-            raise HTTPException(
-                status_code=400,
-                detail="Employee is already booked at this time"
+        # Try to link booking to user if customer email matches a registered user
+        user_id = None
+        if booking_data.customer_email:
+            from models.user import User
+            user_query = select(User).where(User.email == booking_data.customer_email)
+            user_result = await db.execute(user_query)
+            user = user_result.scalar_one_or_none()
+            if user:
+                user_id = user.id
+        
+        # Create new booking using the bookings table fields
+        booking = Booking(
+            salon_id=place_id,  # Required field for existing bookings table
+            place_id=place_id,  # Also set place_id for compatibility
+            service_id=services[0]['service_id'],  # Required field - use first service for backwards compatibility
+            employee_id=booking_data.employee_id,
+            customer_name=booking_data.customer_name,
+            customer_email=booking_data.customer_email,
+            customer_phone=booking_data.customer_phone,
+            booking_date=booking_date,
+            booking_time=booking_time,
+            duration=total_duration,  # Use total duration
+            status=booking_data.status or "pending",  # Ensure status has a default value
+            color_code=booking_color,
+            is_recurring=booking_data.is_recurring if booking_data.is_recurring is not None else False,
+            recurrence_pattern=booking_data.recurrence_pattern,
+            recurrence_end_date=recurrence_end_date,
+            any_employee_selected=booking_data.any_employee_selected if booking_data.any_employee_selected is not None else False,
+            user_id=user_id,  # Link to user if found
+            total_price=float(total_price) if total_price is not None else 0,  # Store total price as Decimal/Float
+            total_duration=int(total_duration) if total_duration is not None else 0,  # Store total duration
+            # Campaign fields - store snapshot if campaign data provided
+            campaign_id=booking_data.campaign_id,
+            campaign_name=booking_data.campaign_name,
+            campaign_type=booking_data.campaign_type,
+            campaign_discount_type=booking_data.campaign_discount_type,
+            campaign_discount_value=float(booking_data.campaign_discount_value) if booking_data.campaign_discount_value is not None else None,
+            campaign_banner_message=booking_data.campaign_banner_message
+        )
+        
+        db.add(booking)
+        await db.commit()
+        await db.refresh(booking)
+        
+        # Create booking services entries for all selected services
+        for service in services:
+            booking_service = BookingService(
+                booking_id=booking.id,
+                service_id=service['service_id'],
+                service_name=service['service_name'],
+                service_price=service['service_price'],
+                service_duration=service['service_duration']
             )
-        # If a specific employee was selected and is available, update the booking_data.employee_id for later use
-        booking_data.employee_id = employee_id_to_check
+            db.add(booking_service)
+        await db.commit()
+        
+        # Get service name for response
+        service_name = None
+        if booking.service_id:
+            service_result = await db.execute(
+                select(Service).where(Service.id == booking.service_id)
+            )
+            service = service_result.scalar_one_or_none()
+            if service:
+                service_name = service.name
+        
+        # Get employee name for response
+        employee_name = None
+        if booking.employee_id:
+            employee_result = await db.execute(
+                select(PlaceEmployee).where(PlaceEmployee.id == booking.employee_id)
+            )
+            employee = employee_result.scalar_one_or_none()
+            if employee:
+                employee_name = employee.name
 
-    # Parse recurrence end date if provided
-    recurrence_end_date = None
-    if booking_data.recurrence_end_date:
-        recurrence_end_date = datetime.fromisoformat(booking_data.recurrence_end_date.replace('Z', '+00:00'))
-    
-    # Determine booking color based on employee color
-    booking_color = booking_data.color_code  # Default to provided color
-    if booking_data.employee_id:
-        # Get employee color from the database
-        employee_result = await db.execute(
-            select(PlaceEmployee).where(PlaceEmployee.id == booking_data.employee_id)
-        )
-        employee = employee_result.scalar_one_or_none()
-        if employee and employee.color_code:
-            booking_color = employee.color_code
-    
-    # Try to link booking to user if customer email matches a registered user
-    user_id = None
-    if booking_data.customer_email:
-        from models.user import User
-        user_query = select(User).where(User.email == booking_data.customer_email)
-        user_result = await db.execute(user_query)
-        user = user_result.scalar_one_or_none()
-        if user:
-            user_id = user.id
-    
-    # Create new booking
-    booking = Booking(
-        salon_id=place_id,  # Use salon_id for compatibility with existing table
-        place_id=place_id,  # Also set place_id for new compatibility
-        service_id=services[0]['service_id'],  # Use first service for backwards compatibility
-        employee_id=booking_data.employee_id,
-        customer_name=booking_data.customer_name,
-        customer_email=booking_data.customer_email,
-        customer_phone=booking_data.customer_phone,
-        booking_date=booking_date,
-        booking_time=booking_time,
-        duration=total_duration,  # Use total duration
-        status=booking_data.status,
-        color_code=booking_color,
-        is_recurring=booking_data.is_recurring,
-        recurrence_pattern=booking_data.recurrence_pattern,
-        recurrence_end_date=recurrence_end_date,
-        any_employee_selected=booking_data.any_employee_selected,
-        user_id=user_id,  # Link to user if found
-        total_price=total_price,  # Store total price
-        total_duration=total_duration,  # Store total duration
-        # Campaign fields - store snapshot if campaign data provided
-        campaign_id=booking_data.campaign_id,
-        campaign_name=booking_data.campaign_name,
-        campaign_type=booking_data.campaign_type,
-        campaign_discount_type=booking_data.campaign_discount_type,
-        campaign_discount_value=booking_data.campaign_discount_value,
-        campaign_banner_message=booking_data.campaign_banner_message
-    )
-    
-    db.add(booking)
-    await db.commit()
-    await db.refresh(booking)
-    
-    # Create booking services entries for all selected services
-    for service in services:
-        booking_service = BookingService(
-            booking_id=booking.id,
-            service_id=service['service_id'],
-            service_name=service['service_name'],
-            service_price=service['service_price'],
-            service_duration=service['service_duration']
-        )
-        db.add(booking_service)
-    await db.commit()
-    
-    # Get service name for response
-    service_name = None
-    if booking.service_id:
-        service_result = await db.execute(
-            select(Service).where(Service.id == booking.service_id)
-        )
-        service = service_result.scalar_one_or_none()
-        if service:
-            service_name = service.name
-    
-    # Get employee name for response
-    employee_name = None
-    if booking.employee_id:
-        employee_result = await db.execute(
-            select(PlaceEmployee).where(PlaceEmployee.id == booking.employee_id)
-        )
-        employee = employee_result.scalar_one_or_none()
-        if employee:
-            employee_name = employee.name
+        # Send email notification with services data
+        try:
+            from email_service import EmailService
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            email_service = EmailService()
+            email_data = {
+                'customer_name': booking.customer_name,
+                'customer_email': booking.customer_email,
+                'salon_name': place.nome,
+                'booking_date': booking.booking_date.strftime("%Y-%m-%d"),
+                'booking_time': booking.booking_time.strftime("%H:%M"),
+                'duration': total_duration,
+                'total_price': float(total_price),
+                'services': services,
+                'status': booking.status or 'pending'  # Include the actual booking status
+            }
+            
+            logger.info(f"📧 Attempting to send booking request email to {booking.customer_email}")
+            result = email_service.send_booking_request_notification(email_data)
+            
+            if result:
+                logger.info(f"✅ Booking request email sent successfully to {booking.customer_email}")
+            else:
+                logger.warning(f"⚠️ Failed to send booking request email to {booking.customer_email} - check email service configuration")
+                print(f"⚠️ Failed to send booking request email to {booking.customer_email}")
+                
+        except Exception as e:
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.error(f"❌ Error sending booking request email: {str(e)}")
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            print(f"❌ Failed to send email notification: {str(e)}")
+            print(f"❌ Traceback: {traceback.format_exc()}")
 
-    # Send email notification with services data
-    try:
-        from email_service import EmailService
-        email_service = EmailService()
-        email_data = {
-            'customer_name': booking.customer_name,
-            'customer_email': booking.customer_email,
-            'salon_name': place.nome,
-            'booking_date': booking.booking_date.strftime("%Y-%m-%d"),
-            'booking_time': booking.booking_time.strftime("%H:%M"),
-            'duration': total_duration,
-            'total_price': float(total_price),
-            'services': services
-        }
-        email_service.send_booking_request_notification(email_data)
+        # Convert services data to BookingServiceResponse format
+        services_response = []
+        for service in services:
+            services_response.append({
+                'service_id': service['service_id'],
+                'service_name': service['service_name'],
+                'service_price': service['service_price'],
+                'service_duration': service['service_duration']
+            })
+
+        return PlaceBookingResponse(
+            id=booking.id,
+            place_id=booking.place_id,
+            service_id=booking.service_id,
+            employee_id=booking.employee_id,
+            service_name=service_name,
+            employee_name=employee_name,
+            customer_name=booking.customer_name,
+            customer_email=booking.customer_email,
+            customer_phone=booking.customer_phone,
+            booking_date=booking.booking_date.strftime("%Y-%m-%d"),
+            booking_time=booking.booking_time.strftime("%H:%M"),
+            duration=booking.duration,
+            status=booking.status or "pending",
+            color_code=booking.color_code,
+            is_recurring=booking.is_recurring,
+            recurrence_pattern=booking.recurrence_pattern,
+            recurrence_end_date=booking.recurrence_end_date.isoformat() if booking.recurrence_end_date else None,
+            any_employee_selected=booking.any_employee_selected,
+            # Multi-service support
+            services=services_response,
+            total_price=float(booking.total_price) if booking.total_price else None,
+            total_duration=booking.total_duration,
+            # Campaign fields
+            campaign_id=booking.campaign_id,
+            campaign_name=booking.campaign_name,
+            campaign_type=booking.campaign_type,
+            campaign_discount_type=booking.campaign_discount_type,
+            campaign_discount_value=float(booking.campaign_discount_value) if booking.campaign_discount_value else None,
+            campaign_banner_message=booking.campaign_banner_message,
+            created_at=booking.created_at,
+            updated_at=booking.updated_at
+        )
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Failed to send email notification: {str(e)}")
-
-    # Convert services data to BookingServiceResponse format
-    services_response = []
-    for service in services:
-        services_response.append({
-            'service_id': service['service_id'],
-            'service_name': service['service_name'],
-            'service_price': service['service_price'],
-            'service_duration': service['service_duration']
-        })
-
-    return PlaceBookingResponse(
-        id=booking.id,
-        place_id=booking.place_id,
-        service_id=booking.service_id,
-        employee_id=booking.employee_id,
-        service_name=service_name,
-        employee_name=employee_name,
-        customer_name=booking.customer_name,
-        customer_email=booking.customer_email,
-        customer_phone=booking.customer_phone,
-        booking_date=booking.booking_date.strftime("%Y-%m-%d"),
-        booking_time=booking.booking_time.strftime("%H:%M"),
-        duration=booking.duration,
-        status=booking.status or "pending",
-        color_code=booking.color_code,
-        is_recurring=booking.is_recurring,
-        recurrence_pattern=booking.recurrence_pattern,
-        recurrence_end_date=booking.recurrence_end_date.isoformat() if booking.recurrence_end_date else None,
-        any_employee_selected=booking.any_employee_selected,
-        # Multi-service support
-        services=services_response,
-        total_price=float(booking.total_price) if booking.total_price else None,
-        total_duration=booking.total_duration,
-        # Campaign fields
-        campaign_id=booking.campaign_id,
-        campaign_name=booking.campaign_name,
-        campaign_type=booking.campaign_type,
-        campaign_discount_type=booking.campaign_discount_type,
-        campaign_discount_value=float(booking.campaign_discount_value) if booking.campaign_discount_value else None,
-        campaign_banner_message=booking.campaign_banner_message,
-        created_at=booking.created_at,
-        updated_at=booking.updated_at
-    )
+        # Rollback database transaction on error
+        await db.rollback()
+        print(f"🔥 Error creating booking: {type(e).__name__}: {str(e)}")
+        import traceback
+        print(f"🔥 Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create booking: {str(e)}"
+        )
 
 @router.get("/{booking_id}", response_model=PlaceBookingResponse)
 # @limiter.limit(settings.RATE_LIMIT_MOBILE_READ)

@@ -100,21 +100,45 @@ class EmailService:
     
     def send_booking_request_notification(self, booking_data):
         """Send email notification when a booking is requested"""
+        customer_email = booking_data.get('customer_email', 'unknown')
+        
+        # Check if any email service is available
+        if not self.brevo_service and not self.gmail_service:
+            logger.error(f"❌ No email service available - cannot send booking notification to {customer_email}")
+            print(f"❌ No email service configured - cannot send email to {customer_email}")
+            return False
+        
         # Try Brevo first (primary)
         if self.brevo_service:
             try:
-                return self.brevo_service.send_booking_request_notification(booking_data)
+                logger.info(f"📧 Attempting to send booking notification via Brevo to {customer_email}")
+                result = self.brevo_service.send_booking_request_notification(booking_data)
+                if result:
+                    logger.info(f"✅ Booking notification sent successfully via Brevo to {customer_email}")
+                    return True
+                else:
+                    logger.warning(f"⚠️ Brevo failed to send booking notification to {customer_email}")
             except Exception as e:
-                logger.error(f"Brevo failed to send booking request notification: {str(e)}")
+                logger.error(f"❌ Brevo exception when sending booking notification: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
         
         # Fallback to Gmail
         if self.gmail_service:
             try:
-                return self.gmail_service.send_booking_request_notification(booking_data)
+                logger.info(f"📧 Attempting to send booking notification via Gmail fallback to {customer_email}")
+                result = self.gmail_service.send_booking_request_notification(booking_data)
+                if result:
+                    logger.info(f"✅ Booking notification sent successfully via Gmail to {customer_email}")
+                    return True
+                else:
+                    logger.warning(f"⚠️ Gmail fallback failed to send booking notification to {customer_email}")
             except Exception as e:
-                logger.error(f"Gmail fallback failed to send booking request notification: {str(e)}")
+                logger.error(f"❌ Gmail exception when sending booking notification: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
         
-        logger.warning("No email service available, skipping email notification")
+        logger.error(f"❌ All email services failed - could not send booking notification to {customer_email}")
         return False
     
     def send_booking_status_notification(self, booking_data):

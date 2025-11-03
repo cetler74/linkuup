@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Base URL for API - should match the frontend's expected backend URL
     BASE_URL: str = "http://localhost:5001"
     
+    # Frontend Base URL - used for OAuth redirects (optional, will use referer header if not set)
+    FRONTEND_BASE_URL: str = "http://localhost:5173"
+    
     @property
     def cors_origins(self) -> list[str]:
         """Parse CORS origins from string or JSON array"""
@@ -43,8 +46,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     
     # Brevo Email Service
-    BREVO_API_KEY: str = ""
-    BREVO_SENDER_EMAIL: str = "noreply@linkuup.com"
+    BREVO_API_KEY: str = ""  # Will be loaded from .env file via SettingsConfigDict
+    BREVO_SENDER_EMAIL: str = "noreply@linkuup.portugalexpatdirectory.com"
     BREVO_SENDER_NAME: str = "LinkUup"
     
     # WhatsApp settings (Twilio)
@@ -83,6 +86,7 @@ class Settings(BaseSettings):
     
     model_config = SettingsConfigDict(
         env_file=".env",
+        env_file_encoding="utf-8",
         case_sensitive=True
     )
 

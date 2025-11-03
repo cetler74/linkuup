@@ -241,6 +241,31 @@ async def get_current_user_info(request: Request, current_user: User = Depends(g
         trial_status=current_user.trial_status,
     )
 
+@router.get("/oauth/status")
+async def oauth_status():
+    """Check OAuth configuration status (for debugging)"""
+    client_id = settings.GOOGLE_CLIENT_ID or os.getenv("GOOGLE_CLIENT_ID", "")
+    client_secret = settings.GOOGLE_CLIENT_SECRET or os.getenv("GOOGLE_CLIENT_SECRET", "")
+    
+    base_url = _get_base_api_url()
+    redirect_uri = f"{base_url}/auth/google/callback"
+    
+    return {
+        "google_oauth": {
+            "configured": bool(client_id and client_secret),
+            "client_id_set": bool(client_id),
+            "client_secret_set": bool(client_secret),
+            "redirect_uri": redirect_uri,
+            "base_url": base_url
+        },
+        "facebook_oauth": {
+            "configured": bool(
+                (settings.FACEBOOK_CLIENT_ID or os.getenv("FACEBOOK_CLIENT_ID", "")) and
+                (getattr(settings, "FACEBOOK_CLIENT_SECRET", "") or os.getenv("FACEBOOK_CLIENT_SECRET", ""))
+            )
+        }
+    }
+
 # =============================
 # OAuth 2.0 (Google & Facebook)
 # =============================
@@ -385,109 +410,177 @@ async def google_oauth_start(request: Request, user_type: str = "customer", sele
         user_type: 'customer' or 'business_owner'
         selected_plan_code: Plan code if registering as business_owner
     """
-    client_id = settings.GOOGLE_CLIENT_ID or os.getenv("GOOGLE_CLIENT_ID", "")
-    client_secret = settings.GOOGLE_CLIENT_SECRET or os.getenv("GOOGLE_CLIENT_SECRET", "")
-    if not client_id or not client_secret:
-        raise HTTPException(status_code=500, detail="Google OAuth not configured")
+    try:
+        client_id = settings.GOOGLE_CLIENT_ID or os.getenv("GOOGLE_CLIENT_ID", "")
+        client_secret = settings.GOOGLE_CLIENT_SECRET or os.getenv("GOOGLE_CLIENT_SECRET", "")
+        
+        if not client_id or not client_secret:
+            error_msg = "Google OAuth not configured: Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables"
+            print(f"❌ {error_msg}")
+            raise HTTPException(status_code=500, detail=error_msg)
 
-    redirect_uri = f"{_get_base_api_url()}/auth/google/callback"
-    
-    # Encode state with user_type and plan info (simple encoding for demo; use proper signing in production)
-    import base64
-    state_data = json.dumps({"user_type": user_type, "selected_plan_code": selected_plan_code})
-    state = base64.urlsafe_b64encode(state_data.encode()).decode()
-    
-    params = {
-        "client_id": client_id,
-        "response_type": "code",
-        "scope": "openid email profile",
-        "redirect_uri": redirect_uri,
-        "access_type": "offline",
-        "include_granted_scopes": "true",
-        "state": state,
-    }
-    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
-    return RedirectResponse(url)
+        redirect_uri = f"{_get_base_api_url()}/auth/google/callback"
+        print(f"🔑 Starting Google OAuth - redirect_uri: {redirect_uri}, user_type: {user_type}")
+        
+        # Encode state with user_type and plan info (simple encoding for demo; use proper signing in production)
+        import base64
+        state_data = json.dumps({"user_type": user_type, "selected_plan_code": selected_plan_code})
+        state = base64.urlsafe_b64encode(state_data.encode()).decode()
+        
+        params = {
+            "client_id": client_id,
+            "response_type": "code",
+            "scope": "openid email profile",
+            "redirect_uri": redirect_uri,
+            "access_type": "offline",
+            "include_granted_scopes": "true",
+            "state": state,
+        }
+        url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
+        return RedirectResponse(url)
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = f"Error starting Google OAuth: {str(e)}"
+        print(f"❌ {error_msg}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @router.get("/google/callback")
 async def google_oauth_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
-    if error:
-        raise HTTPException(status_code=400, detail=f"Google OAuth error: {error}")
-    if not code:
-        raise HTTPException(status_code=400, detail="Missing authorization code")
-
-    # Decode state to get user_type and plan
-    user_type = "customer"
-    selected_plan_code = None
-    if state:
-        try:
-            import base64
-            state_data = json.loads(base64.urlsafe_b64decode(state.encode()).decode())
-            user_type = state_data.get("user_type", "customer")
-            selected_plan_code = state_data.get("selected_plan_code")
-        except Exception:
-            pass  # Use defaults if state decode fails
-
-    client_id = settings.GOOGLE_CLIENT_ID or os.getenv("GOOGLE_CLIENT_ID", "")
-    client_secret = settings.GOOGLE_CLIENT_SECRET or os.getenv("GOOGLE_CLIENT_SECRET", "")
-    redirect_uri = f"{_get_base_api_url()}/auth/google/callback"
-
-    # Exchange code for tokens
-    token_url = "https://oauth2.googleapis.com/token"
-    data = {
-        "code": code,
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "redirect_uri": redirect_uri,
-        "grant_type": "authorization_code",
-    }
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        token_resp = await client.post(token_url, data=data)
-        if token_resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Failed to obtain Google access token")
-        token_json = token_resp.json()
-        access_token_google = token_json.get("access_token")
-        if not access_token_google:
-            raise HTTPException(status_code=400, detail="Google token missing in response")
-
-        # Fetch userinfo
-        userinfo_resp = await client.get(
-            "https://openidconnect.googleapis.com/v1/userinfo",
-            headers={"Authorization": f"Bearer {access_token_google}"}
-        )
-        if userinfo_resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Failed to fetch Google user info")
-        ui = userinfo_resp.json()
-        email = ui.get("email")
-        sub = ui.get("sub")
-        given_name = ui.get("given_name")
-        family_name = ui.get("family_name")
-        if not email or not sub:
-            raise HTTPException(status_code=400, detail="Google user info incomplete")
-
-    # Issue our app tokens
-    from core.database import AsyncSessionLocal
-    async with AsyncSessionLocal() as db:
-        app_access, app_refresh, is_new_user = await _issue_tokens_for_user(
-            db, 
-            email=email, 
-            provider="google", 
-            provider_id=sub, 
-            first_name=given_name, 
-            last_name=family_name,
-            user_type=user_type,
-            selected_plan_code=selected_plan_code,
-            place_id=None  # Place will be created after OAuth
-        )
-
-    frontend_url = _get_frontend_base_url()
-    # For new business owners without a place, redirect to create place first
-    redirect_path = f"{frontend_url}/"
-    if is_new_user and user_type == "business_owner":
-        redirect_path = f"{frontend_url}/owner/create-first-place"
+    """Handle Google OAuth callback with improved error handling"""
+    import traceback
     
-    html = _callback_success_html(app_access, app_refresh, redirect_path=redirect_path)
-    return HTMLResponse(content=html, media_type="text/html")
+    try:
+        if error:
+            error_msg = f"Google OAuth error: {error}"
+            print(f"❌ Google OAuth error: {error}")
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        if not code:
+            error_msg = "Missing authorization code"
+            print(f"❌ {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+
+        # Decode state to get user_type and plan
+        user_type = "customer"
+        selected_plan_code = None
+        if state:
+            try:
+                import base64
+                state_data = json.loads(base64.urlsafe_b64decode(state.encode()).decode())
+                user_type = state_data.get("user_type", "customer")
+                selected_plan_code = state_data.get("selected_plan_code")
+            except Exception as e:
+                print(f"⚠️ Failed to decode state: {e}")
+                pass  # Use defaults if state decode fails
+
+        client_id = settings.GOOGLE_CLIENT_ID or os.getenv("GOOGLE_CLIENT_ID", "")
+        client_secret = settings.GOOGLE_CLIENT_SECRET or os.getenv("GOOGLE_CLIENT_SECRET", "")
+        
+        if not client_id or not client_secret:
+            error_msg = "Google OAuth not configured: Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET"
+            print(f"❌ {error_msg}")
+            raise HTTPException(status_code=500, detail=error_msg)
+        
+        redirect_uri = f"{_get_base_api_url()}/auth/google/callback"
+        print(f"🔑 Google OAuth callback - redirect_uri: {redirect_uri}")
+
+        # Exchange code for tokens
+        token_url = "https://oauth2.googleapis.com/token"
+        data = {
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        }
+        
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            try:
+                token_resp = await client.post(token_url, data=data)
+                if token_resp.status_code != 200:
+                    error_text = token_resp.text
+                    error_msg = f"Failed to obtain Google access token: {token_resp.status_code} - {error_text}"
+                    print(f"❌ {error_msg}")
+                    raise HTTPException(status_code=400, detail=error_msg)
+                
+                token_json = token_resp.json()
+                access_token_google = token_json.get("access_token")
+                if not access_token_google:
+                    error_msg = "Google token missing in response"
+                    print(f"❌ {error_msg} - Response: {token_json}")
+                    raise HTTPException(status_code=400, detail=error_msg)
+
+                # Fetch userinfo
+                userinfo_resp = await client.get(
+                    "https://openidconnect.googleapis.com/v1/userinfo",
+                    headers={"Authorization": f"Bearer {access_token_google}"}
+                )
+                if userinfo_resp.status_code != 200:
+                    error_text = userinfo_resp.text
+                    error_msg = f"Failed to fetch Google user info: {userinfo_resp.status_code} - {error_text}"
+                    print(f"❌ {error_msg}")
+                    raise HTTPException(status_code=400, detail=error_msg)
+                
+                ui = userinfo_resp.json()
+                email = ui.get("email")
+                sub = ui.get("sub")
+                given_name = ui.get("given_name")
+                family_name = ui.get("family_name")
+                if not email or not sub:
+                    error_msg = f"Google user info incomplete - email: {email}, sub: {sub}"
+                    print(f"❌ {error_msg} - Userinfo: {ui}")
+                    raise HTTPException(status_code=400, detail=error_msg)
+                
+                print(f"✅ Google user info retrieved - email: {email}")
+
+            except httpx.HTTPError as e:
+                error_msg = f"Network error during Google OAuth: {str(e)}"
+                print(f"❌ {error_msg}")
+                raise HTTPException(status_code=500, detail=error_msg)
+
+        # Issue our app tokens
+        from core.database import AsyncSessionLocal
+        try:
+            async with AsyncSessionLocal() as db:
+                app_access, app_refresh, is_new_user = await _issue_tokens_for_user(
+                    db, 
+                    email=email, 
+                    provider="google", 
+                    provider_id=sub, 
+                    first_name=given_name, 
+                    last_name=family_name,
+                    user_type=user_type,
+                    selected_plan_code=selected_plan_code,
+                    place_id=None  # Place will be created after OAuth
+                )
+                print(f"✅ User tokens issued - email: {email}, is_new_user: {is_new_user}")
+        except Exception as e:
+            error_msg = f"Database error during user creation: {str(e)}"
+            print(f"❌ {error_msg}")
+            print(f"❌ Traceback: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=error_msg)
+
+        frontend_url = _get_frontend_base_url()
+        # For new business owners without a place, redirect to create place first
+        redirect_path = f"{frontend_url}/"
+        if is_new_user and user_type == "business_owner":
+            redirect_path = f"{frontend_url}/owner/create-first-place"
+        
+        html = _callback_success_html(app_access, app_refresh, redirect_path=redirect_path)
+        return HTMLResponse(content=html, media_type="text/html")
+    
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        # Catch any other unexpected errors
+        error_msg = f"Unexpected error in Google OAuth callback: {str(e)}"
+        print(f"❌ {error_msg}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @router.get("/facebook")
 async def facebook_oauth_start(request: Request, user_type: str = "customer", selected_plan_code: str | None = None):

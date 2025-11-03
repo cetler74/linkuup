@@ -361,14 +361,14 @@ const HomePage: React.FC = () => {
               <div className="relative">
                 {/* Mobile Phone Frame */}
                 <div 
-                  className="w-80 h-[500px] bg-charcoal rounded-3xl p-2 shadow-2xl transition-transform duration-200 ease-out"
+                  className="w-80 h-[560px] bg-charcoal rounded-3xl p-2 shadow-2xl transition-transform duration-200 ease-out"
                   style={{
                     transform: `perspective(1000px) rotateY(${(mousePosition.x - 50) * 0.4}deg) rotateX(${(mousePosition.y - 50) * -0.4}deg) translateZ(30px)`,
                   }}
                 >
                   <div className="w-full h-full bg-white rounded-2xl overflow-hidden relative">
                     {/* Mobile Screen Content */}
-                    <div className="p-4 space-y-4">
+                    <div className="p-4 pb-6 space-y-4">
                       <div className="text-center">
                         <h3 className="font-bold text-charcoal text-lg">{t('home.bookYourAppointment')}</h3>
                       </div>
@@ -387,7 +387,7 @@ const HomePage: React.FC = () => {
                       </div>
                       
                       {/* Video Below Confirm Booking */}
-                      <div className="mt-3 w-full flex justify-center">
+                      <div className="mt-3 mb-6 w-full flex justify-center">
                         <video
                           key={currentVideoIndex}
                           autoPlay
@@ -396,7 +396,7 @@ const HomePage: React.FC = () => {
                           className="rounded-lg object-cover shadow-lg"
                           style={{ 
                             width: '80%',
-                            aspectRatio: '3/4'
+                            aspectRatio: '3/2'
                           }}
                           onEnded={() => {
                             setCurrentVideoIndex((prev) => (prev + 1) % videos.length);

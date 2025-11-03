@@ -480,35 +480,35 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
           </div>
 
           {/* OAuth Buttons */}
-          {formData.user_type === 'customer' && (
-            <OAuthButtons 
-              onGoogleLogin={() => {
-                if (!formData.gdpr_data_processing_consent) {
-                  setError('You must consent to data processing to continue');
-                  return;
-                }
-                // For customers, OAuth can be used after form fields are filled (but password is optional)
-                if (!formData.first_name || !formData.last_name || !formData.email) {
-                  setError('Please fill in First Name, Last Name, and Email');
-                  return;
-                }
-                loginWithGoogle('customer');
-              }}
-              onFacebookLogin={() => {
-                if (!formData.gdpr_data_processing_consent) {
-                  setError('You must consent to data processing to continue');
-                  return;
-                }
-                // For customers, OAuth can be used after form fields are filled (but password is optional)
-                if (!formData.first_name || !formData.last_name || !formData.email) {
-                  setError('Please fill in First Name, Last Name, and Email');
-                  return;
-                }
-                loginWithFacebook('customer');
-              }}
-              loading={loading}
-            />
-          )}
+          <OAuthButtons 
+            onGoogleLogin={() => {
+              const userType = formData.user_type || 'customer';
+              // Ensure userType is a string, not an object
+              const validUserType = (typeof userType === 'string' && (userType === 'customer' || userType === 'business_owner')) 
+                ? userType 
+                : 'customer';
+              // For business owners, require plan selection before OAuth
+              if (validUserType === 'business_owner' && !selectedPlan) {
+                setCurrentStep('pricing');
+                return;
+              }
+              loginWithGoogle(validUserType, selectedPlan?.id);
+            }}
+            onFacebookLogin={() => {
+              const userType = formData.user_type || 'customer';
+              // Ensure userType is a string, not an object
+              const validUserType = (typeof userType === 'string' && (userType === 'customer' || userType === 'business_owner')) 
+                ? userType 
+                : 'customer';
+              // For business owners, require plan selection before OAuth
+              if (validUserType === 'business_owner' && !selectedPlan) {
+                setCurrentStep('pricing');
+                return;
+              }
+              loginWithFacebook(validUserType, selectedPlan?.id);
+            }}
+            loading={loading}
+          />
 
           {/* GDPR Consent Section */}
               <div className="space-y-4 border-t pt-6 mt-6">

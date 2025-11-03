@@ -41,11 +41,16 @@ class BrevoEmailService:
     """Service for sending emails through Brevo API"""
     
     def __init__(self):
-        # Get API key from environment or settings
-        if SETTINGS_AVAILABLE and hasattr(settings, 'BREVO_API_KEY'):
-            self.api_key = os.getenv('BREVO_API_KEY', settings.BREVO_API_KEY)
-        else:
-            self.api_key = os.getenv('BREVO_API_KEY')
+        # Get API key - prioritize environment variable over settings
+        # First try to get from environment (loaded by dotenv or system env)
+        env_api_key = os.getenv('BREVO_API_KEY')
+        
+        # If not in environment, try settings
+        if not env_api_key and SETTINGS_AVAILABLE and hasattr(settings, 'BREVO_API_KEY'):
+            env_api_key = settings.BREVO_API_KEY
+        
+        # Only use non-empty values
+        self.api_key = env_api_key if env_api_key and env_api_key.strip() else None
             
         self.base_url = "https://api.brevo.com/v3"
         
@@ -81,10 +86,18 @@ class BrevoEmailService:
         template_id: Optional[int] = None,
         template_params: Optional[Dict[str, Any]] = None
     ) -> bool:
-        print(f"BREVO DEBUG: Attempting to send to {to_email} with key {self.api_key[:8]}...")
-        if not self.api_key:
-            logger.error("Brevo API key not configured")
+        # Check if API key is configured (not None, not empty string)
+        if not self.api_key or self.api_key.strip() == "":
+            logger.error("❌ Brevo API key not configured - cannot send email")
+            print(f"❌ BREVO DEBUG: API key not configured. Cannot send email to {to_email}")
             return False
+        
+        print(f"✅ BREVO DEBUG: Attempting to send to {to_email}")
+        print(f"📧 BREVO DEBUG: From: {self.sender_name} <{self.sender_email}>")
+        print(f"📧 BREVO DEBUG: To: {to_name} <{to_email}>")
+        print(f"📧 BREVO DEBUG: Subject: {subject}")
+        print(f"📧 BREVO DEBUG: API Key: {self.api_key[:8] if len(self.api_key) > 8 else '****'}...")
+        
         try:
             url = f"{self.base_url}/smtp/email"
             payload = {
@@ -107,24 +120,65 @@ class BrevoEmailService:
                 payload["templateId"] = template_id
                 if template_params:
                     payload["params"] = template_params
-            response = requests.post(url, headers=self._get_headers(), json=payload)
+            response = requests.post(url, headers=self._get_headers(), json=payload, timeout=10)
+            
+            # Log the response for debugging
+            logger.info(f"📧 Brevo API Response for {to_email}: Status={response.status_code}, Body={response.text[:200]}")
+            print(f"📧 BREVO DEBUG: Response Status={response.status_code}")
+            print(f"📧 BREVO DEBUG: Response Body={response.text[:500]}")
+            
             if response.status_code == 201:
-                logger.info(f"Email sent successfully to {to_email}")
-                print(f"BREVO DEBUG: Email sent successfully to {to_email}")
+                # Parse response to get message ID if available
+                try:
+                    response_data = response.json()
+                    message_id = response_data.get('messageId', 'N/A')
+                    logger.info(f"✅ Email sent successfully to {to_email}. Message ID: {message_id}")
+                    print(f"✅ BREVO DEBUG: Email sent successfully to {to_email}. Message ID: {message_id}")
+                except:
+                    logger.info(f"✅ Email sent successfully to {to_email}")
+                    print(f"✅ BREVO DEBUG: Email sent successfully to {to_email}")
                 return True
             else:
-                logger.error(f"Failed to send email to {to_email}. Status: {response.status_code}, Response: {response.text}")
-                print(f"BREVO DEBUG: Failed to send email to {to_email}. Status: {response.status_code}, Response: {response.text}")
+                error_msg = f"❌ Failed to send email to {to_email}. Status: {response.status_code}, Response: {response.text}"
+                logger.error(error_msg)
+                print(f"❌ BREVO DEBUG: {error_msg}")
                 return False
         except Exception as e:
-            print(f"BREVO EXCEPTION: {e}")
-            logger.error(f"Error sending email to {to_email}: {str(e)}")
+            error_msg = f"❌ BREVO EXCEPTION: Error sending email to {to_email}: {str(e)}"
+            print(error_msg)
+            logger.error(error_msg)
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return False
     
     def send_booking_request_notification(self, booking_data: Dict[str, Any]) -> bool:
         """Send email notification when a booking is requested"""
         try:
-            subject = "Booking Request Received - LinkUup"
+            # Get booking status and format it for display
+            booking_status = booking_data.get('status', 'pending').lower()
+            
+            # Map status to display text and styling
+            status_map = {
+                'pending': {'text': 'Pending Confirmation', 'class': 'status-pending', 'color': '#f39c12'},
+                'confirmed': {'text': 'Confirmed', 'class': 'status-confirmed', 'color': '#27ae60'},
+                'cancelled': {'text': 'Cancelled', 'class': 'status-cancelled', 'color': '#e74c3c'},
+                'completed': {'text': 'Completed', 'class': 'status-completed', 'color': '#3498db'}
+            }
+            
+            status_info = status_map.get(booking_status, status_map['pending'])
+            status_text = status_info['text']
+            status_class = status_info['class']
+            status_color = status_info['color']
+            
+            # Adjust subject and message based on status
+            if booking_status == 'confirmed':
+                subject = "Booking Confirmed - LinkUup"
+                greeting_message = "Great news! Your booking has been confirmed."
+                follow_up_message = "We look forward to seeing you!"
+            else:
+                subject = "Booking Request Received - LinkUup"
+                greeting_message = "Thank you for your booking request! We have received your appointment request and will send you a confirmation shortly."
+                follow_up_message = "Our salon team will review your request and send you a confirmation email within 24 hours."
             
             # Format services for display
             services_html = ""
@@ -178,6 +232,18 @@ class BrevoEmailService:
                         color: #f39c12;
                         font-weight: bold;
                     }}
+                    .status-confirmed {{
+                        color: #27ae60;
+                        font-weight: bold;
+                    }}
+                    .status-cancelled {{
+                        color: #e74c3c;
+                        font-weight: bold;
+                    }}
+                    .status-completed {{
+                        color: #3498db;
+                        font-weight: bold;
+                    }}
                     .footer {{
                         text-align: center;
                         margin-top: 30px;
@@ -196,14 +262,14 @@ class BrevoEmailService:
             </head>
             <body>
                 <div class="header">
-                    <h1>Booking Request Received</h1>
+                    <h1>{subject.replace(' - LinkUup', '')}</h1>
                     <p>Thank you for choosing LinkUup!</p>
                 </div>
                 
                 <div class="content">
                     <p>Dear {booking_data['customer_name']},</p>
                     
-                    <p>Thank you for your booking request! We have received your appointment request and will send you a confirmation shortly.</p>
+                    <p>{greeting_message}</p>
                     
                     <div class="booking-details">
                         <h3>Booking Details</h3>
@@ -216,10 +282,10 @@ class BrevoEmailService:
                         <p><strong>Time:</strong> {booking_data['booking_time']}</p>
                         <p><strong>Total Duration:</strong> {booking_data['duration']} minutes</p>
                         <p><strong>Total Price:</strong> €{booking_data.get('total_price', 0)}</p>
-                        <p><strong>Status:</strong> <span class="status-pending">Pending Confirmation</span></p>
+                        <p><strong>Status:</strong> <span class="{status_class}" style="color: {status_color};">{status_text}</span></p>
                     </div>
                     
-                    <p>Our salon team will review your request and send you a confirmation email within 24 hours.</p>
+                    <p>{follow_up_message}</p>
                     
                     <p>If you have any questions, please don't hesitate to contact us.</p>
                     
@@ -235,11 +301,11 @@ class BrevoEmailService:
             """
             
             text_content = f"""
-            Booking Request Received - LinkUup
+            {subject}
             
             Dear {booking_data['customer_name']},
             
-            Thank you for your booking request! We have received your appointment request and will send you a confirmation shortly.
+            {greeting_message}
             
             Booking Details:
             - Salon: {booking_data['salon_name']}
@@ -249,9 +315,9 @@ class BrevoEmailService:
             - Time: {booking_data['booking_time']}
             - Total Duration: {booking_data['duration']} minutes
             - Total Price: €{booking_data.get('total_price', 0)}
-            - Status: Pending Confirmation
+            - Status: {status_text}
             
-            Our salon team will review your request and send you a confirmation email within 24 hours.
+            {follow_up_message}
             
             If you have any questions, please don't hesitate to contact us.
             

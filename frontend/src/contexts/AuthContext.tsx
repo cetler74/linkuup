@@ -163,21 +163,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
-  const loginWithGoogle = (userType: 'customer' | 'business_owner' = 'customer', planCode?: string) => {
+  const loginWithGoogle = (userType: 'customer' | 'business_owner' | any = 'customer', planCode?: string) => {
     // Redirect to Google OAuth endpoint - using full backend URL since OAuth requires server redirect
     const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
-    const params = new URLSearchParams({ user_type: userType });
-    if (planCode) {
+    
+    // Ensure userType is a valid string value
+    let validUserType: 'customer' | 'business_owner' = 'customer';
+    if (typeof userType === 'string' && (userType === 'customer' || userType === 'business_owner')) {
+      validUserType = userType;
+    }
+    
+    const params = new URLSearchParams({ user_type: validUserType });
+    if (planCode && typeof planCode === 'string') {
       params.append('selected_plan_code', planCode);
     }
     window.location.href = `${apiBase}/auth/google?${params.toString()}`;
   };
 
-  const loginWithFacebook = (userType: 'customer' | 'business_owner' = 'customer', planCode?: string) => {
+  const loginWithFacebook = (userType: 'customer' | 'business_owner' | any = 'customer', planCode?: string) => {
     // Redirect to Facebook OAuth endpoint - using full backend URL since OAuth requires server redirect
     const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
-    const params = new URLSearchParams({ user_type: userType });
-    if (planCode) {
+    
+    // Ensure userType is a valid string value
+    let validUserType: 'customer' | 'business_owner' = 'customer';
+    if (typeof userType === 'string' && (userType === 'customer' || userType === 'business_owner')) {
+      validUserType = userType;
+    }
+    
+    const params = new URLSearchParams({ user_type: validUserType });
+    if (planCode && typeof planCode === 'string') {
       params.append('selected_plan_code', planCode);
     }
     window.location.href = `${apiBase}/auth/facebook?${params.toString()}`;

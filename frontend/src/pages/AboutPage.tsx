@@ -21,12 +21,31 @@ import {
 } from 'lucide-react';
 import Header from '../components/common/Header';
 import Footer from '../components/common/Footer';
+import SEOHead from '../components/seo/SEOHead';
+import StructuredData from '../components/seo/StructuredData';
 
 const AboutPage: React.FC = () => {
   const { t } = useTranslation();
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  // AboutPage Schema
+  const aboutPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    name: 'About LinkUup',
+    description: 'Learn about LinkUup, the all-in-one platform for beauty salons, barbershops, and service businesses.',
+    url: `${siteUrl}/about`,
+  };
 
   return (
     <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden">
+      <SEOHead
+        title="About Us - Our Mission and Vision"
+        description="Learn about LinkUup, the all-in-one platform transforming beauty salons, barbershops, and service businesses. Discover our mission, vision, and commitment to empowering businesses."
+        keywords="about LinkUup, salon management software, beauty business platform, appointment booking system, salon technology"
+        ogType="website"
+      />
+      <StructuredData data={aboutPageSchema} />
       {/* Hero Section with Bright Blue Background */}
       <section className="relative bg-gradient-to-br from-bright-blue to-blue-600 min-h-screen flex items-center">
         {/* Transparent Header Overlay */}

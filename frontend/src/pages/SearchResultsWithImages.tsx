@@ -5,6 +5,8 @@ import { placeAPI } from '../utils/api';
 import SalonCardWithImages from '../components/salon/SalonCardWithImages';
 import SalonMapView from '../components/common/SalonMapView';
 import { useTranslation } from 'react-i18next';
+import SEOHead from '../components/seo/SEOHead';
+import StructuredData from '../components/seo/StructuredData';
 import {
   Select,
   SelectContent,
@@ -118,8 +120,37 @@ const SearchResultsWithImages: React.FC = () => {
     };
   }, []);
 
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const searchQuery = searchParams.get('search') || '';
+  const cidade = searchParams.get('cidade') || '';
+  
+  // Dynamic SEO metadata based on search
+  const seoTitle = searchQuery || cidade 
+    ? `Search ${searchQuery || cidade} - Beauty Salons & Barbershops`
+    : 'Search Beauty Salons & Barbershops';
+  const seoDescription = searchQuery || cidade
+    ? `Find the best beauty salons and barbershops${searchQuery ? ` for "${searchQuery}"` : ''}${cidade ? ` in ${cidade}` : ''}. Book appointments online with LinkUup.`
+    : 'Search and discover the best beauty salons, barbershops, and service businesses. Book appointments online with LinkUup.';
+
+  // SearchResultsPage Schema
+  const searchPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'SearchResultsPage',
+    name: seoTitle,
+    description: seoDescription,
+    url: typeof window !== 'undefined' ? `${siteUrl}/search${window.location.search}` : `${siteUrl}/search`,
+  };
+
   return (
     <div className="min-h-screen relative">
+      <SEOHead
+        title={seoTitle}
+        description={seoDescription}
+        keywords={`${searchQuery || ''}, ${cidade || ''}, beauty salon search, barbershop search, salon booking, appointment booking`}
+        ogType="website"
+        noindex={false}
+      />
+      <StructuredData data={searchPageSchema} />
       {/* Dim overlay when card is hovered */}
       <div 
         className={`fixed inset-0 z-[1] bg-black transition-opacity duration-300 pointer-events-none ${

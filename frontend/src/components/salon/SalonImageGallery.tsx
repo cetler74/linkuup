@@ -78,6 +78,7 @@ const SalonImageGallery: React.FC<SalonImageGalleryProps> = ({
             alt={currentImage.image_alt || `${salonName} - Image ${currentImageIndex + 1}`}
             className="w-full h-full object-cover cursor-pointer group-hover:scale-105 transition-transform duration-300"
             onClick={openModal}
+            loading="lazy"
           />
 
           {/* Navigation Arrows */}

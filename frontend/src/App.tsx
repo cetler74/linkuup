@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { UserPermissionsProvider } from './contexts/UserPermissionsContext';
 import { PlaceProvider } from './contexts/PlaceContext';
@@ -189,8 +190,9 @@ function App() {
   const USE_INTERACTIVE_BACKGROUND = true;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
           <Router>
             <Routes>
               <Route path="/" element={<HomePage />} />
@@ -435,7 +437,8 @@ function App() {
             </Routes>
           </Router>
         </AuthProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 }
 

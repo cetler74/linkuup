@@ -1,0 +1,18 @@
+# Robots.txt for LinkUup
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /owner/
+Disallow: /customer/
+Disallow: /manager/
+Disallow: /test-*
+Disallow: /debug-*
+Disallow: /api/
+Disallow: /uploads/
+
+# Sitemap location
+Sitemap: https://linkuup.com/sitemap.xml
+
+# Crawl-delay (optional, adjust as needed)
+Crawl-delay: 1
+

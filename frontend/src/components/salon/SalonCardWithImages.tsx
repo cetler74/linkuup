@@ -153,6 +153,7 @@ const SalonCardWithImages: React.FC<SalonCardWithImagesProps> = ({
                 alt={sortedImages[currentImageIndex].image_alt || `${salon.nome} - Salon Image`}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 onClick={() => openImageModal(currentImageIndex)}
+                loading="lazy"
                 onError={(e) => {
                   console.warn('Image failed to load, using fallback:', getImageUrl(sortedImages[currentImageIndex].image_url));
                   // Replace with fallback image

@@ -1,11 +1,29 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import SEOHead from '../components/seo/SEOHead';
+import StructuredData from '../components/seo/StructuredData';
 
 const TermsOfServicePage: React.FC = () => {
   const { t } = useTranslation();
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const termsPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Terms of Service',
+    description: 'LinkUup Terms of Service - Legal terms and conditions for using our platform.',
+    url: `${siteUrl}/terms-of-service`,
+  };
 
   return (
     <div className="py-12 bg-gray-50">
+      <SEOHead
+        title="Terms of Service"
+        description="LinkUup Terms of Service - Legal terms and conditions for using our booking platform. Please read before using our services."
+        keywords="terms of service, terms and conditions, legal terms, user agreement"
+        ogType="website"
+      />
+      <StructuredData data={termsPageSchema} />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">{t('terms.title')}</h1>

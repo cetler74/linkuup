@@ -12,6 +12,8 @@ import LeafletSalonMap from '../components/common/LeafletSalonMap';
 import BioDiamondIcon from '../components/common/BioDiamondIcon';
 import CampaignBanner from '../components/campaign/CampaignBanner';
 import ServicePrice from '../components/common/ServicePrice';
+import SEOHead from '../components/seo/SEOHead';
+import StructuredData from '../components/seo/StructuredData';
 import { useTranslation } from 'react-i18next';
 
 const SalonDetailsWithImages: React.FC = () => {
@@ -114,8 +116,102 @@ const SalonDetailsWithImages: React.FC = () => {
     return parts.join(', ');
   };
 
+  const fullAddress = formatAddress();
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const salonUrl = `${siteUrl}/place/${salon.slug || salon.id}`;
+  const salonImage = salon.images && salon.images.length > 0 
+    ? getImageUrl(salon.images[0].url || '') 
+    : `${siteUrl}/images/default-salon.png`;
+
+  // Structured Data - LocalBusiness
+  const localBusinessSchema: any = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: salon.nome,
+    description: salon.about || `${salon.nome} - ${t('salon.services')}`,
+    image: salonImage,
+    url: salonUrl,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: `${salon.rua || ''} ${salon.porta || ''}`.trim(),
+      addressLocality: salon.cidade || '',
+      postalCode: salon.cod_postal || '',
+      addressCountry: 'PT',
+    },
+    priceRange: '$$',
+  };
+
+  // Add optional fields only if they exist
+  if (salon.telefone) {
+    localBusinessSchema.telephone = salon.telefone;
+  }
+  if (salon.email) {
+    localBusinessSchema.email = salon.email;
+  }
+  if (salon.latitude && salon.longitude) {
+    localBusinessSchema.geo = {
+      '@type': 'GeoCoordinates',
+      latitude: salon.latitude,
+      longitude: salon.longitude,
+    };
+  }
+  if (salon.working_hours) {
+    const openingHours = Object.entries(salon.working_hours)
+      .filter(([_, hours]) => hours && hours.available)
+      .map(([day, hours]) => ({
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: day.charAt(0).toUpperCase() + day.slice(1),
+        opens: hours.start,
+        closes: hours.end,
+      }));
+    if (openingHours.length > 0) {
+      localBusinessSchema.openingHoursSpecification = openingHours;
+    }
+  }
+  if (salon.reviews && salon.reviews.total_reviews > 0) {
+    localBusinessSchema.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: salon.reviews.average_rating,
+      reviewCount: salon.reviews.total_reviews,
+    };
+  }
+
+  // Breadcrumb Schema
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: t('search.search'),
+        item: `${siteUrl}/search`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: salon.nome,
+        item: salonUrl,
+      },
+    ],
+  };
+
+  // SEO Metadata
+  const seoTitle = `${salon.nome} - ${fullAddress || salon.cidade || 'Beauty Salon'}`;
+  const seoDescription = salon.about 
+    ? `${salon.nome}: ${salon.about.substring(0, 150)}...`
+    : `Book appointments at ${salon.nome}${fullAddress ? ` in ${fullAddress}` : ''}. ${salon.services?.length || 0} services available.`;
+
   return (
     <div className="min-h-screen bg-white">
+      <SEOHead
+        title={seoTitle}
+        description={seoDescription}
+        keywords={`${salon.nome}, ${salon.cidade || ''}, beauty salon, ${salon.services?.map(s => s.name).join(', ') || ''}`}
+        ogType="business.business"
+        ogImage={salonImage}
+      />
+      <StructuredData data={[localBusinessSchema, breadcrumbSchema]} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="mb-8">

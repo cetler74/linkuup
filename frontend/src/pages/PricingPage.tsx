@@ -20,6 +20,9 @@ import {
 import axios from 'axios';
 import Footer from '../components/common/Footer';
 import Header from '../components/common/Header';
+import SEOHead from '../components/seo/SEOHead';
+import StructuredData from '../components/seo/StructuredData';
+import { billingAPI } from '../utils/api';
 
 const PricingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -34,6 +37,7 @@ const PricingPage: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
+  const [plans, setPlans] = useState<Array<{ code: string; trial_days: number }>>([]);
 
   // Parallax scroll effect - hero section scrolls at half speed
   useEffect(() => {
@@ -51,6 +55,16 @@ const PricingPage: React.FC = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
+  }, []);
+
+  // Load plans
+  useEffect(() => {
+    (async () => {
+      try {
+        const plansData = await billingAPI.getPlans();
+        setPlans(plansData.plans);
+      } catch (_) {}
+    })();
   }, []);
 
   // Scroll to pricing section when component mounts
@@ -123,8 +137,26 @@ const PricingPage: React.FC = () => {
     setIsContactFormOpen(true);
   };
 
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  // PricingPage Schema with FAQ
+  const pricingPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'LinkUup Pricing',
+    description: 'Choose the perfect plan for your beauty salon, barbershop, or service business. Flexible pricing plans starting with a free trial.',
+    url: `${siteUrl}/pricing`,
+  };
+
   return (
     <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden">
+      <SEOHead
+        title="Pricing Plans - Choose Your Plan"
+        description="Choose the perfect plan for your beauty salon, barbershop, or service business. Flexible pricing plans starting with a free trial. No credit card required."
+        keywords="salon software pricing, booking system pricing, beauty business plans, salon management cost, appointment booking software pricing"
+        ogType="website"
+      />
+      <StructuredData data={pricingPageSchema} />
       {/* Hero Section - header overlays this section, scrolls at half speed */}
       <section 
         ref={heroSectionRef}
@@ -167,9 +199,14 @@ const PricingPage: React.FC = () => {
                     <div className="text-4xl font-bold text-charcoal">€5,95</div>
                     <div className="text-charcoal/70">per month</div>
                   </div>
-                  <div className="bg-lime-green/20 text-lime-green text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
-                    10 day trial
-                  </div>
+                  {(() => {
+                    const basicPlan = plans.find(p => p.code === 'basic');
+                    return basicPlan ? (
+                      <div className="bg-lime-green/20 text-lime-green text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
+                        {basicPlan.trial_days} day trial
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
 
                 <div className="space-y-4 mb-8 flex-grow">
@@ -461,7 +498,7 @@ const PricingPage: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link 
-                to="/join" 
+                to="/join?trial=true" 
                 className="btn-hero group"
               >
                 <span>Start Free Trial</span>

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Mail, MapPin, Clock, Send } from 'lucide-react';
 import axios from 'axios';
+import SEOHead from '../components/seo/SEOHead';
+import StructuredData from '../components/seo/StructuredData';
 
 const ContactPage: React.FC = () => {
   const { t } = useTranslation();
@@ -65,8 +67,26 @@ const ContactPage: React.FC = () => {
     }
   };
 
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  // ContactPage Schema
+  const contactPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ContactPage',
+    name: 'Contact LinkUup',
+    description: 'Get in touch with LinkUup. Contact us for support, sales inquiries, or partnership opportunities.',
+    url: `${siteUrl}/contact`,
+  };
+
   return (
     <div className="min-h-screen bg-light-gray">
+      <SEOHead
+        title="Contact Us - Get in Touch"
+        description="Get in touch with LinkUup for support, sales inquiries, or partnership opportunities. We're here to help transform your beauty business."
+        keywords="contact LinkUup, salon software support, booking system help, beauty business support"
+        ogType="website"
+      />
+      <StructuredData data={contactPageSchema} />
       
       {/* Hero Section */}
       <section className="relative z-10 py-20 overflow-hidden">

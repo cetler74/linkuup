@@ -1,12 +1,30 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Header from '../components/common/Header';
+import SEOHead from '../components/seo/SEOHead';
+import StructuredData from '../components/seo/StructuredData';
 
 const PrivacyPolicyPage: React.FC = () => {
   const { t } = useTranslation();
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const privacyPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Privacy Policy',
+    description: 'LinkUup Privacy Policy - Learn how we protect your data and privacy.',
+    url: `${siteUrl}/privacy-policy`,
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEOHead
+        title="Privacy Policy"
+        description="LinkUup Privacy Policy - Learn how we collect, use, and protect your personal information. Your privacy is important to us."
+        keywords="privacy policy, data protection, GDPR, privacy rights"
+        ogType="website"
+      />
+      <StructuredData data={privacyPageSchema} />
       {/* Header */}
       <div className="bg-white shadow-sm">
         <Header />

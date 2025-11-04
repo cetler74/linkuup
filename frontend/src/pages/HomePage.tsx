@@ -6,6 +6,8 @@ import { placeAPI, getImageUrl } from '../utils/api';
 import type { Place } from '../utils/api';
 import Header from '../components/common/Header';
 import HeroCarousel from '../components/common/HeroCarousel';
+import SEOHead from '../components/seo/SEOHead';
+import StructuredData from '../components/seo/StructuredData';
 import {
   Marquee,
   MarqueeContent,
@@ -200,8 +202,50 @@ const HomePage: React.FC = () => {
     };
   }, []);
 
+  // Structured Data for Organization
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'LinkUup',
+    description: 'All-in-one platform for beauty salons, barbershops, and service businesses',
+    url: typeof window !== 'undefined' ? window.location.origin : '',
+    logo: typeof window !== 'undefined' ? `${window.location.origin}/vite.svg` : '',
+    sameAs: [
+      // Add social media links if available
+    ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'Customer Service',
+      // Add contact information if available
+    },
+  };
+
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'LinkUup',
+    url: typeof window !== 'undefined' ? window.location.origin : '',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: typeof window !== 'undefined' ? `${window.location.origin}/search?q={search_term_string}` : '',
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
   return (
     <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden">
+      <SEOHead
+        title="Transform Your Beauty Salon Online"
+        description="LinkUup is the all-in-one platform for beauty salons, barbershops, and service businesses. Manage bookings, payments, customers, and more with our intuitive platform. Start your free trial today!"
+        keywords="beauty salon, barbershop, booking system, online booking, salon management, appointment booking, beauty business, salon software, spa management, beauty appointment"
+        ogType="website"
+        ogImage="/images/og-home.png"
+      />
+      <StructuredData data={[organizationSchema, websiteSchema]} />
+      
       {/* Hero Section with Bright Blue Background */}
       <section className="relative bg-gradient-to-br from-bright-blue to-blue-600 min-h-screen flex items-center">
         {/* Transparent Header Overlay */}

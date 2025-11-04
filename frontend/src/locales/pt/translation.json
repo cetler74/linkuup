@@ -998,7 +998,9 @@
       "active": "Ativo",
       "inactive": "Inativo",
       "save": "Guardar",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "period": "Período",
+      "duration": "Duração"
     },
     "rewards": {
       "title": "Gestão de Recompensas",

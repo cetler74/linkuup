@@ -43,7 +43,8 @@ const UserSettingsManagement: React.FC = () => {
   const fetchUserPermissions = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5001/api/v1/owner/user/feature-permissions', {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+      const response = await fetch(`${apiBase}/owner/user/feature-permissions`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
@@ -74,7 +75,8 @@ const UserSettingsManagement: React.FC = () => {
     setSaving(true);
     setMessage(null);
     try {
-      const response = await fetch('http://localhost:5001/api/v1/owner/user/feature-permissions', {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+      const response = await fetch(`${apiBase}/owner/user/feature-permissions`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -93,9 +95,13 @@ const UserSettingsManagement: React.FC = () => {
           detail = data?.detail || '';
         } catch (_) {}
 
-        if (detail.startsWith('managed_by_plan: rewards')) {
-          navigate('/owner/upgrade?feature=rewards');
-          return;
+        // Handle upgrade required for pro-managed features
+        if (detail.startsWith('managed_by_plan: ')) {
+          const feature = detail.replace('managed_by_plan: ', '').trim();
+          if (feature === 'rewards' || feature === 'time_off' || feature === 'campaigns' || feature === 'messaging') {
+            navigate(`/owner/upgrade?feature=${feature}`);
+            return;
+          }
         }
         throw new Error('Failed to update user permissions');
       }
@@ -110,7 +116,8 @@ const UserSettingsManagement: React.FC = () => {
   const performUpgradeToPro = async () => {
     try {
       setUpgrading(true);
-      const placesRes = await fetch('http://localhost:5001/api/v1/owner/places/', {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+      const placesRes = await fetch(`${apiBase}/owner/places/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
@@ -120,7 +127,7 @@ const UserSettingsManagement: React.FC = () => {
       const firstPlaceId = Array.isArray(places) && places.length > 0 ? places[0].id : undefined;
       if (!firstPlaceId) throw new Error('No place found to upgrade');
 
-      const upgradeRes = await fetch('http://localhost:5001/api/v1/subscriptions/change-plan', {
+      const upgradeRes = await fetch(`${apiBase}/subscriptions/change-plan`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -157,6 +164,11 @@ const UserSettingsManagement: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="border rounded-lg p-4">
                 <div className="font-semibold mb-2">Basic</div>
+                <div className="mb-3">
+                  <div className="text-2xl font-bold text-charcoal">€5,95</div>
+                  <div className="text-sm text-charcoal/70">per month</div>
+                  <div className="text-xs text-charcoal/60 mt-1">14-day trial</div>
+                </div>
                 <ul className="text-sm text-charcoal/80 list-disc pl-4 space-y-1">
                   <li>Booking with email notifications</li>
                   <li>Services</li>
@@ -164,8 +176,18 @@ const UserSettingsManagement: React.FC = () => {
                   <li>Up to 2 employees</li>
                 </ul>
               </div>
-              <div className="border rounded-lg p-4">
+              <div className="border-2 border-bright-blue rounded-lg p-4 relative">
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-bright-blue text-white px-3 py-1 rounded-full text-xs font-medium">
+                    Recommended
+                  </div>
+                </div>
                 <div className="font-semibold mb-2">Pro</div>
+                <div className="mb-3">
+                  <div className="text-2xl font-bold text-charcoal">€10,95</div>
+                  <div className="text-sm text-charcoal/70">per month</div>
+                  <div className="text-xs text-charcoal/60 mt-1">14-day trial</div>
+                </div>
                 <ul className="text-sm text-charcoal/80 list-disc pl-4 space-y-1">
                   <li>Everything in Basic</li>
                   <li>SMS and WhatsApp campaigns</li>

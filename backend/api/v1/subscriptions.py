@@ -252,14 +252,23 @@ async def change_plan(
         # Sync user-level permissions to reflect new plan
         await _sync_user_feature_permissions_for_plan(db, current_user.id, plan.id)
         # Optionally enable a requested feature after upgrade/trial creation
-        if body.feature_to_enable == 'rewards':
-            # Ensure PlaceFeatureSetting exists and set rewards_enabled
+        if body.feature_to_enable:
+            # Ensure PlaceFeatureSetting exists
             fs_res = await db.execute(select(PlaceFeatureSetting).where(PlaceFeatureSetting.place_id == body.place_id))
             fs = fs_res.scalar_one_or_none()
             if not fs:
                 fs = PlaceFeatureSetting(place_id=body.place_id)
                 db.add(fs)
-            fs.rewards_enabled = True
+            
+            # Enable the requested feature based on feature_to_enable value
+            if body.feature_to_enable == 'rewards':
+                fs.rewards_enabled = True
+            elif body.feature_to_enable == 'time_off':
+                fs.time_off_enabled = True
+            elif body.feature_to_enable == 'campaigns':
+                fs.campaigns_enabled = True
+            elif body.feature_to_enable == 'messaging':
+                fs.messaging_enabled = True
             await db.commit()
         return {"status": "ok", "message": "Subscription created and trial started"}
 
@@ -273,8 +282,12 @@ async def change_plan(
     if row:
         pf: PlanFeature = row[0]
         if pf.enabled and pf.limit_value is not None:
+            # Count only active employees for limit validation
             count_res = await db.execute(
-                select(func.count(PlaceEmployee.id)).where(PlaceEmployee.place_id == body.place_id)
+                select(func.count(PlaceEmployee.id)).where(
+                    PlaceEmployee.place_id == body.place_id,
+                    PlaceEmployee.is_active == True
+                )
             )
             current_count = count_res.scalar() or 0
             if current_count > pf.limit_value:
@@ -289,13 +302,23 @@ async def change_plan(
     await _sync_user_feature_permissions_for_plan(db, current_user.id, plan.id)
 
     # If a specific feature should be enabled post-change and allowed by plan
-    if body.feature_to_enable == 'rewards':
+    if body.feature_to_enable:
+        # Ensure PlaceFeatureSetting exists
         fs_res = await db.execute(select(PlaceFeatureSetting).where(PlaceFeatureSetting.place_id == body.place_id))
         fs = fs_res.scalar_one_or_none()
         if not fs:
             fs = PlaceFeatureSetting(place_id=body.place_id)
             db.add(fs)
-        fs.rewards_enabled = True
+        
+        # Enable the requested feature based on feature_to_enable value
+        if body.feature_to_enable == 'rewards':
+            fs.rewards_enabled = True
+        elif body.feature_to_enable == 'time_off':
+            fs.time_off_enabled = True
+        elif body.feature_to_enable == 'campaigns':
+            fs.campaigns_enabled = True
+        elif body.feature_to_enable == 'messaging':
+            fs.messaging_enabled = True
         await db.commit()
 
     return {"status": "ok"}

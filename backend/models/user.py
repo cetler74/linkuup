@@ -46,6 +46,8 @@ class User(Base):
     # OAuth fields
     oauth_provider = Column(String(50), nullable=True)
     oauth_id = Column(String(100), nullable=True)
+    # profile_picture column - uncomment after running migration
+    # profile_picture = Column(String(500), nullable=True)  # Profile picture URL from OAuth providers
     
     # Additional fields for compatibility (computed properties)
     @property

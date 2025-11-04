@@ -194,7 +194,7 @@ export interface DashboardStats {
 }
 
 // API Base Configuration
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1'}/owner`;
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/owner`;
 
 // Authentication helper functions
 export const checkAuthStatus = () => {
@@ -235,6 +235,32 @@ const getAuthHeaders = () => {
   };
 };
 
+// Custom error class for feature availability errors
+export class FeatureNotAvailableError extends Error {
+  feature: string;
+  
+  constructor(feature: string, message?: string) {
+    super(message || `Feature "${feature}" is not available. Please upgrade your plan to access this feature.`);
+    this.name = 'FeatureNotAvailableError';
+    this.feature = feature;
+  }
+}
+
+// Custom error class for limit reached errors
+export class LimitReachedError extends Error {
+  feature: string;
+  currentCount: number;
+  limit: number;
+  
+  constructor(feature: string, currentCount: number, limit: number, message?: string) {
+    super(message || `You have reached the limit of ${limit} ${feature}. Please upgrade your plan to add more.`);
+    this.name = 'LimitReachedError';
+    this.feature = feature;
+    this.currentCount = currentCount;
+    this.limit = limit;
+  }
+}
+
 // Helper function for error handling
 const handleApiError = async (response: Response, defaultMessage: string) => {
   if (!response.ok) {
@@ -245,15 +271,64 @@ const handleApiError = async (response: Response, defaultMessage: string) => {
       headers: Object.fromEntries(response.headers.entries())
     });
     
+    let errorData;
     try {
-      const errorData = await response.json();
-      console.error('🚨 Error Response Body:', errorData);
-      console.error('🚨 Error Details:', JSON.stringify(errorData, null, 2));
-      throw new Error(Array.isArray(errorData.detail) ? errorData.detail.join(', ') : (errorData.detail || defaultMessage));
-    } catch (parseError) {
-      console.error('🚨 Failed to parse error response:', parseError);
+      errorData = await response.json();
+    } catch (jsonError) {
+      // If JSON parsing fails, throw generic error
+      console.error('🚨 Failed to parse error response as JSON:', jsonError);
       throw new Error(defaultMessage);
     }
+    
+    console.error('🚨 Error Response Body:', errorData);
+    console.error('🚨 Error Details:', JSON.stringify(errorData, null, 2));
+    
+    const errorDetail = Array.isArray(errorData.detail) 
+      ? errorData.detail.join(', ') 
+      : (errorData.detail || defaultMessage);
+    
+    // Check if this is a limit_reached error
+    // Handle "limit_reached: employees current=X limit=Y" format
+    if (typeof errorDetail === 'string') {
+      const limitMatch = errorDetail.match(/limit_reached:?\s*(\w+)(?:\s+current=(\d+))?(?:\s+limit=(\d+))?/);
+      if (limitMatch) {
+        const featureName = limitMatch[1] || 'feature';
+        const currentCount = limitMatch[2] ? parseInt(limitMatch[2], 10) : 0;
+        const limit = limitMatch[3] ? parseInt(limitMatch[3], 10) : 0;
+        
+        console.log('🚨 Detected limit_reached error for feature:', featureName, `current=${currentCount} limit=${limit}`);
+        
+        const limitError = new LimitReachedError(
+          featureName,
+          currentCount,
+          limit,
+          `You have reached your ${featureName} limit (${limit}). Please upgrade your plan to add more ${featureName}.`
+        );
+        
+        console.log('🚨 Throwing LimitReachedError:', limitError);
+        throw limitError;
+      }
+      
+      // Check if this is a feature_not_available error
+      // Handle both "feature_not_available: employees" and "feature_not_available:employees" formats
+      const featureMatch = errorDetail.match(/feature_not_available:?\s*(\w+)/);
+      if (featureMatch) {
+        const featureName = featureMatch[1] || 'feature';
+        
+        console.log('🚨 Detected feature_not_available error for feature:', featureName);
+        
+        const featureError = new FeatureNotAvailableError(
+          featureName,
+          `The "${featureName}" feature is not available with your current plan. Please upgrade to access this feature.`
+        );
+        
+        console.log('🚨 Throwing FeatureNotAvailableError:', featureError, 'feature:', featureError.feature);
+        throw featureError;
+      }
+    }
+    
+    // If not a feature error, throw regular error
+    throw new Error(errorDetail);
   }
 };
 
@@ -290,7 +365,7 @@ export const ownerApi = {
       id: place.id,
       name: place.nome,
       city: place.cidade,
-      location_type: 'fixed', // Most businesses are fixed locations
+      location_type: place.location_type || 'fixed', // Read from API response, default to 'fixed' if not present
       service_areas: place.service_areas || [],
       address: place.rua,
       postal_code: place.cod_postal,
@@ -510,17 +585,21 @@ export const ownerApi = {
   },
 
   createBooking: async (data: Partial<Booking>): Promise<Booking> => {
-    console.log('📝 createBooking - Data:', data);
-    console.log('📝 createBooking - URL:', `${API_BASE_URL}/bookings/places/${data.business_id}/bookings`);
+    // Extract place_id from business_id (used in URL) and remove it from body
+    const placeId = (data as any).business_id || (data as any).place_id;
+    const { business_id, place_id, ...bodyData } = data as any;
+    
+    console.log('📝 createBooking - Data:', bodyData);
+    console.log('📝 createBooking - URL:', `${API_BASE_URL}/bookings/places/${placeId}/bookings`);
     
     try {
       const headers = getAuthHeaders();
       console.log('📝 createBooking - Headers:', headers);
       
-      const response = await fetch(`${API_BASE_URL}/bookings/places/${data.business_id}/bookings`, {
+      const response = await fetch(`${API_BASE_URL}/bookings/places/${placeId}/bookings`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(data),
+        body: JSON.stringify(bodyData),
       });
       
       console.log('📝 createBooking - Response status:', response.status);
@@ -1434,8 +1513,10 @@ export const useOwnerApi = () => {
     return useQuery({
       queryKey: ['place-feature-settings', placeId],
       queryFn: async () => {
-        const response = await fetch(`/api/v1/owner/places/${placeId}/settings`);
-        if (!response.ok) throw new Error('Failed to fetch feature settings');
+        const response = await fetch(`${API_BASE_URL}/places/${placeId}/settings`, {
+          headers: getAuthHeaders(),
+        });
+        await handleApiError(response, 'Failed to fetch feature settings');
         return response.json();
       },
       enabled: !!placeId,
@@ -1445,12 +1526,12 @@ export const useOwnerApi = () => {
   const useUpdateFeatureSettings = () => {
     return useMutation({
       mutationFn: async ({ placeId, settings }: { placeId: number; settings: any }) => {
-        const response = await fetch(`/api/v1/owner/places/${placeId}/settings/features`, {
+        const response = await fetch(`${API_BASE_URL}/places/${placeId}/settings/features`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify(settings),
         });
-        if (!response.ok) throw new Error('Failed to update feature settings');
+        await handleApiError(response, 'Failed to update feature settings');
         return response.json();
       },
       onSuccess: (_, { placeId }) => {
@@ -1463,8 +1544,10 @@ export const useOwnerApi = () => {
     return useQuery({
       queryKey: ['place-reward-settings', placeId],
       queryFn: async () => {
-        const response = await fetch(`/api/v1/owner/places/${placeId}/reward-settings`);
-        if (!response.ok) throw new Error('Failed to fetch reward settings');
+        const response = await fetch(`${API_BASE_URL}/places/${placeId}/reward-settings`, {
+          headers: getAuthHeaders(),
+        });
+        await handleApiError(response, 'Failed to fetch reward settings');
         return response.json();
       },
       enabled: !!placeId,
@@ -1474,12 +1557,12 @@ export const useOwnerApi = () => {
   const useUpdateRewardSettings = () => {
     return useMutation({
       mutationFn: async ({ placeId, settings }: { placeId: number; settings: any }) => {
-        const response = await fetch(`/api/v1/owner/places/${placeId}/reward-settings`, {
+        const response = await fetch(`${API_BASE_URL}/places/${placeId}/reward-settings`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify(settings),
         });
-        if (!response.ok) throw new Error('Failed to update reward settings');
+        await handleApiError(response, 'Failed to update reward settings');
         return response.json();
       },
       onSuccess: (_, { placeId }) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Gift, Search, LogOut } from 'lucide-react';
+import { Calendar, Clock, Gift, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { customerAPI } from '../../utils/api';
@@ -8,7 +8,7 @@ import Header from '../../components/common/Header';
 
 const CustomerDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [upcomingBookings, setUpcomingBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -59,10 +59,6 @@ const CustomerDashboard: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   if (loading) {
     return (
@@ -141,16 +137,6 @@ const CustomerDashboard: React.FC = () => {
                 </button>
               </nav>
             </div>
-          </div>
-
-          <div className="flex-shrink-0 space-y-4 pt-4 border-t border-medium-gray">
-            <button
-              onClick={handleLogout}
-              className="w-full justify-start text-base text-charcoal/80 hover:bg-coral-red/10 hover:text-coral-red transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
-            >
-              <LogOut className="mr-3 h-5 w-5" />
-              Logout
-            </button>
           </div>
         </div>
 

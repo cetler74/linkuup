@@ -172,12 +172,12 @@ const RewardsManagement: React.FC = () => {
         {/* Configuration Modal */}
         {showConfigModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4">
+            <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6 w-full max-w-2xl mx-4" style={{ borderRadius: '8px' }}>
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-white">Configure Rewards</h3>
+                <h3 className="text-xl font-semibold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Configure Rewards</h3>
                 <button
                   onClick={() => setShowConfigModal(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-[#9E9E9E] hover:text-[#333333] transition-colors"
                 >
                   <XMarkIcon className="h-6 w-6" />
                 </button>
@@ -186,13 +186,14 @@ const RewardsManagement: React.FC = () => {
               <div className="space-y-6">
                 {/* Calculation Method */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-[#333333] mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, fontSize: '14px' }}>
                     Calculation Method
                   </label>
                   <select
                     value={config.calculation_method}
                     onChange={(e) => handleConfigChange('calculation_method', e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-[#F5F5F5] border border-[#E0E0E0] rounded-lg px-3 py-2 text-[#333333] focus:outline-none focus:border-[#1E90FF] focus:ring-0 focus:shadow-[0_0_4px_rgba(30,144,255,0.4)] transition-all"
+                    style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: 400 }}
                   >
                     <option value="volume_based">Volume Based (Points per Euro)</option>
                     <option value="fixed_per_booking">Fixed per Booking</option>
@@ -202,14 +203,16 @@ const RewardsManagement: React.FC = () => {
                 {/* Points per Booking */}
                 {config.calculation_method === 'fixed_per_booking' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-[#333333] mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, fontSize: '14px' }}>
                       Points per Booking
                     </label>
                     <input
                       type="number"
                       value={config.points_per_booking}
                       onChange={(e) => handleConfigChange('points_per_booking', parseInt(e.target.value))}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                      placeholder="Enter points per booking"
+                      className="w-full bg-[#F5F5F5] border border-[#E0E0E0] rounded-lg px-3 py-2 text-[#333333] placeholder-[#9E9E9E] focus:outline-none focus:border-[#1E90FF] focus:ring-0 focus:shadow-[0_0_4px_rgba(30,144,255,0.4)] transition-all"
+                      style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: 400 }}
                     />
                   </div>
                 )}
@@ -217,7 +220,7 @@ const RewardsManagement: React.FC = () => {
                 {/* Points per Euro */}
                 {config.calculation_method === 'volume_based' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-[#333333] mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, fontSize: '14px' }}>
                       Points per Euro Spent
                     </label>
                     <input
@@ -225,10 +228,12 @@ const RewardsManagement: React.FC = () => {
                       step="0.1"
                       value={config.points_per_currency_unit}
                       onChange={(e) => handleConfigChange('points_per_currency_unit', parseFloat(e.target.value))}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                      placeholder="Enter points per euro"
+                      className="w-full bg-[#F5F5F5] border border-[#E0E0E0] rounded-lg px-3 py-2 text-[#333333] placeholder-[#9E9E9E] focus:outline-none focus:border-[#1E90FF] focus:ring-0 focus:shadow-[0_0_4px_rgba(30,144,255,0.4)] transition-all"
+                      style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: 400 }}
                       min="0.1"
                     />
-                    <p className="text-sm text-gray-400 mt-1">
+                    <p className="text-sm text-[#9E9E9E] mt-1" style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px' }}>
                       Example: 1.0 means 1 point per €1 spent, 2.0 means 2 points per €1 spent
                     </p>
                   </div>
@@ -238,39 +243,45 @@ const RewardsManagement: React.FC = () => {
                 {/* Redemption Rules */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-[#333333] mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, fontSize: '14px' }}>
                       Min Points for Redemption
                     </label>
                     <input
                       type="number"
                       value={config.redemption_rules.min_points_redemption}
                       onChange={(e) => handleConfigChange('redemption_rules.min_points_redemption', parseInt(e.target.value))}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                      placeholder="Enter minimum points"
+                      className="w-full bg-[#F5F5F5] border border-[#E0E0E0] rounded-lg px-3 py-2 text-[#333333] placeholder-[#9E9E9E] focus:outline-none focus:border-[#1E90FF] focus:ring-0 focus:shadow-[0_0_4px_rgba(30,144,255,0.4)] transition-all"
+                      style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: 400 }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-[#333333] mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, fontSize: '14px' }}>
                       Max Points for Redemption
                     </label>
                     <input
                       type="number"
                       value={config.redemption_rules.max_points_redemption}
                       onChange={(e) => handleConfigChange('redemption_rules.max_points_redemption', parseInt(e.target.value))}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                      placeholder="Enter maximum points"
+                      className="w-full bg-[#F5F5F5] border border-[#E0E0E0] rounded-lg px-3 py-2 text-[#333333] placeholder-[#9E9E9E] focus:outline-none focus:border-[#1E90FF] focus:ring-0 focus:shadow-[0_0_4px_rgba(30,144,255,0.4)] transition-all"
+                      style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: 400 }}
                     />
                   </div>
                 </div>
 
                 {/* Points to Currency Ratio */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-[#333333] mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, fontSize: '14px' }}>
                     Points to Currency Ratio (1:?)
                   </label>
                   <input
                     type="number"
                     value={config.redemption_rules.points_to_currency_ratio}
                     onChange={(e) => handleConfigChange('redemption_rules.points_to_currency_ratio', parseInt(e.target.value))}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                    placeholder="Enter ratio"
+                    className="w-full bg-[#F5F5F5] border border-[#E0E0E0] rounded-lg px-3 py-2 text-[#333333] placeholder-[#9E9E9E] focus:outline-none focus:border-[#1E90FF] focus:ring-0 focus:shadow-[0_0_4px_rgba(30,144,255,0.4)] transition-all"
+                    style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: 400 }}
                   />
                 </div>
 
@@ -281,9 +292,10 @@ const RewardsManagement: React.FC = () => {
                     id="is_active"
                     checked={config.is_active}
                     onChange={(e) => handleConfigChange('is_active', e.target.checked)}
-                    className="h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                    className="h-4 w-4 text-[#1E90FF] bg-[#F5F5F5] border-[#E0E0E0] rounded focus:ring-[#1E90FF] focus:ring-2"
+                    style={{ accentColor: '#1E90FF' }}
                   />
-                  <label htmlFor="is_active" className="ml-2 text-sm text-gray-300">
+                  <label htmlFor="is_active" className="ml-2 text-sm text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: 500 }}>
                     Enable rewards system
                   </label>
                 </div>
@@ -292,14 +304,16 @@ const RewardsManagement: React.FC = () => {
               <div className="flex justify-end space-x-4 mt-6">
                 <button
                   onClick={() => setShowConfigModal(false)}
-                  className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                  className="px-4 py-2 text-[#333333] hover:text-[#1E90FF] transition-colors rounded-lg"
+                  style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: 500 }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={saveConfig}
                   disabled={loading}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                  className="bg-[#1E90FF] hover:bg-[#1877D2] disabled:bg-[#E0E0E0] disabled:text-[#9E9E9E] text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                  style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: 500 }}
                 >
                   {loading ? 'Saving...' : 'Save Configuration'}
                 </button>

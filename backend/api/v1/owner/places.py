@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import List
+from datetime import datetime, timedelta, timezone
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -16,6 +17,7 @@ from core.config import settings
 from models.user import User
 from models.place_existing import Place, PlaceImage
 from schemas.place_existing import PlaceResponse, PlaceCreate, PlaceUpdate
+from utils.slug import slugify, ensure_unique_slug, validate_slug, generate_slug_from_name
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -37,6 +39,7 @@ async def get_places(
             id=place.id,
             codigo=place.codigo,
             nome=place.nome,
+            slug=getattr(place, 'slug', None) or None,  # Handle missing slug column
             tipo=place.tipo,
             pais=place.pais,
             telefone=place.telefone,
@@ -50,6 +53,8 @@ async def get_places(
             cod_postal=place.cod_postal,
             latitude=place.latitude,
             longitude=place.longitude,
+            location_type=place.location_type,
+            coverage_radius=place.coverage_radius,
             booking_enabled=place.booking_enabled,
             is_bio_diamond=place.is_bio_diamond,
             about=place.about,
@@ -82,10 +87,14 @@ async def get_place(
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
     
+    # Refresh to ensure we get the latest data from the database
+    await db.refresh(place)
+    
     return PlaceResponse(
         id=place.id,
         codigo=place.codigo,
         nome=place.nome,
+        slug=getattr(place, 'slug', None) or None,  # Handle missing slug column
         tipo=place.tipo,
         pais=place.pais,
         telefone=place.telefone,
@@ -120,10 +129,49 @@ async def create_place(
 ):
     """Create a new place"""
     
+    # Generate or validate slug
+    try:
+        if place_data.slug:
+            # Validate provided slug
+            if not validate_slug(place_data.slug):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid slug format. Slug must be lowercase alphanumeric with hyphens only."
+                )
+            # Get existing slugs to check uniqueness (only if column exists)
+            try:
+                existing_slugs_result = await db.execute(
+                    select(Place.slug).where(Place.slug == place_data.slug)
+                )
+                if existing_slugs_result.scalar_one_or_none():
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Slug '{place_data.slug}' is already taken. Please choose a different one."
+                    )
+            except Exception:
+                # Column doesn't exist yet, skip uniqueness check
+                pass
+            final_slug = place_data.slug
+        else:
+            # Auto-generate slug from nome (only if column exists)
+            try:
+                existing_slugs_result = await db.execute(select(Place.slug))
+                existing_slugs = {row[0] for row in existing_slugs_result.all() if row[0]}
+                final_slug = generate_slug_from_name(place_data.nome, existing_slugs)
+            except Exception:
+                # Column doesn't exist yet, generate slug without checking uniqueness
+                final_slug = generate_slug_from_name(place_data.nome, set())
+    except HTTPException:
+        raise
+    except Exception:
+        # If slug column doesn't exist, just use a generated slug
+        final_slug = generate_slug_from_name(place_data.nome, set()) if not place_data.slug else place_data.slug
+    
     # Create new place
     place = Place(
         codigo=place_data.codigo,
         nome=place_data.nome,
+        slug=final_slug,  # Will be None/ignored if column doesn't exist yet
         tipo=place_data.tipo,
         pais=place_data.pais,
         telefone=place_data.telefone,
@@ -162,10 +210,51 @@ async def create_place(
     await db.commit()
     await db.refresh(place)
     
+    # Automatically create a subscription for this place if one doesn't exist
+    try:
+        from models.subscription import Plan, UserPlaceSubscription, SubscriptionStatusEnum
+        
+        # Check if subscription already exists
+        sub_result = await db.execute(
+            select(UserPlaceSubscription).where(
+                UserPlaceSubscription.user_id == current_user.id,
+                UserPlaceSubscription.place_id == place.id
+            )
+        )
+        existing_sub = sub_result.scalar_one_or_none()
+        
+        if not existing_sub:
+            # Get default "basic" plan
+            plan_result = await db.execute(
+                select(Plan).where(Plan.code == "basic", Plan.is_active == True)
+            )
+            plan = plan_result.scalar_one_or_none()
+            
+            if plan:
+                now = datetime.now(timezone.utc)
+                trial_end = now + timedelta(days=plan.trial_days or 14)
+                sub = UserPlaceSubscription(
+                    user_id=current_user.id,
+                    place_id=place.id,
+                    plan_id=plan.id,
+                    status=SubscriptionStatusEnum.TRIALING,
+                    trial_start_at=now,
+                    trial_end_at=trial_end,
+                    current_period_start=now,
+                    current_period_end=trial_end,
+                )
+                db.add(sub)
+                await db.commit()
+    except Exception as e:
+        # Don't fail place creation if subscription creation fails
+        print(f"⚠️ Warning: Could not create subscription for place {place.id}: {e}")
+        pass
+    
     return PlaceResponse(
         id=place.id,
         codigo=place.codigo,
         nome=place.nome,
+        slug=getattr(place, 'slug', None) or None,  # Handle missing slug column
         tipo=place.tipo,
         pais=place.pais,
         telefone=place.telefone,
@@ -214,10 +303,44 @@ async def update_place(
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
     
-    # Update fields
+    # Handle slug update if provided
+    if place_data.slug is not None:
+        try:
+            # Validate slug format
+            if not validate_slug(place_data.slug):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid slug format. Slug must be lowercase alphanumeric with hyphens only."
+                )
+            # Check uniqueness (excluding current place) - only if column exists
+            try:
+                existing_slug_result = await db.execute(
+                    select(Place.slug).where(
+                        Place.slug == place_data.slug,
+                        Place.id != place_id
+                    )
+                )
+                if existing_slug_result.scalar_one_or_none():
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Slug '{place_data.slug}' is already taken. Please choose a different one."
+                    )
+            except Exception:
+                # Column doesn't exist yet, skip uniqueness check
+                pass
+            place.slug = place_data.slug
+        except HTTPException:
+            raise
+        except Exception:
+            # If slug column doesn't exist, just set it (will be ignored until migration)
+            pass
+    
+    # Update other fields
     update_data = place_data.dict(exclude_unset=True)
     for field, value in update_data.items():
-        if field == "working_hours" and value is not None:
+        if field == "slug":  # Already handled above
+            continue
+        elif field == "working_hours" and value is not None:
             place.set_working_hours(value)
         elif hasattr(place, field):
             setattr(place, field, value)
@@ -229,6 +352,7 @@ async def update_place(
         id=place.id,
         codigo=place.codigo,
         nome=place.nome,
+        slug=getattr(place, 'slug', None) or None,  # Handle missing slug column
         tipo=place.tipo,
         pais=place.pais,
         telefone=place.telefone,

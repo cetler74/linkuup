@@ -98,16 +98,69 @@ async def create_employee(
         raise HTTPException(status_code=404, detail="Place not found")
     
     # Feature gating: employees feature and limit
-    if not await has_feature(db, current_user.id, place_id, "employees"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="feature_not_available: employees")
+    # Employees is a basic feature - always available, but check for limits
+    # Get limit from subscription, or use default "basic" plan limit if no subscription exists
     limit = await get_limit(db, current_user.id, place_id, "employees")
+    
+    # If no subscription exists, try to ensure one exists or use default basic plan limit
+    if limit is None:
+        from models.subscription import Plan, UserPlaceSubscription, SubscriptionStatusEnum
+        from datetime import datetime, timedelta, timezone
+        
+        # Try to create a subscription with basic plan if it doesn't exist
+        sub_result = await db.execute(
+            select(UserPlaceSubscription).where(
+                UserPlaceSubscription.user_id == current_user.id,
+                UserPlaceSubscription.place_id == place_id,
+                UserPlaceSubscription.status.in_([SubscriptionStatusEnum.TRIALING, SubscriptionStatusEnum.ACTIVE])
+            )
+        )
+        existing_sub = sub_result.scalar_one_or_none()
+        
+        if not existing_sub:
+            # Get basic plan
+            plan_result = await db.execute(select(Plan).where(Plan.code == "basic", Plan.is_active == True))
+            basic_plan = plan_result.scalar_one_or_none()
+            
+            if basic_plan:
+                # Create subscription with basic plan
+                now = datetime.now(timezone.utc)
+                trial_end = now + timedelta(days=basic_plan.trial_days or 14)
+                sub = UserPlaceSubscription(
+                    user_id=current_user.id,
+                    place_id=place_id,
+                    plan_id=basic_plan.id,
+                    status=SubscriptionStatusEnum.TRIALING,
+                    trial_start_at=now,
+                    trial_end_at=trial_end,
+                    current_period_start=now,
+                    current_period_end=trial_end,
+                )
+                db.add(sub)
+                await db.commit()
+                
+                # Now get the limit again
+                limit = await get_limit(db, current_user.id, place_id, "employees")
+        
+        # If still no limit, use default basic plan limit (2 employees)
+        if limit is None:
+            limit = 2  # Default basic plan limit
+    
+    # Enforce limit validation
     if limit is not None:
+        # Count only active employees for limit validation
         count_res = await db.execute(
-            select(func.count(PlaceEmployee.id)).where(PlaceEmployee.place_id == place_id)
+            select(func.count(PlaceEmployee.id)).where(
+                PlaceEmployee.place_id == place_id,
+                PlaceEmployee.is_active == True
+            )
         )
         current_count = count_res.scalar() or 0
         if current_count >= limit:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="limit_reached: employees")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail=f"limit_reached: employees current={current_count} limit={limit}"
+            )
     
     # Create new employee
     employee = PlaceEmployee(

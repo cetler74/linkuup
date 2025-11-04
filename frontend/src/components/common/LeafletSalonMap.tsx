@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -20,6 +20,8 @@ interface LeafletSalonMapProps {
   className?: string;
   isEditable?: boolean;
   onLocationChange?: (latitude: number, longitude: number) => void;
+  location_type?: 'fixed' | 'mobile';
+  coverage_radius?: number; // in kilometers
 }
 
 // Component to handle map clicks for editing
@@ -53,6 +55,37 @@ const MapController: React.FC<{
   return null;
 };
 
+// Component to fit map bounds to show coverage radius for mobile places
+const FitBoundsController: React.FC<{
+  center: [number, number];
+  radiusKm: number;
+}> = ({ center, radiusKm }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (radiusKm && radiusKm > 0) {
+      // Calculate bounds that include the circle
+      // Add padding to ensure the circle is fully visible
+      const paddingFactor = 1.2; // 20% padding
+      const radiusMeters = radiusKm * 1000 * paddingFactor;
+      
+      // Calculate bounds from center and radius
+      // Approximate: 1 degree latitude ≈ 111 km
+      const latDelta = (radiusMeters / 111000);
+      const lngDelta = (radiusMeters / (111000 * Math.cos(center[0] * Math.PI / 180)));
+      
+      const bounds = [
+        [center[0] - latDelta, center[1] - lngDelta] as [number, number],
+        [center[0] + latDelta, center[1] + lngDelta] as [number, number]
+      ];
+      
+      map.fitBounds(bounds, { padding: [20, 20] });
+    }
+  }, [map, center, radiusKm]);
+  
+  return null;
+};
+
 const LeafletSalonMap: React.FC<LeafletSalonMapProps> = ({
   latitude,
   longitude,
@@ -61,7 +94,9 @@ const LeafletSalonMap: React.FC<LeafletSalonMapProps> = ({
   height = '200px',
   className,
   isEditable = false,
-  onLocationChange
+  onLocationChange,
+  location_type = 'fixed',
+  coverage_radius
 }) => {
   const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
@@ -130,11 +165,30 @@ const LeafletSalonMap: React.FC<LeafletSalonMapProps> = ({
     if (latitude && longitude) {
       setMarkerPosition([latitude, longitude]);
       setMapCenter([latitude, longitude]);
+      
+      // For mobile places with coverage radius, calculate appropriate zoom
+      if (location_type === 'mobile' && coverage_radius && coverage_radius > 0) {
+        // Calculate zoom level based on radius
+        // Approximate formula: zoom decreases as radius increases
+        let calculatedZoom = 15; // default
+        if (coverage_radius <= 5) {
+          calculatedZoom = 13;
+        } else if (coverage_radius <= 10) {
+          calculatedZoom = 12;
+        } else if (coverage_radius <= 20) {
+          calculatedZoom = 11;
+        } else if (coverage_radius <= 50) {
+          calculatedZoom = 10;
+        } else {
+          calculatedZoom = 9;
+        }
+        setMapZoom(calculatedZoom);
+      }
     } else {
       // Reset marker position if no coordinates are provided
       setMarkerPosition(null);
     }
-  }, [latitude, longitude]);
+  }, [latitude, longitude, location_type, coverage_radius]);
 
   // Reset geocoding flag and zoom when switching between edit/view modes
   useEffect(() => {
@@ -216,8 +270,29 @@ const LeafletSalonMap: React.FC<LeafletSalonMapProps> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        <MapController center={displayCenter as [number, number]} zoom={mapZoom} />
+        {location_type === 'mobile' && coverage_radius && coverage_radius > 0 ? (
+          <FitBoundsController center={displayCenter as [number, number]} radiusKm={coverage_radius} />
+        ) : (
+          <MapController center={displayCenter as [number, number]} zoom={mapZoom} />
+        )}
         <MapClickHandler isEditable={isEditable} onLocationChange={handleLocationChange} />
+        {location_type === 'mobile' && coverage_radius && coverage_radius > 0 && (
+          <Circle
+            center={displayCenter as [number, number]}
+            radius={coverage_radius * 1000} // Convert km to meters
+            pathOptions={{
+              color: '#3B82F6',
+              fillColor: '#3B82F6',
+              fillOpacity: 0.2,
+              weight: 2
+            }}
+          >
+            <Popup>
+              <strong>{salonName}</strong><br />
+              Service Area: {coverage_radius} km radius
+            </Popup>
+          </Circle>
+        )}
         <Marker 
           position={displayMarker as [number, number]}
           draggable={isEditable}
@@ -232,6 +307,12 @@ const LeafletSalonMap: React.FC<LeafletSalonMapProps> = ({
           <Popup>
             <strong>{salonName}</strong><br />
             {address || 'Location'}
+            {location_type === 'mobile' && coverage_radius && (
+              <>
+                <br />
+                <small>Service Area: {coverage_radius} km radius</small>
+              </>
+            )}
             {isEditable && (
               <>
                 <br />

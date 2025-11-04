@@ -2,8 +2,8 @@
 Place model that matches the existing database schema.
 This model works with the existing 'places' table in the database.
 """
-from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Float, ForeignKey, JSON, Date, Time, DECIMAL
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Float, ForeignKey, Date, Time, DECIMAL
+from sqlalchemy.dialects.postgresql import UUID, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .base import Base
@@ -16,6 +16,7 @@ class Place(Base):
     id = Column(Integer, primary_key=True, index=True)
     codigo = Column(String(50), unique=True, nullable=True)
     nome = Column(String(200), nullable=False)
+    slug = Column(String(50), nullable=True)  # Made nullable until migration is run (unique/index will be added by migration)
     tipo = Column(String(50), nullable=False, default='salon')
     pais = Column(String(100), nullable=True)
     nif = Column(String(50), nullable=True)
@@ -46,16 +47,24 @@ class Place(Base):
     
     def get_working_hours(self):
         """Get working hours as dict"""
-        if self.working_hours:
-            # If it's a string (JSON), parse it
-            if isinstance(self.working_hours, str):
-                import json
-                try:
-                    return json.loads(self.working_hours)
-                except (json.JSONDecodeError, TypeError):
-                    return {}
-            # If it's already a dict, return it
+        # Handle None case
+        if self.working_hours is None:
+            return {}
+        
+        # If it's a string (JSON), parse it
+        if isinstance(self.working_hours, str):
+            import json
+            try:
+                parsed = json.loads(self.working_hours)
+                return parsed if isinstance(parsed, dict) else {}
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        
+        # If it's already a dict, return it
+        if isinstance(self.working_hours, dict):
             return self.working_hours
+        
+        # Fallback for any other type
         return {}
     
     def set_working_hours(self, hours):
@@ -245,16 +254,24 @@ class PlaceEmployee(Base):
     
     def get_working_hours(self):
         """Get working hours as dict"""
-        if self.working_hours:
-            # If it's a string (JSON), parse it
-            if isinstance(self.working_hours, str):
-                import json
-                try:
-                    return json.loads(self.working_hours)
-                except (json.JSONDecodeError, TypeError):
-                    return {}
-            # If it's already a dict, return it
+        # Handle None case
+        if self.working_hours is None:
+            return {}
+        
+        # If it's a string (JSON), parse it
+        if isinstance(self.working_hours, str):
+            import json
+            try:
+                parsed = json.loads(self.working_hours)
+                return parsed if isinstance(parsed, dict) else {}
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        
+        # If it's already a dict, return it
+        if isinstance(self.working_hours, dict):
             return self.working_hours
+        
+        # Fallback for any other type
         return {}
     
     def set_working_hours(self, hours):

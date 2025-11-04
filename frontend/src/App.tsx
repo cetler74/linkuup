@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { UserPermissionsProvider } from './contexts/UserPermissionsContext';
+import { PlaceProvider } from './contexts/PlaceContext';
 import Header from './components/common/Header';
 import Footer from './components/common/Footer';
 import NotFoundPage from './components/common/NotFoundPage';
@@ -64,9 +65,11 @@ import SimplePlacesTest from './components/test/SimplePlacesTest';
 const OwnerRouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <BusinessOwnerRoute>
     <UserPermissionsProvider>
-      <OwnerLayout>
-        {children}
-      </OwnerLayout>
+      <PlaceProvider>
+        <OwnerLayout>
+          {children}
+        </OwnerLayout>
+      </PlaceProvider>
     </UserPermissionsProvider>
   </BusinessOwnerRoute>
 );
@@ -207,7 +210,7 @@ function App() {
                   <Footer />
                 </div>
               } />
-              <Route path="/place/:id" element={
+              <Route path="/place/:slug" element={
                 <div className="min-h-screen flex flex-col">
                   <Header />
                   <main className="flex-1">

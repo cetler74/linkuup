@@ -54,7 +54,29 @@ async def get_current_business_owner(
         current_user.is_owner or 
         current_user.user_type == "business_owner"
     )
+    
+    # If not explicitly flagged, check if user owns any places (de facto business owner)
     if not is_owner:
+        from models.place_existing import Place
+        place_check = await db.execute(
+            select(Place).where(
+                Place.owner_id == current_user.id,
+                Place.is_active == True
+            ).limit(1)
+        )
+        has_place = place_check.scalar_one_or_none() is not None
+        if has_place:
+            is_owner = True
+            # Auto-update user flags for future requests
+            current_user.is_business_owner = True
+            current_user.is_owner = True
+            if not current_user.user_type or current_user.user_type != "business_owner":
+                current_user.user_type = "business_owner"
+            await db.commit()
+            print(f"✅ User {current_user.id} ({current_user.email}) auto-updated to business owner (owns place)")
+    
+    if not is_owner:
+        print(f"⚠️ User {current_user.id} ({current_user.email}) failed business owner check: is_business_owner={current_user.is_business_owner}, is_owner={current_user.is_owner}, user_type={current_user.user_type}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized as business owner"
@@ -70,20 +92,36 @@ async def get_current_business_owner(
             in_trial = False
 
     if in_trial:
+        print(f"✅ User {current_user.id} has active trial")
         return current_user
 
-    # Check subscription table for active access
+    # Check Stripe billing subscription table for active access
     res = await db.execute(
         select(BillingSubscription).where(
             BillingSubscription.user_id == current_user.id,
             BillingSubscription.active == True,
         )
     )
-    sub = res.scalar_one_or_none()
-    if sub:
+    billing_sub = res.scalar_one_or_none()
+    if billing_sub:
+        print(f"✅ User {current_user.id} has active BillingSubscription")
+        return current_user
+
+    # Check UserPlaceSubscription for place-based subscriptions (alternative billing system)
+    from models.subscription import UserPlaceSubscription, SubscriptionStatusEnum
+    place_sub_res = await db.execute(
+        select(UserPlaceSubscription).where(
+            UserPlaceSubscription.user_id == current_user.id,
+            UserPlaceSubscription.status.in_([SubscriptionStatusEnum.TRIALING, SubscriptionStatusEnum.ACTIVE]),
+        )
+    )
+    place_sub = place_sub_res.scalar_one_or_none()
+    if place_sub:
+        print(f"✅ User {current_user.id} has active UserPlaceSubscription (status: {place_sub.status})")
         return current_user
 
     # If no trial and no active subscription, block access
+    print(f"⚠️ User {current_user.id} has no active trial or subscription - blocking access")
     raise HTTPException(
         status_code=status.HTTP_402_PAYMENT_REQUIRED,
         detail="subscription_required: Your trial has ended. Please subscribe to continue.",

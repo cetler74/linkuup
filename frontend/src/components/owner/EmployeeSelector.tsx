@@ -33,6 +33,9 @@ const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   allowNone = true
 }) => {
   const activeEmployees = employees.filter(emp => emp.is_active);
+  const selectedEmployee = selectedEmployeeId 
+    ? activeEmployees.find(emp => emp.id === selectedEmployeeId)
+    : null;
 
   return (
     <div className="relative">
@@ -41,15 +44,17 @@ const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         onValueChange={(value) => onEmployeeChange(value ? Number(value) : null)}
         disabled={disabled}
       >
-        <SelectTrigger className="block w-full pl-10 pr-10 py-2 text-base border-gray-600 bg-gray-700 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed">
+        <SelectTrigger className="block w-full pl-10 pr-10" style={{ fontFamily: 'Open Sans, sans-serif' }}>
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <UserIcon className="h-5 w-5 text-gray-400" />
+            <UserIcon className="h-5 w-5 text-[#9E9E9E]" />
           </div>
-          <SelectValue placeholder={placeholder} />
+          <span className="flex-1 text-left">
+            {selectedEmployee ? `${selectedEmployee.name} (${selectedEmployee.role})` : placeholder}
+          </span>
         </SelectTrigger>
-        <SelectContent className="bg-gray-700 border-gray-600">
+        <SelectContent>
           {allowNone && (
-            <SelectItem value="" className="text-white hover:bg-gray-600">
+            <SelectItem value="" style={{ fontFamily: 'Open Sans, sans-serif' }}>
               No employee assigned
             </SelectItem>
           )}
@@ -57,7 +62,7 @@ const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             <SelectItem 
               key={employee.id} 
               value={employee.id.toString()}
-              className="text-white hover:bg-gray-600"
+              style={{ fontFamily: 'Open Sans, sans-serif' }}
             >
               {employee.name} ({employee.role})
             </SelectItem>

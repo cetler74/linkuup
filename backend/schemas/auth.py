@@ -47,6 +47,9 @@ class UserResponse(BaseModel):
     trial_start: Optional[str] = None
     trial_end: Optional[str] = None
     trial_status: Optional[str] = None
+    profile_picture: Optional[str] = None
+    oauth_provider: Optional[str] = None
+    oauth_id: Optional[str] = None
 
 class AuthResponse(BaseModel):
     user: UserResponse

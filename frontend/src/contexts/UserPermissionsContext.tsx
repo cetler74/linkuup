@@ -32,7 +32,8 @@ export const UserPermissionsProvider: React.FC<UserPermissionsProviderProps> = (
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:5001/api/v1/owner/user/feature-permissions', {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+      const response = await fetch(`${apiBase}/owner/user/feature-permissions`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',

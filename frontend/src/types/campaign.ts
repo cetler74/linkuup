@@ -4,6 +4,7 @@ export interface ActiveCampaign {
   name: string;
   banner_message: string;
   campaign_type: 'price_reduction' | 'rewards_increase' | 'free_service' | 'messaging';
+  start_datetime?: string;
   end_datetime: string;
   discount_type?: 'percentage' | 'fixed_amount';
   discount_value?: number;

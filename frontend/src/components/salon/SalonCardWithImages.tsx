@@ -28,6 +28,7 @@ interface SalonService {
 
 interface Salon {
   id: number;
+  slug?: string; // Optional until migration is run
   nome: string;
   cidade: string;
   regiao: string;
@@ -138,12 +139,12 @@ const SalonCardWithImages: React.FC<SalonCardWithImagesProps> = ({
   return (
     <>
       <div 
-        className="salon-card bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group"
+        className="salon-card bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group flex flex-col h-full"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
         {/* Image Section */}
-        <div className="relative h-56 sm:h-48 bg-gray-100 overflow-hidden">
+        <div className="relative h-56 sm:h-48 bg-gray-100 overflow-hidden flex-shrink-0">
           {sortedImages.length > 0 ? (
             <div className="relative h-full">
               <img
@@ -155,7 +156,9 @@ const SalonCardWithImages: React.FC<SalonCardWithImagesProps> = ({
                 onError={(e) => {
                   console.warn('Image failed to load, using fallback:', getImageUrl(sortedImages[currentImageIndex].image_url));
                   // Replace with fallback image
-                  e.target.src = 'http://localhost:5001/api/placeholder/400/300';
+                  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+                  const backendBase = apiBase.replace('/api/v1', '') || window.location.origin;
+                  e.target.src = `${backendBase}/api/placeholder/400/300`;
                 }}
                 onLoad={() => {
                   console.log('Image loaded successfully:', getImageUrl(sortedImages[currentImageIndex].image_url));
@@ -246,7 +249,9 @@ const SalonCardWithImages: React.FC<SalonCardWithImagesProps> = ({
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         console.warn('Thumbnail image failed to load:', getImageUrl(image.image_url));
-                        e.target.src = 'http://localhost:5001/api/placeholder/100/100';
+                        const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+                        const backendBase = apiBase.replace('/api/v1', '') || window.location.origin;
+                        e.target.src = `${backendBase}/api/placeholder/100/100`;
                       }}
                     />
                   </button>
@@ -264,7 +269,7 @@ const SalonCardWithImages: React.FC<SalonCardWithImagesProps> = ({
         </div>
 
         {/* Content Section */}
-        <div className="p-4">
+        <div className="p-4 flex flex-col flex-grow">
           {/* Salon Name and Badge */}
           <div className="flex items-start justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 flex-1">
@@ -335,9 +340,9 @@ const SalonCardWithImages: React.FC<SalonCardWithImagesProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2">
+          <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2 mt-auto">
             <Link 
-              to={`/place/${salon.id}`}
+              to={`/place/${salon.slug || salon.id}`}
               className="flex-1 btn-primary text-center text-sm py-3 min-h-[48px]"
             >
               {t('search.viewDetails')}

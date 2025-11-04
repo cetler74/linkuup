@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { authAPI } from '../utils/api';
 
 // Auth types
@@ -7,9 +8,12 @@ interface User {
   email: string;
   name: string;
   customer_id?: string;
-  user_type?: 'customer' | 'business_owner' | 'platform_admin';
+  user_type?: 'customer' | 'business_owner' | 'platform_admin' | 'employee';
   token?: string;
   is_admin?: boolean;
+  profile_picture?: string;
+  oauth_provider?: string;
+  oauth_id?: string;
 }
 
 interface LoginRequest {
@@ -68,6 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (accessToken && refreshToken) {
         // OAuth callback - store tokens and clear URL
+        console.log('✅ OAuth tokens received, storing in localStorage');
         localStorage.setItem('auth_token', accessToken);
         localStorage.setItem('refresh_token', refreshToken);
         // Clear URL params
@@ -77,18 +82,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = localStorage.getItem('auth_token');
       if (token) {
         try {
+          console.log('🔑 Token found, fetching user data...');
           const userData = await authAPI.getCurrentUser();
+          console.log('✅ User data fetched:', userData);
           setUser({
             id: userData.id,
             email: userData.email,
             name: userData.first_name || userData.email,
             is_admin: userData.is_admin,
             user_type: userData.user_type,
+            profile_picture: (userData as any).profile_picture,
+            oauth_provider: (userData as any).oauth_provider,
+            oauth_id: (userData as any).oauth_id,
           });
-        } catch (error) {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('refresh_token');
+          console.log('✅ User logged in successfully');
+        } catch (error: any) {
+          console.error('❌ Failed to fetch user data:', error);
+          console.error('❌ Error details:', error.response?.data || error.message);
+          // Don't remove tokens immediately - might be a temporary network issue
+          // Only remove if it's an authentication error
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            console.error('❌ Authentication failed, removing tokens');
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('refresh_token');
+          }
         }
+      } else {
+        console.log('ℹ️ No token found in localStorage');
       }
       setLoading(false);
     };
@@ -100,8 +120,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await authAPI.login(credentials);
       // Backend returns TokenResponse directly: { access_token, refresh_token, token_type, expires_in }
-      localStorage.setItem('auth_token', response.access_token);
-      localStorage.setItem('refresh_token', response.refresh_token);
+      // But API type says AuthResponse with tokens object - handle both cases
+      const accessToken = response.tokens?.access_token || (response as any).access_token;
+      const refreshToken = response.tokens?.refresh_token || (response as any).refresh_token;
+      localStorage.setItem('auth_token', accessToken);
+      localStorage.setItem('refresh_token', refreshToken);
       
       // Get user info after successful login
       const userData = await authAPI.getCurrentUser();
@@ -111,6 +134,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: userData.first_name || userData.email,
         is_admin: userData.is_admin,
         user_type: userData.user_type,
+        profile_picture: (userData as any).profile_picture,
+        oauth_provider: (userData as any).oauth_provider,
+        oauth_id: (userData as any).oauth_id,
       };
       setUser(newUser);
       
@@ -140,6 +166,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: response.user.first_name || response.user.email,
         is_admin: response.user.is_admin,
         user_type: response.user.user_type,
+        profile_picture: (response.user as any).profile_picture,
+        oauth_provider: (response.user as any).oauth_provider,
+        oauth_id: (response.user as any).oauth_id,
       };
       setUser(newUser);
       
@@ -164,8 +193,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const loginWithGoogle = (userType: 'customer' | 'business_owner' | any = 'customer', planCode?: string) => {
-    // Redirect to Google OAuth endpoint - using full backend URL since OAuth requires server redirect
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+    // Redirect to Google OAuth endpoint - need absolute URL for window.location.href
+    let apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    // If relative URL, make it absolute using current origin
+    if (apiBase.startsWith('/')) {
+      apiBase = `${window.location.origin}${apiBase}`;
+    }
     
     // Ensure userType is a valid string value
     let validUserType: 'customer' | 'business_owner' = 'customer';
@@ -181,8 +214,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const loginWithFacebook = (userType: 'customer' | 'business_owner' | any = 'customer', planCode?: string) => {
-    // Redirect to Facebook OAuth endpoint - using full backend URL since OAuth requires server redirect
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+    // Redirect to Facebook OAuth endpoint - need absolute URL for window.location.href
+    let apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    // If relative URL, make it absolute using current origin
+    if (apiBase.startsWith('/')) {
+      apiBase = `${window.location.origin}${apiBase}`;
+    }
     
     // Ensure userType is a valid string value
     let validUserType: 'customer' | 'business_owner' = 'customer';

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Gift, ArrowLeft, Star, Award, Calendar, TrendingUp, Search, LogOut } from 'lucide-react';
+import { Gift, ArrowLeft, Star, Award, Calendar, TrendingUp, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { customerAPI } from '../../utils/api';
 import Header from '../../components/common/Header';
 import CustomLanguageSelector from '../../components/common/CustomLanguageSelector';
 import { useTranslation } from 'react-i18next';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
 
 interface RewardData {
   id: number;
@@ -30,7 +31,7 @@ interface RewardTransaction {
 
 const CustomerRewards: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { t } = useTranslation();
   const [rewards, setRewards] = useState<RewardData[]>([]);
   const [transactions, setTransactions] = useState<RewardTransaction[]>([]);
@@ -103,10 +104,6 @@ const CustomerRewards: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   if (loading) {
     return (
@@ -197,13 +194,7 @@ const CustomerRewards: React.FC = () => {
             </div>
 
             <div className="flex-shrink-0 space-y-4 pt-4 border-t border-medium-gray">
-              <button
-                onClick={handleLogout}
-                className="w-full justify-start text-base text-charcoal/80 hover:bg-coral-red/10 hover:text-coral-red transition-all duration-200 h-11 flex items-center px-3 rounded-lg"
-              >
-                <LogOut className="mr-3 h-5 w-5" />
-                Logout
-              </button>
+              <ProfileDropdown />
             </div>
           </div>
 

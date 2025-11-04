@@ -880,5 +880,11 @@
     "silver": "Argento",
     "gold": "Oro",
     "platinum": "Platino"
+  },
+  "owner": {
+    "campaigns": {
+      "period": "Periodo",
+      "duration": "Durata"
+    }
   }
 }

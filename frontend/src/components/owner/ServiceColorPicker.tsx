@@ -40,7 +40,7 @@ const ServiceColorPicker: React.FC<ServiceColorPickerProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-white">
+      <label className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
         {label}
       </label>
       
@@ -49,7 +49,7 @@ const ServiceColorPicker: React.FC<ServiceColorPickerProps> = ({
           type="button"
           onClick={() => setShowPicker(!showPicker)}
           disabled={disabled}
-          className="w-10 h-10 rounded-md border-2 border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-10 h-10 rounded-md border-2 border-[#E0E0E0] focus:outline-none focus:ring-2 focus:ring-[#1E90FF] focus:border-[#1E90FF] disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: color }}
         />
         <input
@@ -57,8 +57,9 @@ const ServiceColorPicker: React.FC<ServiceColorPickerProps> = ({
           value={color}
           onChange={(e) => onColorChange(e.target.value)}
           disabled={disabled}
-          className="flex-1 px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-600 disabled:cursor-not-allowed bg-gray-700 text-white"
+          className="flex-1 px-3 py-2 border border-[#E0E0E0] rounded-lg bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-[#1E90FF] focus:border-[#1E90FF] sm:text-sm disabled:bg-[#E0E0E0] disabled:cursor-not-allowed"
           placeholder="#000000"
+          style={{ fontFamily: 'Open Sans, sans-serif' }}
         />
       </div>
 
@@ -72,9 +73,9 @@ const ServiceColorPicker: React.FC<ServiceColorPickerProps> = ({
             disabled={disabled}
             className={`w-6 h-6 rounded border-2 ${
               color === predefinedColor 
-                ? 'border-white' 
-                : 'border-gray-600 hover:border-gray-400'
-            } focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+                ? 'border-[#333333]' 
+                : 'border-[#E0E0E0] hover:border-[#1E90FF]'
+            } focus:outline-none focus:ring-2 focus:ring-[#1E90FF] disabled:opacity-50 disabled:cursor-not-allowed`}
             style={{ backgroundColor: predefinedColor }}
             title={predefinedColor}
           />
@@ -84,7 +85,7 @@ const ServiceColorPicker: React.FC<ServiceColorPickerProps> = ({
       {/* Color Picker Modal */}
       {showPicker && (
         <div className="absolute z-50 mt-2">
-          <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-2">
+          <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0] p-2">
             <ChromePicker
               color={color}
               onChange={handleColorChange}
@@ -94,14 +95,16 @@ const ServiceColorPicker: React.FC<ServiceColorPickerProps> = ({
               <button
                 type="button"
                 onClick={() => setShowPicker(false)}
-                className="px-3 py-1 text-sm text-gray-300 hover:text-white"
+                className="px-3 py-1 text-sm text-[#333333] hover:text-[#1E90FF]"
+                style={{ fontFamily: 'Open Sans, sans-serif' }}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => setShowPicker(false)}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-3 py-1 text-sm bg-[#1E90FF] text-white rounded hover:bg-[#1877D2]"
+                style={{ fontFamily: 'Open Sans, sans-serif' }}
               >
                 Done
               </button>

@@ -25,6 +25,30 @@ from datetime import datetime, date, time
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
+def _safe_get_working_hours(obj):
+    """Safely get working hours from an object, handling all edge cases"""
+    try:
+        if hasattr(obj, 'get_working_hours'):
+            return obj.get_working_hours()
+        elif hasattr(obj, 'working_hours'):
+            working_hours = obj.working_hours
+            if working_hours is None:
+                return {}
+            if isinstance(working_hours, str):
+                import json
+                try:
+                    parsed = json.loads(working_hours)
+                    return parsed if isinstance(parsed, dict) else {}
+                except (json.JSONDecodeError, TypeError):
+                    return {}
+            if isinstance(working_hours, dict):
+                return working_hours
+            return {}
+        return {}
+    except Exception as e:
+        print(f"Error getting working hours: {e}")
+        return {}
+
 @router.get("/debug")
 async def debug_places(db: AsyncSession = Depends(get_db)):
     """Debug endpoint to test basic functionality"""
@@ -143,6 +167,7 @@ async def get_places(
                 id=place.id,
                 codigo=place.codigo,
                 nome=place.nome,
+                slug=getattr(place, 'slug', None) or None,  # Handle missing slug column
                 tipo=place.tipo,
                 pais=place.pais,
                 telefone=place.telefone,
@@ -229,6 +254,7 @@ async def search_places(
             id=place.id,
             codigo=place.codigo,
             nome=place.nome,
+            slug=getattr(place, 'slug', None) or None,  # Handle missing slug column
             tipo=place.tipo,
             pais=place.pais,
             telefone=place.telefone,
@@ -307,22 +333,53 @@ async def get_sectors_list(
     return {"sectors": sectors}
 
 
-@router.get("/{place_id}", response_model=PlaceResponse)
+@router.get("/{slug}", response_model=PlaceResponse)
 # @limiter.limit(settings.RATE_LIMIT_MOBILE_READ)
 async def get_place(
-    place_id: int,
+    slug: str,
     db: AsyncSession = Depends(get_db)
 ):
-    """Get a specific place by ID"""
+    """Get a specific place by slug or ID"""
     try:
-        # Get the place
-        result = await db.execute(
-            select(Place).where(Place.id == place_id, Place.is_active == True)
-        )
-        place = result.scalar_one_or_none()
+        place = None
+        
+        # First, try to get the place by slug (if slug column exists)
+        try:
+            result = await db.execute(
+                select(Place).where(Place.slug == slug, Place.is_active == True)
+            )
+            place = result.scalar_one_or_none()
+        except Exception:
+            # If slug column doesn't exist, continue to try ID lookup
+            pass
+        
+        # If no place found by slug, try to parse as ID for backward compatibility
+        if not place:
+            try:
+                place_id = int(slug)
+                result = await db.execute(
+                    select(Place).where(Place.id == place_id, Place.is_active == True)
+                )
+                place = result.scalar_one_or_none()
+            except (ValueError, TypeError):
+                # slug is not a valid integer, that's fine
+                place = None
         
         if not place:
             raise HTTPException(status_code=404, detail="Place not found")
+        
+        # Refresh the place object to ensure all columns are loaded
+        # This is especially important for JSON columns with asyncpg
+        try:
+            await db.refresh(place)
+        except Exception as refresh_error:
+            print(f"Warning: Could not refresh place object: {refresh_error}")
+            # Continue without refresh - columns should already be loaded
+        
+        # Debug: Check working_hours value before calling get_working_hours()
+        # This helps identify if the issue is with retrieval or with the method
+        if hasattr(place, 'working_hours'):
+            print(f"DEBUG: place.working_hours type: {type(place.working_hours)}, value: {place.working_hours}")
         
         # Get images for this place
         images_result = await db.execute(
@@ -451,6 +508,7 @@ async def get_place(
             id=place.id,
             codigo=place.codigo,
             nome=place.nome,
+            slug=getattr(place, 'slug', None) or None,  # Handle missing slug column
             tipo=place.tipo,
             pais=place.pais,
             telefone=place.telefone,
@@ -469,7 +527,7 @@ async def get_place(
             booking_enabled=place.booking_enabled,
             is_bio_diamond=place.is_bio_diamond,
             about=place.about,
-            working_hours=place.get_working_hours(),
+            working_hours=_safe_get_working_hours(place),
             created_at=place.created_at,
             updated_at=place.updated_at,
             owner_id=place.owner_id,
@@ -495,7 +553,7 @@ async def get_place(
                     color_code=emp.color_code,
                     photo_url=emp.photo_url,
                     is_active=emp.is_active,
-                    working_hours=emp.get_working_hours(),
+                    working_hours=_safe_get_working_hours(emp),
                     created_at=emp.created_at,
                     updated_at=emp.updated_at
                 )
@@ -504,8 +562,14 @@ async def get_place(
             reviews=review_summary
         )
         
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404)
+        raise
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
         print(f"Error in get_place: {e}")
+        print(f"Traceback: {error_trace}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
     
 @router.get("/{place_id}/employees")
@@ -834,6 +898,19 @@ async def get_place_availability(
         time_slots.append(minutes_to_time(current_minutes))
         current_minutes += 30  # 30-minute intervals
     
+    # Helper function to map any booking time to its containing slot
+    # A slot covers a 30-minute period: e.g., 09:00 slot covers 09:00-09:29:59
+    def map_time_to_slot(booking_time_str: str) -> str:
+        """Map any booking time to its containing slot by rounding down to nearest 30-minute interval"""
+        try:
+            hours, minutes = map(int, booking_time_str.split(':'))
+            # Round down minutes to nearest 30-minute interval
+            slot_minutes = (minutes // 30) * 30
+            return f"{hours:02d}:{slot_minutes:02d}"
+        except (ValueError, AttributeError):
+            # If time format is invalid, return as-is for backward compatibility
+            return booking_time_str
+    
     # Check if place has employees
     result = await db.execute(
         select(PlaceEmployee).where(
@@ -875,12 +952,15 @@ async def get_place_availability(
     result = await db.execute(booking_query)
     existing_bookings = result.scalars().all()
     
-    # Get booked time slots
+    # Get booked time slots (map any booking time to its containing slot)
     booked_times = set()
     for booking in existing_bookings:
         if booking.booking_time:
             time_str = booking.booking_time.strftime("%H:%M")
-            booked_times.add(time_str)
+            mapped_slot = map_time_to_slot(time_str)
+            # Only add if the mapped slot exists in time_slots
+            if mapped_slot in time_slots:
+                booked_times.add(mapped_slot)
     
     # If employee_id is provided, only remove slots booked or time-off by that specific employee
     if employee_id:
@@ -894,12 +974,15 @@ async def get_place_availability(
         result = await db.execute(employee_booking_query)
         employee_bookings = result.scalars().all()
         
-        # Get slots booked by this specific employee
+        # Get slots booked by this specific employee (map any booking time to its containing slot)
         employee_booked_times = set()
         for booking in employee_bookings:
             if booking.booking_time:
                 time_str = booking.booking_time.strftime("%H:%M")
-                employee_booked_times.add(time_str)
+                mapped_slot = map_time_to_slot(time_str)
+                # Only add if the mapped slot exists in time_slots
+                if mapped_slot in time_slots:
+                    employee_booked_times.add(mapped_slot)
         
         # Check time-off for this employee
         to_query = select(PlaceEmployeeTimeOff).where(
@@ -976,14 +1059,16 @@ async def get_place_availability(
             slot_available = False
             
             for employee in employees:
-                # Check if this employee is booked at this specific time
+                # Check if this employee is booked at this specific slot
+                # Map any booking time to its containing slot
                 employee_booked = False
                 for booking in existing_bookings:
-                    if (booking.employee_id == employee.id and 
-                        booking.booking_time and 
-                        booking.booking_time.strftime("%H:%M") == slot):
-                        employee_booked = True
-                        break
+                    if booking.employee_id == employee.id and booking.booking_time:
+                        booking_time_str = booking.booking_time.strftime("%H:%M")
+                        mapped_slot = map_time_to_slot(booking_time_str)
+                        if mapped_slot == slot:
+                            employee_booked = True
+                            break
                 
                 # Check time-off for this employee at this slot
                 def is_slot_off_for_employee(emp_id: int, slot_str: str) -> bool:
@@ -1010,6 +1095,10 @@ async def get_place_availability(
     # Campaign data will be fetched separately by the frontend
     slots_with_campaigns = {}
     
+    # booked_times and employee_booked_times are already mapped to slots
+    # Just convert to sorted list for the response
+    booked_slots = sorted(list(employee_booked_times if employee_id else booked_times))
+    
     return {
         "place_id": place_id,
         "date": date,
@@ -1018,7 +1107,7 @@ async def get_place_availability(
         "available_slots": available_slots,
         "is_available": len(available_slots) > 0,
         "available_employees": [emp.id for emp in employees],
-        "booked_slots": list(employee_booked_times) if employee_id else list(booked_times),
+        "booked_slots": booked_slots,
         "slots_with_campaigns": slots_with_campaigns
     }
 

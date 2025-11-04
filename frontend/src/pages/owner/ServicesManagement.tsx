@@ -104,7 +104,7 @@ const ServicesManagement: React.FC = () => {
       const placesData = salonsData.map((salon: any) => ({
         id: salon.id,
         name: salon.nome || salon.name,
-        location_type: salon.location_type || 'fixed' as 'fixed' | 'mobile',
+        location_type: (salon.location_type || 'fixed') as 'fixed' | 'mobile',
         city: salon.cidade || salon.city,
         service_areas: salon.service_areas || []
       }));

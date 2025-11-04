@@ -182,6 +182,7 @@ async def get_campaigns_for_timeslot(
                         name=campaign.name,
                         banner_message=config.get('banner_message', ''),
                         campaign_type=campaign.type,
+                        start_datetime=start,
                         end_datetime=end,
                         discount_type=config.get('discount_type'),
                         discount_value=config.get('discount_value'),

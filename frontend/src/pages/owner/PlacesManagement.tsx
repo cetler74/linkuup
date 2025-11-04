@@ -26,6 +26,7 @@ L.Icon.Default.mergeOptions({
 
 interface Place {
   id: number;
+  slug?: string; // Optional until migration is run
   name: string;
   sector: string;
   description?: string;
@@ -34,6 +35,8 @@ interface Place {
   postal_code?: string;
   phone?: string;
   email?: string;
+  website?: string;
+  instagram?: string;
   location_type: 'fixed' | 'mobile';
   service_areas?: string[];
   coverage_radius?: number; // in kilometers
@@ -79,6 +82,7 @@ const PlacesManagement: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    slug: '',
     sector: '',
     description: '',
     address: '',
@@ -86,6 +90,8 @@ const PlacesManagement: React.FC = () => {
     postal_code: '',
     phone: '',
     email: '',
+    website: '',
+    instagram: '',
     location_type: 'fixed' as 'fixed' | 'mobile',
     service_areas: [] as string[],
     coverage_radius: 10, // default 10km radius
@@ -94,6 +100,27 @@ const PlacesManagement: React.FC = () => {
     longitude: undefined as number | undefined,
     workingHours: editingPlace?.working_hours || {},
   });
+
+  // Helper function to generate slug from name
+  const generateSlug = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove accents
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .trim()
+      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+  };
+
+  // Auto-generate slug when name changes (only if slug is empty)
+  useEffect(() => {
+    if (formData.name && !formData.slug) {
+      const autoSlug = generateSlug(formData.name);
+      setFormData(prev => ({ ...prev, slug: autoSlug }));
+    }
+  }, [formData.name]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
@@ -195,7 +222,9 @@ const PlacesManagement: React.FC = () => {
                 postal_code: salon.cod_postal,
                 phone: salon.telefone,
                 email: salon.email,
-                location_type: 'fixed' as 'fixed' | 'mobile',
+                website: salon.website || '',
+                instagram: salon.instagram || '',
+                location_type: (salon.location_type || 'fixed') as 'fixed' | 'mobile',
                 service_areas: [],
                 coverage_radius: salon.coverage_radius || 10,
                 booking_enabled: salon.booking_enabled || true,
@@ -219,7 +248,9 @@ const PlacesManagement: React.FC = () => {
                 postal_code: salon.cod_postal,
                 phone: salon.telefone,
                 email: salon.email,
-                location_type: 'fixed' as 'fixed' | 'mobile',
+                website: salon.website || '',
+                instagram: salon.instagram || '',
+                location_type: (salon.location_type || 'fixed') as 'fixed' | 'mobile',
                 service_areas: [],
                 coverage_radius: salon.coverage_radius || 10,
                 booking_enabled: salon.booking_enabled || true,
@@ -259,7 +290,8 @@ const PlacesManagement: React.FC = () => {
 
   const fetchPlaceImages = async (placeId: number) => {
     const token = localStorage.getItem('auth_token');
-    const response = await fetch(`http://localhost:5001/api/v1/owner/places/${placeId}/images`, {
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    const response = await fetch(`${apiBase}/owner/places/${placeId}/images`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -277,7 +309,12 @@ const PlacesManagement: React.FC = () => {
     formData.append('file', file);
     
     const token = localStorage.getItem('auth_token');
-    const response = await fetch('http://localhost:5001/api/v1/mobile/images/optimize', {
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    // The mobile/images/optimize endpoint is at /api/v1/mobile/images/optimize
+    const optimizeUrl = apiBase === '/api/v1' 
+      ? '/api/v1/mobile/images/optimize'
+      : `${apiBase}/mobile/images/optimize`;
+    const response = await fetch(optimizeUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -291,7 +328,11 @@ const PlacesManagement: React.FC = () => {
     }
     
     const result = await response.json();
-    return `http://localhost:5001${result.url}`;
+    // Return relative URL or construct full URL based on result.url format
+    if (result.url.startsWith('http://') || result.url.startsWith('https://')) {
+      return result.url;
+    }
+    return result.url; // Already relative, or we'll let the browser handle it
   };
 
   const uploadFiles = async (files: File[]): Promise<string[]> => {
@@ -330,7 +371,8 @@ const PlacesManagement: React.FC = () => {
     for (let i = 0; i < imageUrls.length; i++) {
       try {
         console.log(`📤 Adding image ${i + 1}/${imageUrls.length} to salon ${salonId}`);
-        const response = await fetch(`http://localhost:5001/api/v1/owner/places/${salonId}/images`, {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+        const response = await fetch(`${apiBase}/owner/places/${salonId}/images`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -377,6 +419,7 @@ const PlacesManagement: React.FC = () => {
       // Use the API utility instead of direct fetch
       const placeData = {
         nome: formData.name,
+        slug: formData.slug || undefined, // Auto-generated by backend if not provided
         tipo: formData.sector,
         about: formData.description,
         rua: formData.address,
@@ -384,12 +427,12 @@ const PlacesManagement: React.FC = () => {
         cod_postal: formData.postal_code,
         telefone: formData.phone,
         email: formData.email,
+        website: formData.website || '',
+        instagram: formData.instagram || '',
         booking_enabled: formData.booking_enabled,
         pais: 'Portugal',
         regiao: formData.sector,
         porta: '',
-        website: '',
-        instagram: '',
         is_bio_diamond: false,
         latitude: formData.latitude || null, // Prioritize formData.latitude
         longitude: formData.longitude || null, // Prioritize formData.longitude
@@ -491,6 +534,7 @@ const PlacesManagement: React.FC = () => {
     setSelectedPlace(place);
     setFormData({
       name: place.name,
+      slug: place.slug || '',
       sector: place.sector,
       description: place.description || '',
       address: place.address || '',
@@ -498,6 +542,8 @@ const PlacesManagement: React.FC = () => {
       postal_code: place.postal_code || '',
       phone: place.phone || '',
       email: place.email || '',
+      website: place.website || '',
+      instagram: place.instagram || '',
       location_type: place.location_type,
       service_areas: place.service_areas || [],
       coverage_radius: place.coverage_radius || 10,
@@ -536,6 +582,7 @@ const PlacesManagement: React.FC = () => {
     
     setFormData({
       name: '',
+      slug: '',
       sector: '',
       description: '',
       address: '',
@@ -543,6 +590,8 @@ const PlacesManagement: React.FC = () => {
       postal_code: '',
       phone: '',
       email: '',
+      website: '',
+      instagram: '',
       location_type: 'fixed',
       service_areas: [],
       coverage_radius: 10,
@@ -950,6 +999,30 @@ const PlacesManagement: React.FC = () => {
                         readOnly
                       />
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
+                        Website
+                      </label>
+                      <input
+                        className="input-field"
+                        type="text"
+                        value={selectedPlace.website || ''}
+                        readOnly
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
+                        Instagram
+                      </label>
+                      <input
+                        className="input-field"
+                        type="text"
+                        value={selectedPlace.instagram || ''}
+                        readOnly
+                      />
+                    </div>
                   </div>
 
                   <div className="mt-6 flex flex-wrap justify-end gap-3">
@@ -1079,6 +1152,31 @@ const PlacesManagement: React.FC = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-charcoal mb-1 font-body">
+                        Business URL Slug
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-charcoal/70 text-sm z-10">
+                          linkuup.portugalexpatdirectory.com/
+                        </span>
+                        <input
+                          type="text"
+                          value={formData.slug}
+                          onChange={(e) => {
+                            const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                            setFormData({ ...formData, slug: value });
+                          }}
+                          className="input-field pl-[265px]"
+                          placeholder="auto-generated-slug"
+                          pattern="[a-z0-9\-]+"
+                        />
+                      </div>
+                      <p className="text-xs text-charcoal/60 mt-1">
+                        Auto-generated from name. You can customize it.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
                         Sector *
                       </label>
                       <select
@@ -1185,6 +1283,33 @@ const PlacesManagement: React.FC = () => {
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                           className="input-field"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal mb-1 font-body">
+                          Website
+                        </label>
+                        <input
+                          type="url"
+                          value={formData.website}
+                          onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                          className="input-field"
+                          placeholder="https://example.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal mb-1 font-body">
+                          Instagram
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.instagram}
+                          onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                          className="input-field"
+                          placeholder="@username"
                         />
                       </div>
                     </div>

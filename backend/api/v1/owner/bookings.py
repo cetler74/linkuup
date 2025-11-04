@@ -12,7 +12,7 @@ from core.dependencies import get_current_business_owner
 from core.config import settings
 from models.user import User
 from models.place_existing import Place, Booking, Service, PlaceService, PlaceEmployee, BookingService
-from schemas.place_existing import PlaceBookingCreate, PlaceBookingUpdate, PlaceBookingResponse
+from schemas.place_existing import PlaceBookingCreate, PlaceBookingUpdate, PlaceBookingResponse, BookingStatusUpdate
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -607,6 +607,125 @@ async def get_booking(
         created_at=created_at,
         updated_at=booking.updated_at
     )
+
+@router.put("/{booking_id}/status")
+# @limiter.limit(settings.RATE_LIMIT_WRITE)
+async def update_booking_status(
+    booking_id: int,
+    status_data: BookingStatusUpdate,
+    current_user: User = Depends(get_current_business_owner),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update booking status"""
+    new_status = status_data.status
+    
+    result = await db.execute(
+        select(Booking).where(Booking.id == booking_id)
+    )
+    booking = result.scalar_one_or_none()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Verify place ownership
+    result = await db.execute(
+        select(Place).where(
+            Place.id == booking.place_id,
+            Place.owner_id == current_user.id,
+            Place.is_active == True
+        )
+    )
+    place = result.scalar_one_or_none()
+    if not place:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    try:
+        old_status = booking.status
+        booking.status = new_status
+        await db.commit()
+        await db.refresh(booking)
+        
+        # Send email notification if status changed
+        if new_status != old_status and booking.customer_email:
+            try:
+                from email_service import EmailService
+                from models.place_existing import Service
+                
+                # Get service name for email
+                service_name = None
+                if booking.service_id:
+                    service_result = await db.execute(
+                        select(Service).where(Service.id == booking.service_id)
+                    )
+                    service = service_result.scalar_one_or_none()
+                    if service:
+                        service_name = service.name
+                
+                email_service = EmailService()
+                email_data = {
+                    'customer_name': booking.customer_name,
+                    'customer_email': booking.customer_email,
+                    'salon_name': place.nome,
+                    'service_name': service_name or 'Multiple Services',
+                    'booking_date': booking.booking_date.strftime("%Y-%m-%d"),
+                    'booking_time': booking.booking_time.strftime("%H:%M"),
+                    'duration': booking.duration or 0,
+                    'status': new_status
+                }
+                email_service.send_booking_status_notification(email_data)
+            except Exception as e:
+                print(f"Failed to send status change email notification: {str(e)}")
+        
+        # Award points if booking is completed and user is registered
+        if (old_status != 'completed' and new_status == 'completed' and 
+            booking.user_id and booking.place_id):
+            
+            from services.rewards_service import RewardsService
+            from models.customer_existing import PlaceFeatureSetting
+            
+            # Check if rewards are enabled for this place
+            feature_query = select(PlaceFeatureSetting).where(
+                PlaceFeatureSetting.place_id == booking.place_id
+            )
+            feature_result = await db.execute(feature_query)
+            feature_settings = feature_result.scalar_one_or_none()
+            
+            if feature_settings and feature_settings.rewards_enabled:
+                rewards_service = RewardsService(db)
+                
+                # Calculate points for this booking
+                points_calculation = await rewards_service.calculate_points_for_booking(
+                    booking_id=booking.id,
+                    place_id=booking.place_id
+                )
+                
+                if points_calculation.points_earned > 0:
+                    # Award points
+                    success = await rewards_service.award_points(
+                        user_id=booking.user_id,
+                        place_id=booking.place_id,
+                        booking_id=booking.id,
+                        points=points_calculation.points_earned,
+                        description=f"Points earned from completed booking"
+                    )
+                    
+                    if success:
+                        # Update booking with points earned
+                        booking.rewards_points_earned = points_calculation.points_earned
+                        await db.commit()
+                        await db.refresh(booking)
+        
+        return {"message": "Booking status updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        print(f"🔥 Error updating booking status {booking_id}: {type(e).__name__}: {str(e)}")
+        import traceback
+        print(f"🔥 Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update booking status: {str(e)}"
+        )
 
 @router.put("/{booking_id}", response_model=PlaceBookingResponse)
 # @limiter.limit(settings.RATE_LIMIT_WRITE)

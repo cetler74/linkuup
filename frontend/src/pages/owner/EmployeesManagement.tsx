@@ -1,21 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusIcon, PencilIcon, TrashIcon, ClockIcon, UserIcon, ChevronDownIcon, ChevronRightIcon, CalendarIcon, MagnifyingGlassIcon, BuildingOfficeIcon, MapPinIcon } from '@heroicons/react/24/outline';
-import { useOwnerApi, ownerApi } from '../../utils/ownerApi';
+import { useOwnerApi, ownerApi, FeatureNotAvailableError, LimitReachedError } from '../../utils/ownerApi';
+import UpgradeModal from '../../components/owner/UpgradeModal';
 import { getImageUrl } from '../../utils/api';
 import { useQueryClient } from '@tanstack/react-query';
 import ServiceColorPicker from '../../components/owner/ServiceColorPicker';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,6 +74,8 @@ const EmployeesManagement: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [workingHours, setWorkingHours] = useState<{ [key: string]: any }>({});
   const [expandedEmployees, setExpandedEmployees] = useState<Set<number>>(new Set());
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [featureError, setFeatureError] = useState<string | null>(null);
 
   const { data: places = [] } = usePlaces();
   const { data: employees = [], isLoading } = usePlaceEmployees(selectedPlace?.id || 0);
@@ -168,6 +160,59 @@ const EmployeesManagement: React.FC = () => {
       resetForm();
     } catch (error) {
       console.error('Error saving employee:', error);
+      console.error('Error type:', error?.constructor?.name);
+      console.error('Is FeatureNotAvailableError?', error instanceof FeatureNotAvailableError);
+      console.error('Is LimitReachedError?', error instanceof LimitReachedError);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : String(error),
+        name: error instanceof Error ? error.name : undefined,
+        feature: error instanceof FeatureNotAvailableError ? error.feature : undefined,
+        limit: error instanceof LimitReachedError ? error.limit : undefined,
+        currentCount: error instanceof LimitReachedError ? error.currentCount : undefined
+      });
+      
+      // Check if this is a limit reached error (most specific)
+      if (error instanceof LimitReachedError) {
+        console.log('✅ Detected LimitReachedError, showing upgrade dialog');
+        setFeatureError(error.message);
+        setShowUpgradeDialog(true);
+        return; // Don't show modal or create employee
+      }
+      
+      // Check if this is a feature not available error
+      if (error instanceof FeatureNotAvailableError) {
+        console.log('✅ Detected FeatureNotAvailableError, showing upgrade dialog');
+        setFeatureError(error.message);
+        setShowUpgradeDialog(true);
+        return; // Don't show modal or create employee
+      }
+      
+      // Check if error message contains feature_not_available as fallback
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('feature_not_available')) {
+        console.log('⚠️ Fallback: Detected feature_not_available in error message');
+        const featureMatch = errorMessage.match(/feature_not_available:?\s*(\w+)/);
+        const featureName = featureMatch?.[1] || 'feature';
+        setFeatureError(`The "${featureName}" feature is not available with your current plan. Please upgrade to access this feature.`);
+        setShowUpgradeDialog(true);
+        return; // Don't show modal or create employee
+      }
+      
+      // Check if error message contains limit_reached as fallback
+      if (errorMessage.includes('limit_reached')) {
+        console.log('⚠️ Fallback: Detected limit_reached in error message');
+        const limitMatch = errorMessage.match(/limit_reached:?\s*(\w+)(?:\s+current=(\d+))?(?:\s+limit=(\d+))?/);
+        if (limitMatch) {
+          const featureName = limitMatch[1] || 'employees';
+          const limit = limitMatch[3] ? parseInt(limitMatch[3], 10) : 2;
+          setFeatureError(`You have reached your ${featureName} limit (${limit}). Please upgrade your plan to add more ${featureName}.`);
+          setShowUpgradeDialog(true);
+          return; // Don't show modal or create employee
+        }
+      }
+      
+      // Show generic error for other cases
+      alert(error instanceof Error ? error.message : 'Failed to save employee. Please try again.');
     }
   };
 
@@ -1177,7 +1222,7 @@ const EmployeesManagement: React.FC = () => {
                 <ServiceColorPicker
                   color={formData.color_code}
                   onColorChange={(color) => setFormData({ ...formData, color_code: color })}
-                  label="Employee Color"
+                  label="Select employee color"
                 />
 
                 <div>
@@ -1381,6 +1426,17 @@ const EmployeesManagement: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* Upgrade Modal for Feature Not Available or Limit Reached */}
+      <UpgradeModal
+        open={showUpgradeDialog}
+        onClose={() => {
+          setShowUpgradeDialog(false);
+          setFeatureError(null);
+        }}
+        feature="employees"
+        message={featureError || 'Unlock Pro features to add more employees and access advanced features.'}
+      />
     </>
   );
 };

@@ -30,7 +30,7 @@ class CampaignBase(BaseModel):
 class PriceReductionConfig(BaseModel):
     """Configuration for price reduction campaigns"""
     discount_type: str = Field(..., pattern="^(percentage|fixed_amount)$")
-    discount_value: Decimal = Field(..., gt=0)
+    discount_value: Decimal = Field(..., ge=0)
     
     @validator('discount_value')
     def validate_discount_value(cls, v, values):

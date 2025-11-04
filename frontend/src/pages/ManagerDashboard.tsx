@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Phone, Mail, Plus, Eye, LogOut, Settings, Trash2, Edit, Building, Camera } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Mail, Plus, Eye, Settings, Trash2, Edit, Building, Camera } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,7 @@ import OpeningHoursDisplay from '../components/manager/OpeningHoursDisplay';
 import BookingCalendar from '../components/manager/BookingCalendar';
 import SalonImageManager from '../components/manager/SalonImageManager';
 import LeafletSalonMap from '../components/common/LeafletSalonMap';
+import ProfileDropdown from '../components/common/ProfileDropdown';
 
 const ManagerDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'bookings' | 'salon' | 'salons' | 'salon-info' | 'opening-hours' | 'images'>('salons');
@@ -57,7 +58,7 @@ const ManagerDashboard: React.FC = () => {
   const [bookingViewMode, setBookingViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(undefined);
   
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
@@ -357,13 +358,7 @@ const ManagerDashboard: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('manager.dashboard')}</h1>
               <p className="text-gray-600">{t('manager.welcome')} {user?.name}</p>
             </div>
-            <button
-              onClick={logout}
-              className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              {t('manager.logout')}
-            </button>
+            <ProfileDropdown />
           </div>
         </div>
 

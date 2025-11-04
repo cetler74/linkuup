@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, TagIcon, GiftIcon, ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { useTranslation } from 'react-i18next';
 // Define types inline to avoid module resolution issues
 interface ActiveCampaign {
   id: number;
   name: string;
   banner_message: string;
   campaign_type: 'price_reduction' | 'rewards_increase' | 'free_service';
+  start_datetime?: string;
   end_datetime: string;
   discount_type?: 'percentage' | 'fixed_amount';
   discount_value?: number;
@@ -30,6 +32,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({
   showCloseButton = false,
   className = ''
 }) => {
+  const { t, i18n } = useTranslation();
   const [currentCampaignIndex, setCurrentCampaignIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -97,6 +100,33 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({
     return `${minutes}m left`;
   };
 
+  const formatDateRange = (startDateTime?: string, endDateTime: string) => {
+    // Map i18n language codes to locale strings for date formatting
+    const localeMap: Record<string, string> = {
+      'en': 'en-US',
+      'pt': 'pt-PT',
+      'es': 'es-ES',
+      'fr': 'fr-FR',
+      'de': 'de-DE',
+      'it': 'it-IT'
+    };
+    
+    const locale = localeMap[i18n.language] || 'en-US';
+    
+    if (!startDateTime) {
+      const end = new Date(endDateTime);
+      return end.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
+    
+    const startFormatted = start.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+    const endFormatted = end.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+    
+    return `${startFormatted} - ${endFormatted}`;
+  };
+
   const getDiscountText = (campaign: ActiveCampaign) => {
     if (campaign.campaign_type === 'price_reduction') {
       if (campaign.discount_type === 'percentage') {
@@ -143,18 +173,15 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({
                 <p className="text-sm opacity-90 mt-1">
                   {currentCampaign.banner_message}
                 </p>
-                <div className="flex items-center space-x-4 mt-2 text-xs opacity-75">
-                  <div className="flex items-center space-x-1">
-                    <ClockIcon className="h-3 w-3" />
-                    <span>{formatTimeRemaining(currentCampaign.end_datetime)}</span>
+                <p className="text-xs opacity-75 mt-2">
+                  {t('owner.campaigns.period', { defaultValue: 'Period' })}: {formatDateRange(currentCampaign.start_datetime, currentCampaign.end_datetime)} | {t('owner.campaigns.duration', { defaultValue: 'Duration' })}: {formatTimeRemaining(currentCampaign.end_datetime)}
+                </p>
+                {campaigns.length > 1 && (
+                  <div className="flex items-center space-x-1 mt-2 text-xs opacity-75">
+                    <CheckCircleIcon className="h-3 w-3" />
+                    <span>{currentCampaignIndex + 1} of {campaigns.length} offers</span>
                   </div>
-                  {campaigns.length > 1 && (
-                    <div className="flex items-center space-x-1">
-                      <CheckCircleIcon className="h-3 w-3" />
-                      <span>{currentCampaignIndex + 1} of {campaigns.length} offers</span>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
             

@@ -86,27 +86,36 @@ async def register(user_in: RegisterRequest, db: AsyncSession = Depends(get_db))
     # For business owners: optionally start trial subscription per place
     if user_in.user_type == "business_owner":
         try:
-            if user_in.selected_plan_code and user_in.place_id:
-                from models.subscription import Plan, UserPlaceSubscription, SubscriptionStatusEnum
-                plan_result = await db.execute(select(Plan).where(Plan.code == user_in.selected_plan_code, Plan.is_active == True))
+            from models.subscription import Plan, UserPlaceSubscription, SubscriptionStatusEnum
+            # Try to get plan (use provided plan_code or default to "basic")
+            plan_code = user_in.selected_plan_code or "basic"
+            plan_result = await db.execute(select(Plan).where(Plan.code == plan_code, Plan.is_active == True))
+            plan = plan_result.scalar_one_or_none()
+            
+            # If plan doesn't exist, try "basic" as fallback
+            if not plan:
+                plan_result = await db.execute(select(Plan).where(Plan.code == "basic", Plan.is_active == True))
                 plan = plan_result.scalar_one_or_none()
-                if plan:
-                    now = datetime.now(timezone.utc)
-                    trial_end = now + timedelta(days=plan.trial_days or 14)
-                    sub = UserPlaceSubscription(
-                        user_id=user.id,
-                        place_id=user_in.place_id,
-                        plan_id=plan.id,
-                        status=SubscriptionStatusEnum.TRIALING,
-                        trial_start_at=now,
-                        trial_end_at=trial_end,
-                        current_period_start=now,
-                        current_period_end=trial_end,
-                    )
-                    db.add(sub)
-                    await db.commit()
-        except Exception:
+            
+            # Create subscription if we have a plan and place_id
+            if plan and user_in.place_id:
+                now = datetime.now(timezone.utc)
+                trial_end = now + timedelta(days=plan.trial_days or 14)
+                sub = UserPlaceSubscription(
+                    user_id=user.id,
+                    place_id=user_in.place_id,
+                    plan_id=plan.id,
+                    status=SubscriptionStatusEnum.TRIALING,
+                    trial_start_at=now,
+                    trial_end_at=trial_end,
+                    current_period_start=now,
+                    current_period_end=trial_end,
+                )
+                db.add(sub)
+                await db.commit()
+        except Exception as e:
             # Do not block registration on subscription creation; frontend will retry via /subscriptions/start-trial
+            print(f"⚠️ Warning: Could not create subscription during registration: {e}")
             pass
     
     # Generate tokens
@@ -201,9 +210,65 @@ async def logout(request: Request):
 # @limiter.limit(settings.RATE_LIMIT_MOBILE_READ)
 async def validate_token(request: Request, current_user: User = Depends(get_current_user)):
     """Validate if current access token is still valid"""
-    return ValidateTokenResponse(
-        valid=True,
-        user=UserResponse(
+    try:
+        # Safely get profile_picture - column might not exist in all databases
+        profile_picture = None
+        oauth_provider = None
+        oauth_id = None
+        try:
+            profile_picture = getattr(current_user, "profile_picture", None)
+            oauth_provider = getattr(current_user, "oauth_provider", None)
+            oauth_id = getattr(current_user, "oauth_id", None)
+        except AttributeError:
+            # Column doesn't exist yet - safe to ignore
+            pass
+        
+        return ValidateTokenResponse(
+            valid=True,
+            user=UserResponse(
+                id=current_user.id,
+                email=current_user.email,
+                first_name=current_user.first_name,
+                last_name=current_user.last_name,
+                user_type=current_user.user_type,
+                is_active=current_user.is_active,
+                is_owner=current_user.is_owner,
+                is_admin=current_user.is_admin,
+                gdpr_data_processing_consent=current_user.gdpr_data_processing_consent,
+                gdpr_marketing_consent=current_user.gdpr_marketing_consent,
+                trial_start=current_user.trial_start.isoformat() if current_user.trial_start else None,
+                trial_end=current_user.trial_end.isoformat() if current_user.trial_end else None,
+                trial_status=current_user.trial_status,
+                profile_picture=profile_picture,
+                oauth_provider=oauth_provider,
+                oauth_id=oauth_id,
+            ),
+            expires_at=None  # Token expiry is handled by JWT
+        )
+    except Exception as e:
+        import traceback
+        print(f"❌ Error in /validate endpoint: {str(e)}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.get("/me", response_model=UserResponse)
+# @limiter.limit(settings.RATE_LIMIT_MOBILE_READ)
+async def get_current_user_info(request: Request, current_user: User = Depends(get_current_user)):
+    """Get current user information"""
+    try:
+        # Safely get profile_picture - column might not exist in all databases
+        profile_picture = None
+        oauth_provider = None
+        oauth_id = None
+        try:
+            profile_picture = getattr(current_user, "profile_picture", None)
+            oauth_provider = getattr(current_user, "oauth_provider", None)
+            oauth_id = getattr(current_user, "oauth_id", None)
+        except AttributeError:
+            # Column doesn't exist yet - safe to ignore
+            pass
+        
+        return UserResponse(
             id=current_user.id,
             email=current_user.email,
             first_name=current_user.first_name,
@@ -217,29 +282,15 @@ async def validate_token(request: Request, current_user: User = Depends(get_curr
             trial_start=current_user.trial_start.isoformat() if current_user.trial_start else None,
             trial_end=current_user.trial_end.isoformat() if current_user.trial_end else None,
             trial_status=current_user.trial_status,
-        ),
-        expires_at=None  # Token expiry is handled by JWT
-    )
-
-@router.get("/me", response_model=UserResponse)
-# @limiter.limit(settings.RATE_LIMIT_MOBILE_READ)
-async def get_current_user_info(request: Request, current_user: User = Depends(get_current_user)):
-    """Get current user information"""
-    return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        first_name=current_user.first_name,
-        last_name=current_user.last_name,
-        user_type=current_user.user_type,
-        is_active=current_user.is_active,
-        is_owner=current_user.is_owner,
-        is_admin=current_user.is_admin,
-        gdpr_data_processing_consent=current_user.gdpr_data_processing_consent,
-        gdpr_marketing_consent=current_user.gdpr_marketing_consent,
-        trial_start=current_user.trial_start.isoformat() if current_user.trial_start else None,
-        trial_end=current_user.trial_end.isoformat() if current_user.trial_end else None,
-        trial_status=current_user.trial_status,
-    )
+            profile_picture=profile_picture,
+            oauth_provider=oauth_provider,
+            oauth_id=oauth_id,
+        )
+    except Exception as e:
+        import traceback
+        print(f"❌ Error in /me endpoint: {str(e)}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.get("/oauth/status")
 async def oauth_status():
@@ -274,10 +325,27 @@ def _get_base_api_url() -> str:
     """Return base API URL like http://localhost:5001/api/v1"""
     return f"{settings.BASE_URL}{settings.API_V1_STR}"
 
-def _get_frontend_base_url() -> str:
+def _get_frontend_base_url(request: Request | None = None, use_referer: bool = True) -> str:
     """Best-effort frontend base URL used for post-login redirect."""
-    # Prefer VITE dev host if present in CORS list, otherwise fall back
-    return os.getenv("FRONTEND_BASE_URL", "http://localhost:5173")
+    # Try to get from request referer header (most accurate), but only if not from Google
+    if request and use_referer:
+        referer = request.headers.get("referer")
+        if referer and not ("accounts.google.com" in referer or "google.com" in referer):
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(referer)
+                # Only use if it's not Google's domain
+                if parsed.netloc and not parsed.netloc.endswith("google.com"):
+                    frontend_url = f"{parsed.scheme}://{parsed.netloc}"
+                    print(f"🔑 Using frontend URL from referer: {frontend_url}")
+                    return frontend_url
+            except Exception:
+                pass
+    
+    # Fall back to settings or environment variable or default
+    frontend_url = settings.FRONTEND_BASE_URL or os.getenv("FRONTEND_BASE_URL", "http://localhost:5173")
+    print(f"🔑 Using frontend URL from settings/env/default: {frontend_url}")
+    return frontend_url
 
 async def _issue_tokens_for_user(
     db: AsyncSession, 
@@ -288,39 +356,130 @@ async def _issue_tokens_for_user(
     last_name: str | None,
     user_type: str = "customer",
     selected_plan_code: str | None = None,
-    place_id: int | None = None
+    place_id: int | None = None,
+    profile_picture: str | None = None
 ) -> tuple[str, str, bool]:
     """
     Find-or-create user by email/provider and return (access_token, refresh_token, is_new_user).
     For business owners, handles trial and subscription setup.
     """
-    result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+    # Try to query user, but handle case where profile_picture column doesn't exist
+    try:
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+    except Exception as query_error:
+        # Handle case where profile_picture column doesn't exist in database
+        error_str = str(query_error).lower()
+        error_type = type(query_error).__name__
+        
+        if ("profile_picture" in error_str or 
+            "undefinedcolumn" in error_str.lower() or 
+            "does not exist" in error_str or
+            "ProgrammingError" in error_type):
+            print(f"⚠️ Profile picture column doesn't exist, querying without it")
+            # Query using raw SQL to exclude profile_picture column
+            from sqlalchemy import text
+            query_text = text("""
+                SELECT id, email, password_hash, name, customer_id, auth_token, is_admin, is_active,
+                       first_name, last_name, user_type, is_business_owner, is_owner, created_at, updated_at,
+                       refresh_token, token_expires_at, refresh_token_expires_at, last_login_at,
+                       gdpr_data_processing_consent, gdpr_data_processing_consent_date,
+                       gdpr_marketing_consent, gdpr_marketing_consent_date, gdpr_consent_version,
+                       oauth_provider, oauth_id, trial_start, trial_end, trial_status
+                FROM users WHERE email = :email
+            """)
+            result = await db.execute(query_text, {"email": email})
+            row = result.first()
+            if row:
+                # Create User object and map row data
+                user = User()
+                for key, value in row._mapping.items():
+                    if hasattr(user, key):
+                        setattr(user, key, value)
+                # Make sure it's attached to the session
+                user = await db.merge(user)
+            else:
+                user = None
+        else:
+            # Different error - re-raise it
+            import traceback
+            print(f"❌ Query error: {traceback.format_exc()}")
+            raise
+    
     is_new_user = False
 
     if not user:
         is_new_user = True
         # Create user with OAuth info
-        user = User(
-            email=email,
-            password_hash="",  # No password for OAuth-only accounts
-            name=(f"{first_name or ''} {last_name or ''}".strip() or email),
-            first_name=first_name,
-            last_name=last_name,
-            user_type=user_type,
-            is_active=True,
-            is_admin=False,
-            is_owner=(user_type == "business_owner"),
-            is_business_owner=(user_type == "business_owner"),
-            oauth_provider=provider,
-            oauth_id=provider_id,
-            gdpr_data_processing_consent=True,  # OAuth consent implied
-            gdpr_data_processing_consent_date=datetime.utcnow(),
-            gdpr_consent_version="1.0"
-        )
+        # Try to create user with profile_picture, but handle if column doesn't exist
+        user_data = {
+            "email": email,
+            "password_hash": "",  # No password for OAuth-only accounts
+            "name": (f"{first_name or ''} {last_name or ''}".strip() or email),
+            "first_name": first_name,
+            "last_name": last_name,
+            "user_type": user_type,
+            "is_active": True,
+            "is_admin": False,
+            "is_owner": (user_type == "business_owner"),
+            "is_business_owner": (user_type == "business_owner"),
+            "oauth_provider": provider,
+            "oauth_id": provider_id,
+            "gdpr_data_processing_consent": True,  # OAuth consent implied
+            "gdpr_data_processing_consent_date": datetime.utcnow(),
+            "gdpr_consent_version": "1.0"
+        }
+        
+        # Try to add profile_picture - SQLAlchemy will ignore it if column doesn't exist
+        # We'll catch the error during commit if the column doesn't exist
+        if profile_picture:
+            user_data["profile_picture"] = profile_picture
+        
+        user = User(**user_data)
         db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        try:
+            await db.commit()
+            await db.refresh(user)
+        except Exception as db_error:
+            # If commit failed due to missing column, try again without profile_picture
+            error_str = str(db_error).lower()
+            error_type = type(db_error).__name__
+            error_repr = repr(db_error).lower()
+            
+            print(f"⚠️ Database error during user creation: {error_type}: {error_str}")
+            
+            # Check if it's a column-related error (PostgreSQL, SQLite, etc.)
+            # Catch various database exceptions that indicate missing column
+            is_column_error = (
+                "profile_picture" in error_str or 
+                "column" in error_str or 
+                "does not exist" in error_str or
+                "no such column" in error_str or
+                "operationalerror" in error_type.lower() or
+                "programmingerror" in error_type.lower() or
+                "invalid column name" in error_str
+            )
+            
+            if is_column_error and "profile_picture" in user_data:
+                print(f"⚠️ Profile picture column doesn't exist, creating user without it")
+                # Remove profile_picture and try again
+                user_data.pop("profile_picture", None)
+                try:
+                    await db.rollback()
+                except:
+                    pass
+                
+                # Create new user object without profile_picture
+                user = User(**user_data)
+                db.add(user)
+                await db.commit()
+                await db.refresh(user)
+                print(f"✅ User created without profile_picture column")
+            else:
+                # Re-raise if it's a different error
+                import traceback
+                print(f"❌ Unexpected database error: {traceback.format_exc()}")
+                raise
 
         # Start a 14-day user-level trial for business owners (no card required)
         if user.user_type == "business_owner":
@@ -360,7 +519,7 @@ async def _issue_tokens_for_user(
                 # Do not block registration on subscription creation; frontend will retry via /subscriptions/start-trial
                 pass
     else:
-        # Update oauth fields if not set
+        # Update oAuth fields if not set, and update profile picture if provided
         updated = False
         if not getattr(user, "oauth_provider", None):
             user.oauth_provider = provider
@@ -368,6 +527,15 @@ async def _issue_tokens_for_user(
         if not getattr(user, "oauth_id", None):
             user.oauth_id = provider_id
             updated = True
+        if profile_picture:
+            try:
+                current_picture = getattr(user, "profile_picture", None)
+                if current_picture != profile_picture:
+                    user.profile_picture = profile_picture
+                    updated = True
+            except AttributeError:
+                # Column doesn't exist - skip it
+                pass
         if updated:
             await db.commit()
             await db.refresh(user)
@@ -378,6 +546,11 @@ async def _issue_tokens_for_user(
 
 def _callback_success_html(access_token: str, refresh_token: str, redirect_path: str = "/") -> str:
     """Small HTML page that redirects to frontend with tokens in URL query params."""
+    # Ensure redirect_path is a full URL (not relative)
+    if not redirect_path.startswith("http://") and not redirect_path.startswith("https://"):
+        # If it's relative, we need to use the frontend base URL
+        redirect_path = f"http://linkuup.portugalexpatdirectory.com{redirect_path}"
+    
     # Redirect to frontend with tokens in query params - frontend will extract and store
     tokens = urllib.parse.urlencode({
         'access_token': access_token,
@@ -386,19 +559,24 @@ def _callback_success_html(access_token: str, refresh_token: str, redirect_path:
     separator = '&' if '?' in redirect_path else '?'
     redirect_url = f"{redirect_path}{separator}{tokens}"
     
+    print(f"🔑 Final redirect URL: {redirect_url}")
+    
     return f"""
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset=\"utf-8\" />
     <title>Signing you in…</title>
+    <meta http-equiv="refresh" content="0; url={json.dumps(redirect_url)}">
   </head>
   <body>
+    <p>Redirecting...</p>
     <script>
+      console.log('Redirecting to:', {json.dumps(redirect_url)});
       window.location.replace({json.dumps(redirect_url)});
     </script>
   </body>
-  </html>
+</html>
 """
 
 @router.get("/google")
@@ -422,9 +600,14 @@ async def google_oauth_start(request: Request, user_type: str = "customer", sele
         redirect_uri = f"{_get_base_api_url()}/auth/google/callback"
         print(f"🔑 Starting Google OAuth - redirect_uri: {redirect_uri}, user_type: {user_type}")
         
-        # Encode state with user_type and plan info (simple encoding for demo; use proper signing in production)
+        # Encode state with user_type, plan info, AND redirect_uri to ensure exact match
+        # This ensures the redirect_uri in token exchange matches what was sent in authorization
         import base64
-        state_data = json.dumps({"user_type": user_type, "selected_plan_code": selected_plan_code})
+        state_data = json.dumps({
+            "user_type": user_type, 
+            "selected_plan_code": selected_plan_code,
+            "redirect_uri": redirect_uri  # Store the exact redirect_uri used
+        })
         state = base64.urlsafe_b64encode(state_data.encode()).decode()
         
         params = {
@@ -463,15 +646,17 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
             print(f"❌ {error_msg}")
             raise HTTPException(status_code=400, detail=error_msg)
 
-        # Decode state to get user_type and plan
+        # Decode state to get user_type, plan, and redirect_uri
         user_type = "customer"
         selected_plan_code = None
+        redirect_uri_from_state = None
         if state:
             try:
                 import base64
                 state_data = json.loads(base64.urlsafe_b64decode(state.encode()).decode())
                 user_type = state_data.get("user_type", "customer")
                 selected_plan_code = state_data.get("selected_plan_code")
+                redirect_uri_from_state = state_data.get("redirect_uri")  # Get stored redirect_uri
             except Exception as e:
                 print(f"⚠️ Failed to decode state: {e}")
                 pass  # Use defaults if state decode fails
@@ -484,8 +669,21 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
             print(f"❌ {error_msg}")
             raise HTTPException(status_code=500, detail=error_msg)
         
-        redirect_uri = f"{_get_base_api_url()}/auth/google/callback"
-        print(f"🔑 Google OAuth callback - redirect_uri: {redirect_uri}")
+        # Use the redirect_uri from state if available (this ensures exact match with authorization request)
+        # Otherwise fall back to constructing from request URL
+        if redirect_uri_from_state:
+            redirect_uri = redirect_uri_from_state
+            print(f"🔑 Google OAuth callback - Using redirect_uri from state: {redirect_uri}")
+        else:
+            # Fallback: construct from request URL
+            scheme = request.url.scheme
+            host = request.headers.get("host") or request.url.hostname
+            path = request.url.path
+            redirect_uri = f"{scheme}://{host}{path}"
+            print(f"🔑 Google OAuth callback - Constructed redirect_uri from request: {redirect_uri}")
+            print(f"   - Scheme: {scheme}")
+            print(f"   - Host: {host}")
+            print(f"   - Path: {path}")
 
         # Exchange code for tokens
         token_url = "https://oauth2.googleapis.com/token"
@@ -497,13 +695,40 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
             "grant_type": "authorization_code",
         }
         
+        # Debug: Log request details (without exposing secrets)
+        print(f"🔑 Token exchange request:")
+        print(f"   - Client ID: {client_id[:20]}...{client_id[-10:]}")
+        print(f"   - Client Secret: {client_secret[:5]}...{client_secret[-5:] if len(client_secret) > 10 else '***'}")
+        print(f"   - Redirect URI: {redirect_uri}")
+        print(f"   - Code length: {len(code) if code else 0}")
+        
         async with httpx.AsyncClient(timeout=15.0) as client:
             try:
+                # Log the full request for debugging (without exposing secret)
+                print(f"🔍 Full token exchange data:")
+                print(f"   - URL: {token_url}")
+                print(f"   - client_id: {client_id}")
+                print(f"   - redirect_uri: {redirect_uri}")
+                print(f"   - grant_type: authorization_code")
+                print(f"   - code: {code[:20]}...{code[-10:] if len(code) > 30 else ''}")
+                
                 token_resp = await client.post(token_url, data=data)
                 if token_resp.status_code != 200:
                     error_text = token_resp.text
                     error_msg = f"Failed to obtain Google access token: {token_resp.status_code} - {error_text}"
                     print(f"❌ {error_msg}")
+                    print(f"❌ Request redirect_uri: {redirect_uri}")
+                    print(f"❌ Client ID: {client_id}")
+                    print(f"❌ Client Secret length: {len(client_secret)}")
+                    print(f"❌ Client Secret starts with: {client_secret[:10]}")
+                    
+                    # Check if redirect_uri matches what was sent in authorization
+                    print(f"❌ Verify in Google Console:")
+                    print(f"   1. Redirect URI should be: {redirect_uri}")
+                    print(f"   2. Client ID should be: {client_id}")
+                    print(f"   3. Application type should be: Web application")
+                    print(f"   4. Client secret should match the one in .env")
+                    
                     raise HTTPException(status_code=400, detail=error_msg)
                 
                 token_json = token_resp.json()
@@ -529,12 +754,15 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
                 sub = ui.get("sub")
                 given_name = ui.get("given_name")
                 family_name = ui.get("family_name")
+                picture = ui.get("picture")  # Google profile picture URL
                 if not email or not sub:
                     error_msg = f"Google user info incomplete - email: {email}, sub: {sub}"
                     print(f"❌ {error_msg} - Userinfo: {ui}")
                     raise HTTPException(status_code=400, detail=error_msg)
                 
-                print(f"✅ Google user info retrieved - email: {email}")
+                print(f"✅ Google user info retrieved - email: {email}, picture: {picture}")
+                if picture:
+                    print(f"📸 Google profile picture URL: {picture}")
 
             except httpx.HTTPError as e:
                 error_msg = f"Network error during Google OAuth: {str(e)}"
@@ -554,20 +782,31 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
                     last_name=family_name,
                     user_type=user_type,
                     selected_plan_code=selected_plan_code,
-                    place_id=None  # Place will be created after OAuth
+                    place_id=None,  # Place will be created after OAuth
+                    profile_picture=picture  # Pass Google profile picture URL
                 )
                 print(f"✅ User tokens issued - email: {email}, is_new_user: {is_new_user}")
+        except HTTPException:
+            # Re-raise HTTP exceptions
+            raise
         except Exception as e:
             error_msg = f"Database error during user creation: {str(e)}"
             print(f"❌ {error_msg}")
             print(f"❌ Traceback: {traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=error_msg)
 
-        frontend_url = _get_frontend_base_url()
+        # Don't use referer during callback (it will be from Google) - use settings/env
+        frontend_url = _get_frontend_base_url(request, use_referer=False)
+        print(f"🔑 OAuth callback - frontend_url from settings: {frontend_url}")
+        
         # For new business owners without a place, redirect to create place first
         redirect_path = f"{frontend_url}/"
         if is_new_user and user_type == "business_owner":
             redirect_path = f"{frontend_url}/owner/create-first-place"
+        
+        print(f"🔑 OAuth callback redirecting to: {redirect_path}")
+        print(f"   - Access token length: {len(app_access)}")
+        print(f"   - Refresh token length: {len(app_refresh)}")
         
         html = _callback_success_html(app_access, app_refresh, redirect_path=redirect_path)
         return HTMLResponse(content=html, media_type="text/html")
@@ -653,10 +892,10 @@ async def facebook_oauth_callback(request: Request, code: str | None = None, sta
         if not fb_access:
             raise HTTPException(status_code=400, detail="Facebook token missing in response")
 
-        # Fetch user info: id, name, email
+        # Fetch user info: id, name, email, picture
         userinfo_resp = await client.get(
             "https://graph.facebook.com/v18.0/me",
-            params={"fields": "id,name,email,first_name,last_name"},
+            params={"fields": "id,name,email,first_name,last_name,picture.type(large)"},
             headers={"Authorization": f"Bearer {fb_access}"}
         )
         if userinfo_resp.status_code != 200:
@@ -666,6 +905,8 @@ async def facebook_oauth_callback(request: Request, code: str | None = None, sta
         fb_id = ui.get("id")
         first_name = ui.get("first_name") or None
         last_name = ui.get("last_name") or None
+        picture_data = ui.get("picture", {})
+        picture_url = picture_data.get("data", {}).get("url") if picture_data else None
         if not email or not fb_id:
             # Some FB apps don't return email; you may require email permission
             raise HTTPException(status_code=400, detail="Facebook user info incomplete (email missing)")
@@ -682,10 +923,11 @@ async def facebook_oauth_callback(request: Request, code: str | None = None, sta
             last_name=last_name,
             user_type=user_type,
             selected_plan_code=selected_plan_code,
-            place_id=None  # Place will be created after OAuth
+            place_id=None,  # Place will be created after OAuth
+            profile_picture=picture_url  # Pass Facebook profile picture URL
         )
 
-    frontend_url = _get_frontend_base_url()
+    frontend_url = _get_frontend_base_url(request)
     # For new business owners without a place, redirect to create place first
     redirect_path = f"{frontend_url}/"
     if is_new_user and user_type == "business_owner":

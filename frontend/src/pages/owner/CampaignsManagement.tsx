@@ -122,8 +122,8 @@ const CampaignsManagement: React.FC = () => {
       // Client-side validation guards before final submit
       if (formData.campaign_type === 'price_reduction') {
         const dv = Number(formData.discount_value);
-        if (!dv || dv <= 0) {
-          console.error('Discount value must be greater than 0');
+        if (isNaN(dv) || dv < 0) {
+          console.error('Discount value must be a valid number >= 0');
           return;
         }
       }
@@ -139,7 +139,7 @@ const CampaignsManagement: React.FC = () => {
         place_ids: formData.place_ids,
         service_ids: formData.service_ids,
         // Add campaign type specific configurations
-        ...(formData.campaign_type === 'price_reduction' && formData.discount_value && formData.discount_value > 0 && {
+        ...(formData.campaign_type === 'price_reduction' && formData.discount_value !== undefined && formData.discount_value !== null && {
           price_reduction_config: {
             discount_type: formData.discount_type,
             discount_value: Number(formData.discount_value)
@@ -759,7 +759,7 @@ const CampaignsManagement: React.FC = () => {
                           <input
                             type="number"
                             required
-                            min="0.01"
+                            min="0"
                             max={formData.discount_type === 'percentage' ? 100 : undefined}
                             step={formData.discount_type === 'percentage' ? '0.1' : '0.01'}
                             value={formData.discount_value}

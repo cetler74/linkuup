@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import CustomLanguageSelector from './CustomLanguageSelector';
+import ProfileDropdown from './ProfileDropdown';
 
 const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -28,14 +29,6 @@ const Header: React.FC = () => {
   
   const { isAuthenticated, isAdmin, isBusinessOwner, isCustomer, user, logout, loading } = authContext;
   const { t } = useTranslation();
-
-  // Determine dashboard URL based on user type
-  const getDashboardUrl = () => {
-    if (isAdmin) return '/admin';
-    if (isBusinessOwner) return '/owner/dashboard';
-    if (isCustomer) return '/customer/dashboard';
-    return '/manager'; // Fallback
-  };
 
   // Show loading state while auth is initializing
   if (loading) {
@@ -103,26 +96,7 @@ const Header: React.FC = () => {
         <div className="hidden md:flex items-center space-x-4">
           {isAuthenticated ? (
             <div className="flex items-center space-x-4">
-              <Link
-                to={getDashboardUrl()}
-                className="bg-bright-blue text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors duration-200 font-semibold"
-              >
-                DASHBOARD
-              </Link>
-              {isBusinessOwner && (
-                <Link
-                  to="/billing"
-                  className="bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition-colors duration-200 font-semibold"
-                >
-                  MANAGE PLAN
-                </Link>
-              )}
-              <button
-                onClick={logout}
-                className="bg-coral-red text-white px-6 py-3 rounded-lg hover:bg-red-500 transition-colors duration-200 font-semibold"
-              >
-                LOGOUT
-              </button>
+              <ProfileDropdown />
             </div>
           ) : (
             <Link
@@ -201,36 +175,11 @@ const Header: React.FC = () => {
             </div>
             
             {isAuthenticated ? (
-              <>
-                <Link
-                  to={getDashboardUrl()}
-                  className="block bg-bright-blue text-white text-center w-full min-h-[48px] py-3 px-4 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  DASHBOARD
-                </Link>
-                {isBusinessOwner && (
-                  <Link
-                    to="/billing"
-                    className="block bg-yellow-500 text-white text-center w-full min-h-[48px] py-3 px-4 rounded-lg font-semibold hover:bg-yellow-600 transition-colors mt-2"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    MANAGE PLAN
-                  </Link>
-                )}
-                <div className="pt-4 pb-2 border-t border-medium-gray mt-2">
-                  <p className="text-lg text-charcoal mb-3 px-4">Welcome, {user?.name}</p>
-                  <button
-                    onClick={() => {
-                      logout();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full bg-coral-red text-white text-center min-h-[48px] py-3 px-4 rounded-lg font-semibold hover:bg-red-500 transition-colors"
-                  >
-                    LOGOUT
-                  </button>
+              <div className="pt-4 pb-2 border-t border-medium-gray mt-2">
+                <div className="px-4">
+                  <ProfileDropdown onLogout={() => setIsMobileMenuOpen(false)} />
                 </div>
-              </>
+              </div>
             ) : (
               <div className="pt-2 border-t border-medium-gray mt-2">
                 <Link

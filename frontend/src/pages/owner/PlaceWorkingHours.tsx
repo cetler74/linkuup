@@ -225,17 +225,6 @@ const PlaceWorkingHours: React.FC = () => {
                 Working Hours
               </h1>
             </div>
-            {selectedPlace && (
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!selectedPlace || isSaving}
-                className="btn-primary"
-              >
-                <ClockIcon className="h-4 w-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Save Hours'}
-              </button>
-            )}
           </div>
 
           {/* Selected Place Details */}
@@ -400,6 +389,19 @@ const PlaceWorkingHours: React.FC = () => {
                         Close All Days
                       </button>
                     </div>
+                  </div>
+
+                  {/* Action Buttons at Bottom */}
+                  <div className="mt-6 pt-4 border-t border-medium-gray flex flex-wrap justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={!selectedPlace || isSaving}
+                      className="btn-primary"
+                    >
+                      <ClockIcon className="h-4 w-4 mr-2" />
+                      {isSaving ? 'Saving...' : 'Save Hours'}
+                    </button>
                   </div>
                 </div>
               </div>

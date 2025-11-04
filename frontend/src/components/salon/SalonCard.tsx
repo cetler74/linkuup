@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 // Using inline types to avoid import issues
 interface Salon {
   id: number;
+  slug?: string; // Optional until migration is run
   nome: string;
   cidade: string;
   regiao: string;
@@ -170,7 +171,7 @@ const SalonCard: React.FC<SalonCardProps> = ({ salon, showServices = false }) =>
       {/* Action Buttons */}
       <div className="flex space-x-2">
         <Link 
-          to={`/place/${salon.id}`}
+          to={`/place/${salon.slug || salon.id}`}
           className="flex-1 btn-primary text-center"
         >
           {t('search.viewDetails')}

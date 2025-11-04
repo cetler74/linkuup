@@ -430,7 +430,7 @@ const BookingPage: React.FC = () => {
             <Link to="/" className="btn-primary w-full block text-sm sm:text-base">
               {t('booking.backToHome')}
             </Link>
-            <Link to={`/place/${place.id}`} className="btn-secondary w-full block text-sm sm:text-base">
+            <Link to={`/place/${place.slug || place.id}`} className="btn-secondary w-full block text-sm sm:text-base">
               {t('booking.viewPlaceDetails')}
             </Link>
           </div>

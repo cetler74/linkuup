@@ -31,6 +31,19 @@ async def get_place_settings(
 ):
     """Get all settings for a specific place"""
     
+    # Verify place ownership
+    from models.place_existing import Place
+    place_result = await db.execute(
+        select(Place).where(
+            Place.id == place_id,
+            Place.owner_id == current_user.id,
+            Place.is_active == True
+        )
+    )
+    place = place_result.scalar_one_or_none()
+    if not place:
+        raise HTTPException(status_code=404, detail="Place not found")
+    
     # Get feature settings
     feature_query = select(PlaceFeatureSetting).where(
         PlaceFeatureSetting.place_id == place_id

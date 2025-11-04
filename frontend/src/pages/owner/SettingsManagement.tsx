@@ -21,6 +21,7 @@ import api from '../../utils/api';
 
 interface Place {
   id: number;
+  slug?: string; // Optional until migration is run
   name: string;
   location_type: 'fixed' | 'mobile';
   city?: string;
@@ -64,8 +65,16 @@ const SettingsManagement: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { usePlaces, usePlaceFeatureSettings, useUpdateFeatureSettings, usePlaceRewardSettings, useUpdateRewardSettings } = useOwnerApi();
+  
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
   
   const { data: places = [], isLoading: placesLoading } = usePlaces();
   const { data: settingsData, isLoading: settingsLoading } = usePlaceFeatureSettings(selectedPlace?.id || 0);
@@ -113,7 +122,8 @@ const SettingsManagement: React.FC = () => {
           });
           // Refetch latest settings
           try {
-            const resp = await fetch(`http://localhost:5001/api/v1/owner/places/${targetPlaceId}/settings`, {
+            const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+            const resp = await fetch(`${apiBase}/owner/places/${targetPlaceId}/settings`, {
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
               },
@@ -261,6 +271,43 @@ const SettingsManagement: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Business URL Section */}
+        {selectedPlace && (
+          <div className="mb-8">
+            <div className="card-elevated">
+              <div className="flex items-center mb-4">
+                <BuildingOfficeIcon className="h-6 w-6 text-bright-blue mr-3" />
+                <h2 className="text-xl font-semibold text-charcoal">Business URL</h2>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-charcoal mb-2">
+                    Your Business URL
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`linkuup.portugalexpatdirectory.com/${selectedPlace.slug || selectedPlace.id}`}
+                      className="flex-1 px-3 py-2 bg-white border border-medium-gray rounded-lg text-charcoal focus:outline-none focus:ring-2 focus:ring-bright-blue focus:border-bright-blue"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(`linkuup.portugalexpatdirectory.com/${selectedPlace.slug || selectedPlace.id}`)}
+                      className="px-4 py-2 bg-bright-blue text-white rounded-lg hover:bg-bright-blue/90 transition-colors font-medium"
+                    >
+                      {copied ? 'Copied!' : 'Copy URL'}
+                    </button>
+                  </div>
+                  <p className="text-sm text-charcoal/70 mt-2">
+                    Share this URL with customers or use it for Google Maps, social media, and marketing materials.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Feature Settings */}

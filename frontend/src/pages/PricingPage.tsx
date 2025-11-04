@@ -82,7 +82,7 @@ const PricingPage: React.FC = () => {
     setSubmitStatus({ type: null, message: '' });
     
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
       const response = await axios.post(`${API_BASE_URL}/contact-sales/`, contactForm);
       
       if (response.data.success) {

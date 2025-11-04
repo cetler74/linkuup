@@ -15,20 +15,22 @@ import ServicePrice from '../components/common/ServicePrice';
 import { useTranslation } from 'react-i18next';
 
 const SalonDetailsWithImages: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const salonId = parseInt(id || '0');
+  const { slug } = useParams<{ slug: string }>();
   const { t } = useTranslation();
 
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [salonId]);
+  }, [slug]);
 
   const { data: salon, isLoading, error } = useQuery({
-    queryKey: ['place', salonId],
-    queryFn: () => placeAPI.getPlace(salonId),
-    enabled: salonId > 0
+    queryKey: ['place', slug],
+    queryFn: () => placeAPI.getPlace(slug || ''),
+    enabled: !!slug && slug.length > 0
   });
+
+  // Fallback: if slug is not available but we have an id, use id for links
+  const placeSlug = salon?.slug || (salon?.id ? String(salon.id) : slug);
 
   // Component to display employee services
   const EmployeeServicesDisplay = ({ employee }: { employee: any }) => {
@@ -69,9 +71,9 @@ const SalonDetailsWithImages: React.FC = () => {
 
   // Fetch active campaigns for this place
   const { data: activeCampaigns = [] } = useQuery({
-    queryKey: ['campaigns', 'active', salonId],
-    queryFn: () => campaignAPI.getActiveCampaigns(salonId),
-    enabled: salonId > 0
+    queryKey: ['campaigns', 'active', salon?.id],
+    queryFn: () => campaignAPI.getActiveCampaigns(salon?.id || 0),
+    enabled: !!salon?.id && salon.id > 0
   });
 
   // Debug logging
@@ -169,6 +171,8 @@ const SalonDetailsWithImages: React.FC = () => {
                       salonName={salon.nome}
                       address={`${formatAddress()}${formatAddress() ? ', ' : ''}Portugal`}
                       height="300px"
+                      location_type={salon.location_type || 'fixed'}
+                      coverage_radius={salon.coverage_radius}
                     />
                   </div>
                 ) : (
@@ -336,7 +340,7 @@ const SalonDetailsWithImages: React.FC = () => {
 
             {/* Reviews Section */}
             <ReviewSection 
-              salonId={salonId} 
+              salonId={salon?.id || 0} 
               reviewSummary={salon.reviews || { average_rating: 0, total_reviews: 0 }}
             />
           </div>

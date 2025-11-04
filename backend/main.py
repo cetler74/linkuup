@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 import traceback
 
 from core.config import settings
+from core.database import AsyncSessionLocal
 from models import *
 from api.v1 import auth, bookings, campaigns, contact, contact_sales
 from api.v1 import billing as billing_api
@@ -157,6 +158,126 @@ app.include_router(admin_router, prefix=f"{settings.API_V1_STR}/admin", tags=["A
 # Subscription endpoints
 from api.v1.subscriptions import router as subscriptions_router
 app.include_router(subscriptions_router, prefix=f"{settings.API_V1_STR}/subscriptions", tags=["Subscriptions"])
+
+
+# Startup event to seed plans and features if they don't exist
+@app.on_event("startup")
+async def startup_event():
+    """Seed plans and features on application startup if they don't exist"""
+    from sqlalchemy import select
+    from models.subscription import Plan, Feature
+    
+    async with AsyncSessionLocal() as db:
+        try:
+            # Check if plans exist
+            result = await db.execute(select(Plan))
+            existing_plans = result.scalars().all()
+            
+            if not existing_plans:
+                print("📦 No plans found. Seeding plans and features...")
+                await seed_plans_and_features(db)
+                await db.commit()
+                print("✅ Plans and features seeded successfully!")
+            else:
+                print(f"✅ Plans already exist ({len(existing_plans)} found)")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not seed plans on startup: {e}")
+            # Don't fail startup if seeding fails
+
+
+async def seed_plans_and_features(db):
+    """Seed plans and features from seed_subscriptions logic"""
+    from sqlalchemy import select
+    from models.subscription import Plan, Feature, PlanFeature
+    from typing import Dict
+    
+    FEATURES: Dict[str, Dict[str, str]] = {
+        "booking": {"name": "Booking", "description": "Booking with email notifications"},
+        "services": {"name": "Services", "description": "Manage services"},
+        "employees": {"name": "Employees", "description": "Employee management (limit applies)"},
+        "time_off": {"name": "Time-off", "description": "Employee time-off management"},
+        "campaigns_email": {"name": "Email Campaigns", "description": "Create messaging campaigns for email"},
+        "campaigns_sms": {"name": "SMS Campaigns", "description": "Create messaging campaigns for SMS"},
+        "campaigns_whatsapp": {"name": "WhatsApp Campaigns", "description": "Create messaging campaigns for WhatsApp"},
+        "promotions": {"name": "Promotions", "description": "Create new promotions"},
+        "rewards": {"name": "Rewards", "description": "Loyalty rewards"},
+    }
+    
+    # Upsert features
+    feature_ids: Dict[str, int] = {}
+    for code, meta in FEATURES.items():
+        result = await db.execute(
+            select(Feature).where(Feature.code == code)
+        )
+        feature = result.scalar_one_or_none()
+        if not feature:
+            feature = Feature(code=code, name=meta["name"], description=meta["description"])
+            db.add(feature)
+            await db.flush()
+        feature_ids[code] = feature.id
+    
+    # Upsert plans
+    basic_result = await db.execute(select(Plan).where(Plan.code == "basic"))
+    basic_plan = basic_result.scalar_one_or_none()
+    if not basic_plan:
+        basic_plan = Plan(code="basic", name="Basic", price_cents=0, trial_days=14, is_active=True)
+        db.add(basic_plan)
+        await db.flush()
+    
+    pro_result = await db.execute(select(Plan).where(Plan.code == "pro"))
+    pro_plan = pro_result.scalar_one_or_none()
+    if not pro_plan:
+        pro_plan = Plan(code="pro", name="Pro", price_cents=0, trial_days=14, is_active=True)
+        db.add(pro_plan)
+        await db.flush()
+    
+    # Helper function to upsert plan features
+    async def upsert_plan_feature(plan_id: int, feature_id: int, enabled: bool, limit_value: int | None):
+        pf_result = await db.execute(
+            select(PlanFeature).where(
+                (PlanFeature.plan_id == plan_id) & (PlanFeature.feature_id == feature_id)
+            )
+        )
+        pf = pf_result.scalar_one_or_none()
+        if not pf:
+            pf = PlanFeature(plan_id=plan_id, feature_id=feature_id, enabled=enabled, limit_value=limit_value)
+            db.add(pf)
+        else:
+            pf.enabled = enabled
+            pf.limit_value = limit_value
+    
+    # Basic plan features
+    await upsert_plan_feature(basic_plan.id, feature_ids["booking"], True, None)
+    await upsert_plan_feature(basic_plan.id, feature_ids["services"], True, None)
+    await upsert_plan_feature(basic_plan.id, feature_ids["employees"], True, 2)
+    await upsert_plan_feature(basic_plan.id, feature_ids["time_off"], False, None)
+    await upsert_plan_feature(basic_plan.id, feature_ids["campaigns_email"], True, None)
+    await upsert_plan_feature(basic_plan.id, feature_ids["campaigns_sms"], False, None)
+    await upsert_plan_feature(basic_plan.id, feature_ids["campaigns_whatsapp"], False, None)
+    await upsert_plan_feature(basic_plan.id, feature_ids["promotions"], False, None)
+    await upsert_plan_feature(basic_plan.id, feature_ids["rewards"], False, None)
+    
+    # Pro plan features
+    await upsert_plan_feature(pro_plan.id, feature_ids["booking"], True, None)
+    await upsert_plan_feature(pro_plan.id, feature_ids["services"], True, None)
+    await upsert_plan_feature(pro_plan.id, feature_ids["employees"], True, 5)
+    await upsert_plan_feature(pro_plan.id, feature_ids["time_off"], True, None)
+    await upsert_plan_feature(pro_plan.id, feature_ids["campaigns_email"], True, None)
+    await upsert_plan_feature(pro_plan.id, feature_ids["campaigns_sms"], True, None)
+    await upsert_plan_feature(pro_plan.id, feature_ids["campaigns_whatsapp"], True, None)
+    await upsert_plan_feature(pro_plan.id, feature_ids["promotions"], True, None)
+    await upsert_plan_feature(pro_plan.id, feature_ids["rewards"], True, None)
+
+
+@app.get("/")
+async def root():
+    """Root endpoint - redirect to API docs or return API info"""
+    return {
+        "message": "Linkuup API",
+        "version": settings.VERSION,
+        "docs": f"{settings.API_V1_STR}/docs",
+        "health": f"{settings.API_V1_STR}/health"
+    }
 
 @app.get("/api/v1/health")
 async def health_check():

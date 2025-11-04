@@ -65,6 +65,7 @@ export interface PlaceImage {
 
 export interface Place {
   id: number;
+  slug?: string; // Optional until migration is run
   codigo?: string; // Made optional
   nome: string;
   tipo: string; // salon, clinic, office, etc.
@@ -382,9 +383,9 @@ export const placeAPI = {
     return response.data;
   },
 
-  // Get single place with services
-  getPlace: async (id: number): Promise<Place> => {
-    const response = await api.get(`/places/${id}`);
+  // Get single place with services by slug
+  getPlace: async (slug: string): Promise<Place> => {
+    const response = await api.get(`/places/${slug}`);
     return response.data;
   },
 

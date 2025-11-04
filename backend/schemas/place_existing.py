@@ -62,6 +62,7 @@ class PlaceResponse(BaseModel):
     id: int
     codigo: Optional[str] = None
     nome: str
+    slug: Optional[str] = None  # Optional until migration is run
     tipo: str
     pais: Optional[str] = None
     telefone: Optional[str] = None
@@ -111,6 +112,7 @@ class PlaceCreate(BaseModel):
     """Schema for creating a new place"""
     codigo: Optional[str] = None
     nome: str
+    slug: Optional[str] = None  # Auto-generated from nome if not provided
     tipo: str = "salon"
     pais: Optional[str] = None
     telefone: Optional[str] = None
@@ -135,6 +137,7 @@ class PlaceUpdate(BaseModel):
     """Schema for updating a place"""
     codigo: Optional[str] = None
     nome: Optional[str] = None
+    slug: Optional[str] = None
     tipo: Optional[str] = None
     pais: Optional[str] = None
     telefone: Optional[str] = None
@@ -195,6 +198,11 @@ class PlaceBookingUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
     any_employee_selected: Optional[bool] = None  # New field to track if customer selected "any employee"
+
+
+class BookingStatusUpdate(BaseModel):
+    """Schema for updating booking status"""
+    status: str
 
 
 class BookingServiceResponse(BaseModel):

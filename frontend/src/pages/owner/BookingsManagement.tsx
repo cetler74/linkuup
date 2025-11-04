@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PlusIcon, CalendarIcon, ClockIcon, UserIcon, MagnifyingGlassIcon, MapPinIcon, BuildingOfficeIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, CalendarIcon, ClockIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useOwnerApi } from '../../utils/ownerApi';
 import { useQueryClient } from '@tanstack/react-query';
 import EmployeeSelector from '../../components/owner/EmployeeSelector';
 import FullCalendarComponent from '../../components/owner/FullCalendarComponent';
 import RecurringBookingForm from '../../components/owner/RecurringBookingForm';
 import moment from 'moment';
+import { usePlaceContext } from '../../contexts/PlaceContext';
 import {
   Select,
   SelectContent,
@@ -13,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Booking {
   id: number;
@@ -38,13 +41,6 @@ interface Booking {
   };
 }
 
-interface Place {
-  id: number;
-  name: string;
-  location_type: 'fixed' | 'mobile';
-  city?: string;
-  service_areas?: string[];
-}
 
 interface Employee {
   id: number;
@@ -96,7 +92,6 @@ interface BookingData {
 const BookingsManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const { 
-    usePlaces, 
     usePlaceBookings, 
     usePlaceEmployees,
     usePlaceServices,
@@ -106,11 +101,7 @@ const BookingsManagement: React.FC = () => {
     useAcceptBooking
   } = useOwnerApi();
   
-  const [selectedPlaceId, setSelectedPlaceId] = useState<number | null>(null);
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  const [filteredPlaces, setFilteredPlaces] = useState<Place[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { selectedPlaceId, selectedPlace } = usePlaceContext();
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showRecurringModal, setShowRecurringModal] = useState(false);
@@ -128,10 +119,10 @@ const BookingsManagement: React.FC = () => {
     booking_date: '',
     booking_time: '',
     duration: 60,
-    status: 'confirmed'
+    status: 'confirmed',
+    color_code: undefined
   });
 
-  const { data: places = [] } = usePlaces();
   const { data: bookings = [], isLoading: bookingsLoading } = usePlaceBookings(selectedPlaceId || 0);
   const { data: employees = [] } = usePlaceEmployees(selectedPlaceId || 0);
   const { data: services = [] } = usePlaceServices(selectedPlaceId || 0);
@@ -140,34 +131,6 @@ const BookingsManagement: React.FC = () => {
   const updateBookingMutation = useUpdateBooking();
   const cancelBookingMutation = useCancelBooking();
   const acceptBookingMutation = useAcceptBooking();
-
-  useEffect(() => {
-    if (places.length > 0 && !selectedPlaceId) {
-      setSelectedPlaceId(places[0].id);
-    }
-    setFilteredPlaces(places);
-  }, [places, selectedPlaceId]);
-
-  useEffect(() => {
-    if (selectedPlaceId) {
-      // Find and set the selected place object
-      const place = places.find(p => p.id === selectedPlaceId);
-      setSelectedPlace(place || null);
-    }
-  }, [selectedPlaceId, places]);
-
-  // Search functionality
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredPlaces(places);
-    } else {
-      const filtered = places.filter(place =>
-        place.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        place.city?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredPlaces(filtered);
-    }
-  }, [searchTerm, places]);
 
 
 
@@ -217,7 +180,7 @@ const BookingsManagement: React.FC = () => {
     }
 
     const bookingData = {
-      business_id: selectedPlaceId,
+      business_id: selectedPlaceId, // Used for URL path, will be removed from body
       service_ids: formData.service_ids,
       employee_id: formData.employee_id ? parseInt(formData.employee_id) : undefined,
       customer_name: formData.customer_name,
@@ -227,8 +190,9 @@ const BookingsManagement: React.FC = () => {
       booking_time: new Date(`${formData.booking_date}T${formData.booking_time}`).toISOString(),
       duration: calculateTotalDuration(),
       status: formData.status,
-      color_code: formData.color_code,
       is_recurring: false,
+      recurrence_pattern: null,
+      any_employee_selected: false,
     };
 
     try {
@@ -362,7 +326,7 @@ const BookingsManagement: React.FC = () => {
       booking_time: '',
       duration: 60,
       status: 'confirmed',
-      color_code: '#3B82F6'
+      color_code: undefined
     });
   };
 
@@ -370,6 +334,11 @@ const BookingsManagement: React.FC = () => {
     setShowBookingModal(false);
     setSelectedBooking(null);
     resetForm();
+  };
+
+  const handleBookingDetailsModalClose = () => {
+    setShowBookingDetailsModal(false);
+    setSelectedBooking(null);
   };
 
   const handleRecurringSubmit = async (data: any) => {
@@ -386,21 +355,30 @@ const BookingsManagement: React.FC = () => {
   };
 
 
-  const handleBookingStatusChange = async (bookingId: number, status: string) => {
-    try {
-      await updateBookingMutation.mutateAsync({
+  const handleBookingStatusChange = (bookingId: number, status: string) => {
+    updateBookingMutation.mutate(
+      {
         id: bookingId,
         data: { status }
-      });
-      // Invalidate the specific place bookings query
-      if (selectedPlaceId) {
-        queryClient.invalidateQueries({ 
-          queryKey: ['owner', 'places', selectedPlaceId, 'bookings'] 
-        });
+      },
+      {
+        onSuccess: () => {
+          // Close the Booking Details modal after status change
+          handleBookingDetailsModalClose();
+          // Invalidate the specific place bookings query to refresh calendar/list view
+          if (selectedPlaceId) {
+            queryClient.invalidateQueries({ 
+              queryKey: ['owner', 'places', selectedPlaceId, 'bookings'] 
+            });
+          }
+        },
+        onError: (error) => {
+          console.error('Error updating booking status:', error);
+          // Close modal even on error
+          handleBookingDetailsModalClose();
+        }
       }
-    } catch (error) {
-      console.error('Error updating booking status:', error);
-    }
+    );
   };
 
   const handleEditBooking = (booking: any) => {
@@ -415,7 +393,7 @@ const BookingsManagement: React.FC = () => {
       booking_time: booking.booking_time,
       duration: booking.total_duration || booking.duration || 60,
       status: booking.status,
-      color_code: booking.color_code || '#3B82F6'
+      color_code: undefined
     });
     setShowEditModal(true);
   };
@@ -462,27 +440,37 @@ const BookingsManagement: React.FC = () => {
       booking_date: new Date(`${formData.booking_date}T00:00:00`).toISOString(),
       booking_time: new Date(`${formData.booking_date}T${formData.booking_time}`).toISOString(),
       duration: calculateTotalDuration(),
-      status: formData.status,
-      color_code: formData.color_code
+      status: formData.status
     };
 
-    try {
-      await updateBookingMutation.mutateAsync({
+    updateBookingMutation.mutate(
+      {
         id: editingBooking.id,
         data: bookingData
-      });
-      // Invalidate the specific place bookings query
-      if (selectedPlaceId) {
-        queryClient.invalidateQueries({ 
-          queryKey: ['owner', 'places', selectedPlaceId, 'bookings'] 
-        });
+      },
+      {
+        onSuccess: () => {
+          // Close all modals and reset state
+          setShowEditModal(false);
+          handleBookingDetailsModalClose();
+          setEditingBooking(null);
+          resetForm();
+          // Invalidate the specific place bookings query to refresh calendar/list view
+          if (selectedPlaceId) {
+            queryClient.invalidateQueries({ 
+              queryKey: ['owner', 'places', selectedPlaceId, 'bookings'] 
+            });
+          }
+        },
+        onError: (error) => {
+          console.error('Error updating booking:', error);
+          // Close modals even on error
+          setShowEditModal(false);
+          handleBookingDetailsModalClose();
+          setEditingBooking(null);
+        }
       }
-      setShowEditModal(false);
-      setEditingBooking(null);
-      resetForm();
-    } catch (error) {
-      console.error('Error updating booking:', error);
-    }
+    );
   };
 
   if (bookingsLoading) {
@@ -494,120 +482,12 @@ const BookingsManagement: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-light-gray">
-      {/* Mobile Menu Button */}
-      <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-form border border-medium-gray"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        <svg className="w-6 h-6 text-charcoal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-
-      {/* Sidebar */}
-      <aside className={`w-1/3 max-w-sm flex flex-col border-r border-medium-gray bg-white shadow-form lg:block ${
-        sidebarOpen ? 'block' : 'hidden'
-      }`}>
-        <div className="p-4 border-b border-medium-gray flex justify-between items-center">
-          <h2 className="text-xl font-bold text-charcoal font-display">My Places</h2>
-          <button
-            className="lg:hidden p-1 text-charcoal/60 hover:text-bright-blue"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        
-        {/* Search */}
-        <div className="p-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-charcoal/60" />
-            </div>
-            <input
-              type="text"
-              className="input-field pl-10 pr-3"
-              placeholder="Search for a place"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Places List */}
-        <div className="flex-grow overflow-y-auto">
-          <div className="flex flex-col">
-            {filteredPlaces.map((place) => (
-              <div
-                key={place.id}
-                className={`flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between cursor-pointer transition-colors ${
-                  selectedPlace?.id === place.id
-                    ? 'bg-bright-blue bg-opacity-10 border-l-4 border-bright-blue'
-                    : 'bg-white hover:bg-light-gray'
-                }`}
-                onClick={() => {
-                  setSelectedPlace(place);
-                  setSelectedPlaceId(place.id);
-                  setSidebarOpen(false); // Close sidebar on mobile when place is selected
-                }}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`flex items-center justify-center rounded-lg shrink-0 size-12 ${
-                    selectedPlace?.id === place.id ? 'bg-bright-blue' : 'bg-light-gray'
-                  }`}>
-                    {place.location_type === 'fixed' ? (
-                      <BuildingOfficeIcon className={`h-6 w-6 ${
-                        selectedPlace?.id === place.id ? 'text-charcoal' : 'text-bright-blue'
-                      }`} />
-                    ) : (
-                      <MapPinIcon className={`h-6 w-6 ${
-                        selectedPlace?.id === place.id ? 'text-charcoal' : 'text-bright-blue'
-                      }`} />
-                    )}
-                  </div>
-                  <div className="flex flex-col justify-center">
-                    <p className={`text-base font-medium leading-normal line-clamp-1 font-body ${
-                      selectedPlace?.id === place.id ? 'text-bright-blue' : 'text-charcoal'
-                    }`}>
-                      {place.name}
-                    </p>
-                    <p className={`text-sm font-normal leading-normal line-clamp-2 font-body ${
-                      selectedPlace?.id === place.id ? 'text-bright-blue' : 'text-charcoal/60'
-                    }`}>
-                      {place.location_type === 'fixed' ? 'Fixed Location' : 'Mobile/Service Area'}
-                    </p>
-                  </div>
-                </div>
-                <div className="shrink-0">
-                  <div className={`flex size-7 items-center justify-center ${
-                    selectedPlace?.id === place.id ? 'text-bright-blue' : 'text-charcoal/60'
-                  }`}>
-                    <PencilIcon className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </aside>
-
+    <div className="w-full bg-light-gray">
       {/* Main Content */}
-      <main className="w-full lg:w-2/3 flex-grow p-4 lg:p-6 bg-light-gray overflow-y-auto">
+      <main className="w-full p-4 lg:p-6 bg-light-gray overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
             <div className="flex items-center gap-4">
-              <button
-                className="lg:hidden p-2 text-charcoal/60 hover:text-bright-blue"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
               <h1 className="text-charcoal text-2xl lg:text-3xl font-bold leading-tight font-display">
                 Bookings Management
               </h1>
@@ -672,15 +552,6 @@ const BookingsManagement: React.FC = () => {
                         List
                       </button>
                     </div>
-                    <button
-                      className="btn-outline"
-                      onClick={() => {
-                        setSelectedPlace(null);
-                        setSelectedPlaceId(null);
-                      }}
-                    >
-                      <span>Close</span>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -893,87 +764,86 @@ const BookingsManagement: React.FC = () => {
 
       {/* Booking Modal */}
       {showBookingModal && (
-        <div className="fixed inset-0 bg-charcoal bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border border-medium-gray w-full max-w-md shadow-elevated rounded-md bg-white">
+        <div className="fixed inset-0 bg-[#333333] bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border border-[#E0E0E0] w-full max-w-md shadow-[0px_2px_8px_rgba(0,0,0,0.1)] rounded-lg bg-white">
             <div className="mt-3">
-              <h3 className="text-lg font-medium text-charcoal font-body mb-4 font-display">
+              <h3 className="text-lg font-medium text-[#333333] mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 Create New Booking
               </h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-charcoal font-body font-body">Customer Name *</label>
-                    <input
+                    <Label htmlFor="customer_name" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Customer Name *</Label>
+                    <Input
+                      id="customer_name"
                       type="text"
                       required
                       value={formData.customer_name}
                       onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                      className="input-field"
+                      placeholder="Enter customer name"
+                      style={{ fontFamily: 'Open Sans, sans-serif' }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-charcoal font-body font-body">Customer Email *</label>
-                    <input
+                    <Label htmlFor="customer_email" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Customer Email *</Label>
+                    <Input
+                      id="customer_email"
                       type="email"
                       required
                       value={formData.customer_email}
                       onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
-                      className="input-field"
+                      placeholder="Enter email address"
+                      style={{ fontFamily: 'Open Sans, sans-serif' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal font-body">Customer Phone</label>
-                  <input
+                  <Label htmlFor="customer_phone" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Customer Phone</Label>
+                  <Input
+                    id="customer_phone"
                     type="tel"
                     value={formData.customer_phone}
                     onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
-                    className="input-field"
+                    placeholder="Enter phone number"
+                    style={{ fontFamily: 'Open Sans, sans-serif' }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal font-body mb-2">Services *</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {services.map((service: any) => (
-                      <div
-                        key={service.id}
-                        className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                          formData.service_ids.includes(service.id)
-                            ? 'border-bright-blue bg-bright-blue bg-opacity-10'
-                            : 'border-medium-gray bg-light-gray hover:bg-medium-gray'
-                        }`}
-                        onClick={() => handleServiceToggle(service.id)}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <input
-                            type="checkbox"
-                            checked={formData.service_ids.includes(service.id)}
-                            onChange={() => handleServiceToggle(service.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <div className="flex-1">
-                            <div className="text-charcoal font-medium">{service.name}</div>
-                            <div className="text-sm text-charcoal/70">
-                              €{service.price || 0} • {service.duration || 0} min
-                            </div>
-                          </div>
-                        </div>
+                  <label className="block text-sm font-medium text-[#333333] mb-2" style={{ fontFamily: 'Open Sans, sans-serif' }}>Services *</label>
+                  <div className="max-h-48 overflow-y-auto border border-[#E0E0E0] rounded-lg p-2 bg-[#F5F5F5]">
+                    {services.length === 0 ? (
+                      <p className="text-[#9E9E9E] text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>No services available for this place</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {services.map((service: any) => (
+                          <label key={service.id} className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={formData.service_ids.includes(service.id)}
+                              onChange={() => handleServiceToggle(service.id)}
+                              className="rounded border-[#E0E0E0] text-[#1E90FF] focus:ring-[#1E90FF] focus:ring-2"
+                            />
+                            <span className="text-sm text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
+                              {service.name} - €{service.price || 0} ({service.duration || 0}min)
+                            </span>
+                          </label>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                   {formData.service_ids.length > 0 && (
-                    <div className="mt-3 p-3 bg-light-gray rounded-lg">
+                    <div className="mt-3 p-3 bg-[#F5F5F5] rounded-lg border border-[#E0E0E0]">
                       <div className="flex justify-between items-center">
-                        <span className="text-charcoal font-medium">
+                        <span className="text-[#333333] font-medium" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                           {formData.service_ids.length} service{formData.service_ids.length > 1 ? 's' : ''} selected
                         </span>
                         <div className="text-right">
-                          <div className="text-lime-green font-semibold">
+                          <div className="text-[#A3D55D] font-semibold" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                             Total: €{calculateTotalPrice().toFixed(2)}
                           </div>
-                          <div className="text-sm text-charcoal/70">
+                          <div className="text-sm text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                             {calculateTotalDuration()} minutes
                           </div>
                         </div>
@@ -983,7 +853,7 @@ const BookingsManagement: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal font-body">Employee</label>
+                  <Label htmlFor="employee" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Employee</Label>
                   <EmployeeSelector
                     employees={employees}
                     selectedEmployeeId={formData.employee_id ? parseInt(formData.employee_id) : undefined}
@@ -994,45 +864,48 @@ const BookingsManagement: React.FC = () => {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-charcoal font-body">Date *</label>
-                    <input
+                    <Label htmlFor="booking_date" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Date *</Label>
+                    <Input
+                      id="booking_date"
                       type="date"
                       required
                       value={formData.booking_date}
                       onChange={(e) => setFormData({ ...formData, booking_date: e.target.value })}
-                      className="input-field"
+                      style={{ fontFamily: 'Open Sans, sans-serif' }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-charcoal font-body">Time *</label>
-                    <input
+                    <Label htmlFor="booking_time" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Time *</Label>
+                    <Input
+                      id="booking_time"
                       type="time"
                       required
                       value={formData.booking_time}
                       onChange={(e) => setFormData({ ...formData, booking_time: e.target.value })}
-                      className="input-field"
+                      style={{ fontFamily: 'Open Sans, sans-serif' }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-charcoal font-body">Duration (min)</label>
-                    <input
+                    <Label htmlFor="duration" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Duration (min)</Label>
+                    <Input
+                      id="duration"
                       type="number"
                       min="15"
                       step="15"
                       value={formData.duration}
                       onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
-                      className="input-field"
+                      style={{ fontFamily: 'Open Sans, sans-serif' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal font-body">Status</label>
+                  <Label htmlFor="status" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Status</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) => setFormData({ ...formData, status: value })}
                   >
-                    <SelectTrigger className="input-field">
+                    <SelectTrigger id="status">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1048,14 +921,16 @@ const BookingsManagement: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleModalClose}
-                    className="px-4 py-2 text-sm font-medium text-charcoal font-body/70 bg-light-gray border border-medium-gray rounded-md shadow-sm hover:bg-medium-gray focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="px-4 py-2 text-sm font-medium text-[#333333] bg-white border border-[#E0E0E0] rounded-lg shadow-sm hover:bg-[#F5F5F5] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E90FF]"
+                    style={{ fontFamily: 'Open Sans, sans-serif' }}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={createBookingMutation.isPending || formData.service_ids.length === 0}
-                    className="btn-primary disabled:opacity-50"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#1E90FF] border border-transparent rounded-lg shadow-sm hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E90FF] disabled:opacity-50"
+                    style={{ fontFamily: 'Open Sans, sans-serif' }}
                   >
                     Create Booking
                   </button>
@@ -1253,15 +1128,22 @@ const BookingsManagement: React.FC = () => {
           onCancel={() => setShowRecurringModal(false)}
           initialData={{
             business_id: selectedPlaceId || 0,
-            service_id: services.length > 0 ? services[0].id : 0
+            service_ids: services.length > 0 ? [services[0].id] : []
           }}
+          services={services}
         />
       )}
 
       {/* Booking Details Modal */}
       {showBookingDetailsModal && selectedBooking && (
-        <div className="fixed inset-0 bg-charcoal bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-5 border border-medium-gray w-full max-w-2xl shadow-elevated rounded-md bg-white">
+        <div 
+          className="fixed inset-0 bg-charcoal bg-opacity-50 overflow-y-auto h-full w-full z-50"
+          onClick={handleBookingDetailsModalClose}
+        >
+          <div 
+            className="relative top-10 mx-auto p-5 border border-medium-gray w-full max-w-2xl shadow-elevated rounded-md bg-white"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-6">
               <h3 className="text-xl font-semibold text-charcoal font-display">
                 Booking Details
@@ -1385,7 +1267,7 @@ const BookingsManagement: React.FC = () => {
                         booking_time: selectedBooking.start.toTimeString().slice(0, 5),
                         duration: Math.round((selectedBooking.end.getTime() - selectedBooking.start.getTime()) / (1000 * 60)),
                         status: selectedBooking.resource?.status || 'pending',
-                        color_code: selectedBooking.resource?.color || '#3B82F6'
+                        color_code: undefined
                       });
                       setShowBookingDetailsModal(false);
                       setShowEditModal(true);
@@ -1423,7 +1305,7 @@ const BookingsManagement: React.FC = () => {
 
                   {/* Close Button */}
                   <button
-                    onClick={() => setShowBookingDetailsModal(false)}
+                    onClick={handleBookingDetailsModalClose}
                     className="px-4 py-2 bg-medium-gray text-charcoal rounded-lg hover:bg-gray-400 transition-colors font-body"
                   >
                     Close

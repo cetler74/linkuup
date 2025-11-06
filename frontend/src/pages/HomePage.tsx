@@ -573,9 +573,9 @@ const HomePage: React.FC = () => {
                 </div>
                 <h3 className="text-2xl font-bold mb-4">{t('home.salonsBarbers')}</h3>
                 <p className="text-charcoal/70 mb-6">{t('home.salonsBarbersDesc')}</p>
-                <button className="bg-bright-blue text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors">
+                <Link to="/join" className="bg-bright-blue text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-block">
                   {t('home.getStarted')}
-                </button>
+                </Link>
               </div>
             </div>
             
@@ -586,9 +586,9 @@ const HomePage: React.FC = () => {
                 </div>
                 <h3 className="text-2xl font-bold mb-4">{t('home.clinicsMedical')}</h3>
                 <p className="text-charcoal/70 mb-6">{t('home.clinicsMedicalDesc')}</p>
-                <button className="bg-lime-green text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors">
+                <Link to="/join" className="bg-lime-green text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors inline-block">
                   {t('home.getStarted')}
-                </button>
+                </Link>
               </div>
             </div>
             
@@ -599,9 +599,9 @@ const HomePage: React.FC = () => {
                 </div>
                 <h3 className="text-2xl font-bold mb-4">{t('home.fitnessCoaching')}</h3>
                 <p className="text-charcoal/70 mb-6">{t('home.fitnessCoachingDesc')}</p>
-                <button className="bg-coral-red text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors">
+                <Link to="/join" className="bg-coral-red text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors inline-block">
                   {t('home.getStarted')}
-                </button>
+                </Link>
               </div>
             </div>
           </div>

@@ -87,3 +87,10 @@ class User(Base):
     trial_start = Column(DateTime(timezone=True), nullable=True)
     trial_end = Column(DateTime(timezone=True), nullable=True)
     trial_status = Column(String(20), nullable=True, default='active')
+    
+    # Password reset fields
+    password_reset_token = Column(String(500), nullable=True)  # JWT tokens can be longer than 200 chars
+    password_reset_token_expires_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Language preference for email notifications
+    language_preference = Column(String(10), nullable=True, default='en')  # en, pt, es, fr, de, it

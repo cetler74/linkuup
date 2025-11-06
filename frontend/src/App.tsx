@@ -52,6 +52,8 @@ import CustomerDashboard from './pages/customer/CustomerDashboard';
 import CustomerBookings from './pages/customer/CustomerBookings';
 import CustomerRewards from './pages/customer/CustomerRewards';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import TestOwner from './pages/TestOwner';
 import TestForm from './pages/TestForm';
 import TestFormSimple from './pages/TestFormSimple';
@@ -276,6 +278,9 @@ function App() {
                 </div>
               } />
               <Route path="/join" element={<JoinPage />} />
+              <Route path="/login" element={<AuthPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/payment/success" element={<PaymentSuccessPage />} />
               <Route path="/billing" element={
                 <BasicProtectedRoute>

@@ -41,16 +41,47 @@ class BrevoEmailService:
     """Service for sending emails through Brevo API"""
     
     def __init__(self):
-        # Get API key - prioritize environment variable over settings
-        # First try to get from environment (loaded by dotenv or system env)
-        env_api_key = os.getenv('BREVO_API_KEY')
+        # Ensure .env file is loaded
+        try:
+            from dotenv import load_dotenv
+            env_path = Path(__file__).parent / '.env'
+            if env_path.exists():
+                load_dotenv(dotenv_path=env_path, override=True)
+            else:
+                # Try parent directory
+                env_path = Path(__file__).parent.parent / '.env'
+                if env_path.exists():
+                    load_dotenv(dotenv_path=env_path, override=True)
+                else:
+                    load_dotenv(override=True)  # Try default location
+        except ImportError:
+            pass  # python-dotenv not installed, will rely on system env vars
         
-        # If not in environment, try settings
-        if not env_api_key and SETTINGS_AVAILABLE and hasattr(settings, 'BREVO_API_KEY'):
+        # Get API key - try settings first (from core.config which loads .env), then environment variable
+        env_api_key = None
+        
+        # Try settings first (from core.config which loads .env file)
+        if SETTINGS_AVAILABLE and hasattr(settings, 'BREVO_API_KEY'):
             env_api_key = settings.BREVO_API_KEY
+            if env_api_key and env_api_key.strip():
+                logger.info("Brevo API key loaded from settings")
+        
+        # If not in settings or empty, try environment variable (loaded by dotenv or system env)
+        if not env_api_key or not env_api_key.strip():
+            env_api_key = os.getenv('BREVO_API_KEY')
+            if env_api_key and env_api_key.strip():
+                logger.info("Brevo API key loaded from environment variable")
         
         # Only use non-empty values
         self.api_key = env_api_key if env_api_key and env_api_key.strip() else None
+        
+        # Debug logging
+        if not self.api_key:
+            settings_has_key = SETTINGS_AVAILABLE and hasattr(settings, 'BREVO_API_KEY') and settings.BREVO_API_KEY if SETTINGS_AVAILABLE else False
+            env_has_key = bool(os.getenv('BREVO_API_KEY'))
+            logger.warning(f"Brevo API key not found. Settings has key: {bool(settings_has_key)}, env var has key: {env_has_key}")
+        else:
+            logger.info(f"Brevo API key configured (length: {len(self.api_key)})")
             
         self.base_url = "https://api.brevo.com/v3"
         
@@ -608,6 +639,338 @@ class BrevoEmailService:
             
         except Exception as e:
             logger.error(f"Failed to send booking reminder: {str(e)}")
+            return False
+    
+    def send_password_reset_email(self, to_email: str, to_name: str, reset_token: str, reset_url: str, language: str = 'en') -> bool:
+        """Send password reset email"""
+        try:
+            subject = "Password Reset Request - LinkUup"
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Password Reset Request</title>
+                <style>
+                    body {{
+                        font-family: 'Open Sans', Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #333333;
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 20px;
+                        background-color: #F5F5F5;
+                    }}
+                    .container {{
+                        background-color: #FFFFFF;
+                        border-radius: 8px;
+                        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+                        overflow: hidden;
+                    }}
+                    .header {{
+                        background-color: #1E90FF;
+                        color: white;
+                        padding: 30px 20px;
+                        text-align: center;
+                    }}
+                    .header h1 {{
+                        margin: 0;
+                        font-family: 'Poppins', Arial, sans-serif;
+                        font-weight: 600;
+                        font-size: 24px;
+                    }}
+                    .content {{
+                        padding: 30px;
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background-color: #FF5A5F;
+                        color: white;
+                        padding: 14px 28px;
+                        text-decoration: none;
+                        border-radius: 8px;
+                        font-weight: 500;
+                        margin: 20px 0;
+                        text-align: center;
+                    }}
+                    .button:hover {{
+                        background-color: #E0484D;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        color: #9E9E9E;
+                        font-size: 12px;
+                        padding: 20px;
+                        background-color: #F5F5F5;
+                    }}
+                    .warning {{
+                        background-color: #FFF3CD;
+                        border-left: 4px solid #FFC107;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Password Reset Request</h1>
+                    </div>
+                    
+                    <div class="content">
+                        <p>Hello {to_name},</p>
+                        
+                        <p>We received a request to reset your password for your LinkUup account. Click the button below to reset your password:</p>
+                        
+                        <div style="text-align: center;">
+                            <a href="{reset_url}" class="button">Reset Password</a>
+                        </div>
+                        
+                        <p>Or copy and paste this link into your browser:</p>
+                        <p style="word-break: break-all; color: #1E90FF;">{reset_url}</p>
+                        
+                        <div class="warning">
+                            <strong>⚠️ Important:</strong> This link will expire in 1 hour. If you didn't request a password reset, please ignore this email.
+                        </div>
+                        
+                        <p>If you have any questions, please don't hesitate to contact us.</p>
+                        
+                        <p>Best regards,<br>
+                        The LinkUup Team</p>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>This is an automated message. Please do not reply to this email.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            text_content = f"""
+            Password Reset Request - LinkUup
+            
+            Hello {to_name},
+            
+            We received a request to reset your password for your LinkUup account. 
+            Click the link below to reset your password:
+            
+            {reset_url}
+            
+            This link will expire in 1 hour. If you didn't request a password reset, please ignore this email.
+            
+            If you have any questions, please don't hesitate to contact us.
+            
+            Best regards,
+            The LinkUup Team
+            
+            This is an automated message. Please do not reply to this email.
+            """
+            
+            return self.send_transactional_email(
+                to_email=to_email,
+                to_name=to_name,
+                subject=subject,
+                html_content=html_content,
+                text_content=text_content
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to send password reset email: {str(e)}")
+            return False
+    
+    def send_welcome_email(self, to_email: str, to_name: str, user_type: str, plan_name: str = None, language: str = 'en') -> bool:
+        """Send welcome email to new users"""
+        try:
+            # Determine user type display name
+            user_type_display = {
+                "customer": "Customer",
+                "business_owner": "Business Owner",
+                "employee": "Employee",
+                "platform_admin": "Platform Administrator"
+            }.get(user_type, "User")
+            
+            subject = f"Welcome to LinkUup - {user_type_display}"
+            
+            # Build plan information section for business owners
+            plan_section = ""
+            if user_type == "business_owner" and plan_name:
+                plan_section = f"""
+                <div style="background-color: #E3F2FD; border-left: 4px solid #1E90FF; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <h3 style="margin-top: 0; color: #1E90FF;">Your Subscription Plan</h3>
+                    <p style="margin-bottom: 0;"><strong>Plan:</strong> {plan_name}</p>
+                </div>
+                """
+            
+            # Build welcome message based on user type
+            welcome_message = ""
+            if user_type == "customer":
+                welcome_message = """
+                <p>We're excited to have you join our community! As a customer, you can now:</p>
+                <ul>
+                    <li>Book appointments at your favorite businesses</li>
+                    <li>Manage your bookings and appointments</li>
+                    <li>Earn rewards and special offers</li>
+                    <li>Leave reviews and share your experiences</li>
+                </ul>
+                """
+            elif user_type == "business_owner":
+                welcome_message = """
+                <p>Welcome to LinkUup! As a business owner, you can now:</p>
+                <ul>
+                    <li>Manage your business profile and services</li>
+                    <li>Handle bookings and appointments</li>
+                    <li>Connect with customers and grow your business</li>
+                    <li>Access powerful business management tools</li>
+                </ul>
+                """
+            else:
+                welcome_message = "<p>We're excited to have you join our platform!</p>"
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Welcome to LinkUup</title>
+                <style>
+                    body {{
+                        font-family: 'Open Sans', Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #333333;
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 20px;
+                        background-color: #F5F5F5;
+                    }}
+                    .container {{
+                        background-color: #FFFFFF;
+                        border-radius: 8px;
+                        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+                        overflow: hidden;
+                    }}
+                    .header {{
+                        background-color: #1E90FF;
+                        color: white;
+                        padding: 30px 20px;
+                        text-align: center;
+                    }}
+                    .header h1 {{
+                        margin: 0;
+                        font-family: 'Poppins', Arial, sans-serif;
+                        font-weight: 600;
+                        font-size: 28px;
+                    }}
+                    .content {{
+                        padding: 30px;
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background-color: #1E90FF;
+                        color: white;
+                        padding: 14px 28px;
+                        text-decoration: none;
+                        border-radius: 8px;
+                        font-weight: 500;
+                        margin: 20px 0;
+                        text-align: center;
+                    }}
+                    .button:hover {{
+                        background-color: #1877D2;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        color: #9E9E9E;
+                        font-size: 12px;
+                        padding: 20px;
+                        background-color: #F5F5F5;
+                    }}
+                    ul {{
+                        padding-left: 20px;
+                    }}
+                    li {{
+                        margin: 10px 0;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Welcome to LinkUup!</h1>
+                    </div>
+                    
+                    <div class="content">
+                        <p>Hello {to_name},</p>
+                        
+                        <p>Thank you for joining LinkUup! We're thrilled to have you as part of our community.</p>
+                        
+                        <p><strong>Account Type:</strong> {user_type_display}</p>
+                        
+                        {plan_section}
+                        
+                        {welcome_message}
+                        
+                        <div style="text-align: center;">
+                            <a href="http://linkuup.portugalexpatdirectory.com/login" class="button">Get Started</a>
+                        </div>
+                        
+                        <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+                        
+                        <p>Best regards,<br>
+                        The LinkUup Team</p>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>This is an automated message. Please do not reply to this email.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            text_content = f"""
+            Welcome to LinkUup!
+            
+            Hello {to_name},
+            
+            Thank you for joining LinkUup! We're thrilled to have you as part of our community.
+            
+            Account Type: {user_type_display}
+            """
+            
+            if user_type == "business_owner" and plan_name:
+                text_content += f"\nYour Subscription Plan: {plan_name}\n"
+            
+            text_content += f"""
+            
+            {welcome_message.replace('<p>', '').replace('</p>', '').replace('<ul>', '').replace('</ul>', '').replace('<li>', '- ').replace('</li>', '')}
+            
+            Get started by visiting: http://linkuup.portugalexpatdirectory.com/login
+            
+            If you have any questions or need assistance, please don't hesitate to contact our support team.
+            
+            Best regards,
+            The LinkUup Team
+            
+            This is an automated message. Please do not reply to this email.
+            """
+            
+            return self.send_transactional_email(
+                to_email=to_email,
+                to_name=to_name,
+                subject=subject,
+                html_content=html_content,
+                text_content=text_content
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to send welcome email: {str(e)}")
             return False
 
 # Global Brevo email service instance

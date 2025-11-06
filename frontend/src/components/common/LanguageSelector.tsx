@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Globe, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../contexts/AuthContext';
+import { authAPI } from '../../utils/api';
 
 const LanguageSelector: React.FC = () => {
   const { i18n, t } = useTranslation();
+  const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -31,9 +34,19 @@ const LanguageSelector: React.FC = () => {
     };
   }, []);
 
-  const handleLanguageChange = (langCode: string) => {
+  const handleLanguageChange = async (langCode: string) => {
     i18n.changeLanguage(langCode);
     setIsOpen(false);
+    
+    // Save language preference to user account if authenticated
+    if (isAuthenticated) {
+      try {
+        await authAPI.updateLanguagePreference(langCode);
+      } catch (error) {
+        console.error('Failed to update language preference:', error);
+        // Don't block language change if API call fails
+      }
+    }
   };
 
   return (

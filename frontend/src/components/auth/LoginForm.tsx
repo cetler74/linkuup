@@ -167,7 +167,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
             </button>
           </div>
 
-          <div className="text-center pt-4">
+          <div className="text-center pt-2">
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium hover:opacity-75 transition-opacity duration-200 block mb-3"
+              style={{color: '#1E90FF'}}
+            >
+              {t('auth.forgotPassword')}
+            </Link>
             <Link
               to="/join"
               className="text-sm font-medium hover:opacity-75 transition-opacity duration-200"

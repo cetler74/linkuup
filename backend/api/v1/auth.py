@@ -13,25 +13,29 @@ import httpx
 
 try:
     from core.database import get_db
-    from core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, verify_token
+    from core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, verify_token, create_password_reset_token, verify_password_reset_token
     from core.dependencies import get_current_user
     from core.config import settings
     from models.user import User
 except ImportError:
     from core.database import get_db
-    from core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, verify_token
+    from core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, verify_token, create_password_reset_token, verify_password_reset_token
     from core.dependencies import get_current_user
     from core.config import settings
     from models.user import User
 try:
     from schemas.auth import (
         LoginRequest, RegisterRequest, RefreshTokenRequest, TokenResponse, 
-        UserResponse, AuthResponse, ValidateTokenResponse, LogoutResponse
+        UserResponse, AuthResponse, ValidateTokenResponse, LogoutResponse,
+        ForgotPasswordRequest, ForgotPasswordResponse, ResetPasswordRequest, ResetPasswordResponse,
+        UpdateLanguagePreferenceRequest, UpdateLanguagePreferenceResponse
     )
 except ImportError:
     from schemas.auth import (
         LoginRequest, RegisterRequest, RefreshTokenRequest, TokenResponse, 
-        UserResponse, AuthResponse, ValidateTokenResponse, LogoutResponse
+        UserResponse, AuthResponse, ValidateTokenResponse, LogoutResponse,
+        ForgotPasswordRequest, ForgotPasswordResponse, ResetPasswordRequest, ResetPasswordResponse,
+        UpdateLanguagePreferenceRequest, UpdateLanguagePreferenceResponse
     )
 
 router = APIRouter()
@@ -47,6 +51,12 @@ async def register(user_in: RegisterRequest, db: AsyncSession = Depends(get_db))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # Validate language preference
+    valid_languages = ['en', 'pt', 'es', 'fr', 'de', 'it']
+    language_preference = user_in.language_preference or 'en'
+    if language_preference not in valid_languages:
+        language_preference = 'en'
+    
     # Create user
     user = User(
         email=user_in.email,
@@ -59,6 +69,7 @@ async def register(user_in: RegisterRequest, db: AsyncSession = Depends(get_db))
         is_admin=False,  # Set default admin status
         is_owner=user_in.user_type == "business_owner",  # Set owner status based on user type
         is_business_owner=user_in.user_type == "business_owner",  # Set business owner flag
+        language_preference=language_preference,  # Set language preference
         gdpr_data_processing_consent=user_in.gdpr_data_processing_consent,
         gdpr_data_processing_consent_date=datetime.utcnow() if user_in.gdpr_data_processing_consent else None,
         gdpr_marketing_consent=user_in.gdpr_marketing_consent,
@@ -132,6 +143,42 @@ async def register(user_in: RegisterRequest, db: AsyncSession = Depends(get_db))
             # Do not block registration on subscription creation; frontend will retry via /subscriptions/start-trial
             print(f"⚠️ Warning: Could not create subscription during registration: {e}")
             pass
+    
+    # Send welcome email
+    try:
+        from email_service import EmailService
+        email_service = EmailService()  # Initialize email service (same way as booking emails)
+        user_name = user.first_name or user.name or user.email.split('@')[0]
+        plan_name = None
+        
+        # Get plan name for business owners
+        if user.user_type == "business_owner" and user_in.selected_plan_code:
+            try:
+                from models.subscription import Plan
+                plan_result = await db.execute(select(Plan).where(Plan.code == user_in.selected_plan_code, Plan.is_active == True))
+                plan = plan_result.scalar_one_or_none()
+                if plan:
+                    plan_name = plan.name
+            except Exception:
+                pass  # Don't block registration if plan lookup fails
+        
+        print(f"📧 Attempting to send welcome email to {user.email}")
+        result = email_service.send_welcome_email(
+            to_email=user.email,
+            to_name=user_name,
+            user_type=user.user_type,
+            plan_name=plan_name,
+            language=user.language_preference or 'en'
+        )
+        if result:
+            print(f"✅ Welcome email sent successfully to {user.email}")
+        else:
+            print(f"⚠️ Welcome email failed to send to {user.email}")
+    except Exception as e:
+        print(f"❌ Error sending welcome email: {e}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        # Don't block registration on email failure
     
     # Generate tokens
     access_token = create_access_token({"sub": str(user.id)})
@@ -569,6 +616,41 @@ async def _issue_tokens_for_user(
             await db.commit()
             await db.refresh(user)
 
+    # Send welcome email for new users
+    if is_new_user:
+        try:
+            from email_service import EmailService
+            email_service = EmailService()  # Initialize email service (same way as booking emails)
+            user_name = user.first_name or user.name or user.email.split('@')[0]
+            plan_name = None
+            
+            # Get plan name for business owners
+            if user.user_type == "business_owner" and selected_plan_code:
+                try:
+                    from models.subscription import Plan
+                    plan_result = await db.execute(select(Plan).where(Plan.code == selected_plan_code, Plan.is_active == True))
+                    plan = plan_result.scalar_one_or_none()
+                    if plan:
+                        plan_name = plan.name
+                except Exception:
+                    pass  # Don't block on plan lookup failure
+            
+            print(f"📧 Attempting to send welcome email to {user.email}")
+            result = email_service.send_welcome_email(
+                to_email=user.email,
+                to_name=user_name,
+                user_type=user.user_type,
+                plan_name=plan_name,
+                language=getattr(user, 'language_preference', None) or 'en'
+            )
+            if result:
+                print(f"✅ Welcome email sent successfully to {user.email}")
+            else:
+                print(f"⚠️ Welcome email failed to send to {user.email}")
+        except Exception as e:
+            print(f"⚠️ Error sending welcome email: {e}")
+            # Don't block OAuth flow on email failure
+    
     access_token = create_access_token({"sub": str(user.id)})
     refresh_token = create_refresh_token({"sub": str(user.id)})
     return access_token, refresh_token, is_new_user
@@ -964,3 +1046,125 @@ async def facebook_oauth_callback(request: Request, code: str | None = None, sta
     
     html = _callback_success_html(app_access, app_refresh, redirect_path=redirect_path)
     return HTMLResponse(content=html, media_type="text/html")
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+async def forgot_password(request_data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Request password reset - sends email with reset link"""
+    from datetime import datetime, timedelta, timezone
+    from email_service import EmailService
+    
+    # Initialize email service (same way as booking emails)
+    email_service = EmailService()
+    
+    # Find user by email
+    result = await db.execute(select(User).where(User.email == request_data.email))
+    user = result.scalar_one_or_none()
+    
+    # Always return success message (security best practice - don't reveal if email exists)
+    if not user:
+        return ForgotPasswordResponse()
+    
+    # Only allow password reset for internal accounts (not OAuth-only accounts)
+    if not user.password_hash or user.password_hash.strip() == "":
+        # OAuth-only account, can't reset password
+        return ForgotPasswordResponse()
+    
+    # Generate password reset token
+    reset_token = create_password_reset_token(user.email)
+    
+    # Store token in database
+    try:
+        user.password_reset_token = reset_token
+        user.password_reset_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        await db.commit()
+    except Exception as e:
+        print(f"⚠️ Error storing password reset token: {e}")
+        import traceback
+        print(f"⚠️ Traceback: {traceback.format_exc()}")
+        await db.rollback()
+        # Still return success to not reveal if email exists
+        return ForgotPasswordResponse()
+    
+    # Build reset URL
+    frontend_url = _get_frontend_base_url(None, use_referer=False)
+    reset_url = f"{frontend_url}/reset-password?token={reset_token}"
+    
+    # Send password reset email
+    try:
+        user_name = user.first_name or user.name or user.email.split('@')[0]
+        # Get language preference safely (might not exist on old users)
+        language = getattr(user, 'language_preference', None) or 'en'
+        print(f"📧 Attempting to send password reset email to {user.email}")
+        print(f"📧 Reset URL: {reset_url}")
+        result = email_service.send_password_reset_email(
+            to_email=user.email,
+            to_name=user_name,
+            reset_token=reset_token,
+            reset_url=reset_url,
+            language=language
+        )
+        if result:
+            print(f"✅ Password reset email sent successfully to {user.email}")
+        else:
+            print(f"⚠️ Password reset email failed to send to {user.email}")
+    except Exception as e:
+        print(f"❌ Error sending password reset email: {e}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        # Still return success to not reveal if email exists
+    
+    return ForgotPasswordResponse()
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+async def reset_password(request_data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Reset password using token from email"""
+    from datetime import datetime, timezone
+    
+    # Verify token
+    email = verify_password_reset_token(request_data.token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    # Find user by email
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid reset token")
+    
+    # Check if token matches and is not expired
+    if user.password_reset_token != request_data.token:
+        raise HTTPException(status_code=400, detail="Invalid reset token")
+    
+    if user.password_reset_token_expires_at and user.password_reset_token_expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+    
+    # Update password
+    user.password_hash = get_password_hash(request_data.new_password)
+    user.password_reset_token = None
+    user.password_reset_token_expires_at = None
+    await db.commit()
+    
+    return ResetPasswordResponse()
+
+@router.patch("/me/language", response_model=UpdateLanguagePreferenceResponse)
+async def update_language_preference(
+    request_data: UpdateLanguagePreferenceRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update user's language preference"""
+    # Validate language code
+    valid_languages = ['en', 'pt', 'es', 'fr', 'de', 'it']
+    if request_data.language not in valid_languages:
+        raise HTTPException(status_code=400, detail=f"Invalid language code. Must be one of: {', '.join(valid_languages)}")
+    
+    # Update language preference
+    current_user.language_preference = request_data.language
+    await db.commit()
+    await db.refresh(current_user)
+    
+    return UpdateLanguagePreferenceResponse(
+        message="Language preference updated successfully.",
+        language=request_data.language
+    )

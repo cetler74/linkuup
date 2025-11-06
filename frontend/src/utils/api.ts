@@ -486,6 +486,24 @@ export const authAPI = {
     const response = await api.get('/auth/me');
     return response.data;
   },
+
+  // Update language preference
+  updateLanguagePreference: async (language: string): Promise<{ message: string; language: string }> => {
+    const response = await api.patch('/auth/me/language', { language });
+    return response.data;
+  },
+
+  // Forgot password
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  // Reset password
+  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
+    const response = await api.post('/auth/reset-password', { token, new_password: newPassword });
+    return response.data;
+  },
 };
 
 export const managerAPI = {

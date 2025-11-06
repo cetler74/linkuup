@@ -23,6 +23,7 @@ class RegisterRequest(BaseModel):
     # New fields for owner subscription setup
     selected_plan_code: Optional[str] = None  # 'basic' | 'pro'
     place_id: Optional[int] = None
+    language_preference: Optional[str] = 'en'  # en, pt, es, fr, de, it
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
@@ -62,3 +63,23 @@ class ValidateTokenResponse(BaseModel):
 
 class LogoutResponse(BaseModel):
     message: str = "Logout successful"
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ForgotPasswordResponse(BaseModel):
+    message: str = "If an account with that email exists, a password reset link has been sent."
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class ResetPasswordResponse(BaseModel):
+    message: str = "Password has been reset successfully."
+
+class UpdateLanguagePreferenceRequest(BaseModel):
+    language: str  # en, pt, es, fr, de, it
+
+class UpdateLanguagePreferenceResponse(BaseModel):
+    message: str = "Language preference updated successfully."
+    language: str

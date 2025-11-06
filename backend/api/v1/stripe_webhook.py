@@ -348,6 +348,42 @@ async def _create_user_from_registration_data(db: AsyncSession, registration_dat
         await db.refresh(user)
         
         print(f"✅ Successfully created user account for {email} (ID: {user.id})")
+        
+        # Send welcome email
+        try:
+            from email_service import EmailService
+            email_service = EmailService()  # Initialize email service (same way as booking emails)
+            user_name = user.first_name or user.name or email.split('@')[0]
+            plan_name = None
+            
+            # Get plan name for business owners
+            if user.user_type == "business_owner" and plan_code:
+                try:
+                    from models.subscription import Plan
+                    plan_result = await db.execute(select(Plan).where(Plan.code == plan_code, Plan.is_active == True))
+                    plan = plan_result.scalar_one_or_none()
+                    if plan:
+                        plan_name = plan.name
+                except Exception:
+                    pass  # Don't block on plan lookup failure
+            
+            print(f"📧 Attempting to send welcome email to {email}")
+            result = email_service.send_welcome_email(
+                to_email=user.email,
+                to_name=user_name,
+                user_type=user.user_type,
+                plan_name=plan_name,
+                language=getattr(user, 'language_preference', None) or 'en'
+            )
+            if result:
+                print(f"✅ Welcome email sent successfully to {email}")
+            else:
+                print(f"⚠️ Welcome email failed to send to {email}")
+        except Exception as e:
+            print(f"❌ Error sending welcome email: {e}")
+            import traceback
+            print(f"❌ Traceback: {traceback.format_exc()}")
+            # Don't block user creation on email failure
     except Exception as e:
         print(f"❌ Error creating user account for {email}: {e}")
         import traceback

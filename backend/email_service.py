@@ -336,6 +336,92 @@ class EmailService:
         logger.info(f"Batch email sending completed. Sent: {results['sent_count']}, Failed: {results['failed_count']}")
         
         return results
+    
+    def send_password_reset_email(self, to_email: str, to_name: str, reset_token: str, reset_url: str, language: str = 'en') -> bool:
+        """Send password reset email"""
+        # Ensure services are initialized
+        if not self.brevo_service and not self.gmail_service:
+            logger.warning("Email services not initialized, initializing now...")
+            self._initialize_services()
+        
+        # Try Brevo first (primary)
+        if self.brevo_service:
+            try:
+                logger.info(f"📧 Attempting to send password reset email via Brevo to {to_email}")
+                result = self.brevo_service.send_password_reset_email(to_email, to_name, reset_token, reset_url, language)
+                if result:
+                    logger.info(f"✅ Password reset email sent successfully via Brevo to {to_email}")
+                    return True
+                else:
+                    logger.warning(f"⚠️ Brevo failed to send password reset email to {to_email}")
+            except Exception as e:
+                logger.error(f"❌ Brevo exception when sending password reset email: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        # Fallback to Gmail
+        if self.gmail_service:
+            try:
+                logger.info(f"📧 Attempting to send password reset email via Gmail fallback to {to_email}")
+                # Gmail service doesn't have password reset method, use generic send_email
+                subject = "Password Reset Request - LinkUup"
+                body = f"""
+                Hello {to_name},
+                
+                We received a request to reset your password. Click the link below:
+                
+                {reset_url}
+                
+                This link expires in 1 hour.
+                
+                Best regards,
+                The LinkUup Team
+                """
+                result = self.gmail_service.send_email(to=to_email, subject=subject, body_text=body)
+                if result:
+                    logger.info(f"✅ Password reset email sent successfully via Gmail to {to_email}")
+                    return True
+                else:
+                    logger.warning(f"⚠️ Gmail fallback failed to send password reset email to {to_email}")
+            except Exception as e:
+                logger.error(f"❌ Gmail exception when sending password reset email: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        logger.error(f"❌ No email service available - could not send password reset email to {to_email}")
+        print(f"❌ No email service configured - cannot send email to {to_email}")
+        return False
+    
+    def send_welcome_email(self, to_email: str, to_name: str, user_type: str, plan_name: str = None, language: str = 'en') -> bool:
+        """Send welcome email to new users"""
+        # Try Brevo first (primary)
+        if self.brevo_service:
+            try:
+                return self.brevo_service.send_welcome_email(to_email, to_name, user_type, plan_name, language)
+            except Exception as e:
+                logger.error(f"Brevo failed to send welcome email: {str(e)}")
+        
+        # Fallback to Gmail
+        if self.gmail_service:
+            try:
+                subject = f"Welcome to LinkUup - {user_type.title()}"
+                body = f"""
+                Hello {to_name},
+                
+                Welcome to LinkUup! We're thrilled to have you as part of our community.
+                
+                Account Type: {user_type}
+                """
+                if user_type == "business_owner" and plan_name:
+                    body += f"\nYour Subscription Plan: {plan_name}\n"
+                
+                body += "\nGet started by visiting: http://linkuup.portugalexpatdirectory.com/login\n\nBest regards,\nThe LinkUup Team"
+                return self.gmail_service.send_email(to=to_email, subject=subject, body_text=body)
+            except Exception as e:
+                logger.error(f"Gmail fallback failed to send welcome email: {str(e)}")
+        
+        logger.warning("No email service available, skipping welcome email")
+        return False
 
 # Global email service instance
 email_service = EmailService()

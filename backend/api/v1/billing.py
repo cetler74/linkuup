@@ -60,7 +60,7 @@ async def retry_invoice(invoiceId: str):
 @router.get("/subscription", response_model=SubscriptionResponse)
 async def get_subscription(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
-        # Get all active subscriptions for the user
+        # First, try to get BillingSubscription (Stripe subscription)
         res = await db.execute(
             select(BillingSubscription)
             .where(
@@ -71,27 +71,86 @@ async def get_subscription(db: AsyncSession = Depends(get_db), current_user: Use
         )
         subs = res.scalars().all()
         
-        if not subs:
-            return SubscriptionResponse()
+        if subs:
+            # If multiple active subscriptions exist, use the most recent one
+            # (Ideally, there should only be one active subscription per user)
+            sub = subs[0]  # Most recent based on order_by
+            
+            # Log warning if multiple active subscriptions found
+            if len(subs) > 1:
+                print(f"⚠️ Warning: User {current_user.id} has {len(subs)} active subscriptions. Using most recent: {sub.stripe_subscription_id}")
+            
+            # Safely extract subscription data
+            subscription_id = getattr(sub, 'stripe_subscription_id', None) or None
+            status = getattr(sub, 'status', None) or None
+            plan_code = getattr(sub, 'plan_code', None) or None
+            
+            return SubscriptionResponse(
+                subscriptionId=subscription_id,
+                status=status,
+                planCode=plan_code
+            )
         
-        # If multiple active subscriptions exist, use the most recent one
-        # (Ideally, there should only be one active subscription per user)
-        sub = subs[0]  # Most recent based on order_by
+        # If no BillingSubscription, check for UserPlaceSubscription (trial subscriptions)
+        # This handles Basic plan users with trial periods
+        from models.subscription import UserPlaceSubscription, SubscriptionStatusEnum, Plan
+        from sqlalchemy import and_
         
-        # Log warning if multiple active subscriptions found
-        if len(subs) > 1:
-            print(f"⚠️ Warning: User {current_user.id} has {len(subs)} active subscriptions. Using most recent: {sub.stripe_subscription_id}")
-        
-        # Safely extract subscription data
-        subscription_id = getattr(sub, 'stripe_subscription_id', None) or None
-        status = getattr(sub, 'status', None) or None
-        plan_code = getattr(sub, 'plan_code', None) or None
-        
-        return SubscriptionResponse(
-            subscriptionId=subscription_id,
-            status=status,
-            planCode=plan_code
+        place_sub_res = await db.execute(
+            select(UserPlaceSubscription, Plan)
+            .join(Plan, UserPlaceSubscription.plan_id == Plan.id)
+            .where(
+                and_(
+                    UserPlaceSubscription.user_id == current_user.id,
+                    UserPlaceSubscription.status.in_([SubscriptionStatusEnum.TRIALING, SubscriptionStatusEnum.ACTIVE])
+                )
+            )
+            .order_by(UserPlaceSubscription.created_at.desc())
         )
+        place_subs = place_sub_res.all()
+        
+        if place_subs:
+            # Get the most recent place subscription
+            place_sub, plan = place_subs[0]
+            
+            # Determine status based on subscription status
+            status = "trialing" if place_sub.status == SubscriptionStatusEnum.TRIALING else "active"
+            plan_code = plan.code if plan else None
+            
+            print(f"ℹ️ User {current_user.id} has UserPlaceSubscription with plan {plan_code}, status: {status}")
+            
+            return SubscriptionResponse(
+                subscriptionId=None,  # No Stripe subscription ID for trial subscriptions
+                status=status,
+                planCode=plan_code
+            )
+        
+        # If no subscriptions found, check if user has an active trial on User model
+        # This handles Basic plan users with trial periods who haven't created a place yet
+        if current_user.trial_status == "active" and current_user.trial_start and current_user.trial_end:
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            
+            # Check if trial is still active
+            if current_user.trial_start <= now <= current_user.trial_end:
+                # User is in trial period, assume Basic plan (default for business owners)
+                # Try to get the plan they selected during registration, or default to "basic"
+                plan_code = "basic"  # Default for business owners with trial
+                
+                # Check if user has a selected_plan_code stored somewhere
+                # For now, default to "basic" for users in trial
+                print(f"ℹ️ User {current_user.id} is in trial period, returning plan: {plan_code}")
+                
+                return SubscriptionResponse(
+                    subscriptionId=None,  # No Stripe subscription ID for trial subscriptions
+                    status="trialing",
+                    planCode=plan_code
+                )
+        
+        # If no subscriptions found at all, return empty response
+        print(f"ℹ️ No active subscriptions found for user {current_user.id}")
+        return SubscriptionResponse()
+        
     except Exception as e:
         # Log the error and return empty response instead of crashing
         import traceback

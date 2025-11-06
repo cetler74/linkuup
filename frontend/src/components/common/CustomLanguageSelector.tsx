@@ -13,7 +13,10 @@ const CustomLanguageSelector: React.FC<CustomLanguageSelectorProps> = ({
 }) => {
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
   const languages = [
     { code: 'pt', short: 'PT', full: 'Português (PT)' },
@@ -28,7 +31,14 @@ const CustomLanguageSelector: React.FC<CustomLanguageSelectorProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        isOpen &&
+        containerRef.current &&
+        !containerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -37,7 +47,17 @@ const CustomLanguageSelector: React.FC<CustomLanguageSelectorProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        right: window.innerWidth - rect.right - window.scrollX
+      });
+    }
+  }, [isOpen]);
 
   const handleLanguageChange = async (langCode: string) => {
     console.log('Changing language to:', langCode);
@@ -54,20 +74,30 @@ const CustomLanguageSelector: React.FC<CustomLanguageSelectorProps> = ({
   };
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between w-full px-4 py-1.5 text-sm text-charcoal hover:text-bright-blue transition-colors duration-200 rounded-md hover:bg-light-gray font-medium border border-medium-gray ${className.includes('w-full') ? 'bg-white' : ''}`}
-        aria-label="Select Language"
-      >
+    <>
+      <div className={`relative z-[9999] ${className}`} ref={containerRef}>
+        <button
+          ref={buttonRef}
+          onClick={() => setIsOpen(!isOpen)}
+          className={`flex items-center justify-between w-full px-4 py-1.5 text-sm text-charcoal hover:text-bright-blue transition-colors duration-200 rounded-md hover:bg-light-gray font-medium border border-medium-gray ${className.includes('w-full') ? 'bg-white' : ''}`}
+          aria-label="Select Language"
+        >
         <span className="font-display font-semibold">
           {showFullName ? currentLanguage.full : currentLanguage.short}
         </span>
-        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+          <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-form border border-medium-gray z-50">
+        <div 
+          ref={dropdownRef}
+          className="fixed w-48 bg-white rounded-md shadow-form border border-medium-gray z-[99999]"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            right: `${dropdownPosition.right}px`
+          }}
+        >
           <div className="py-1">
             {languages.map((lang) => (
               <button
@@ -88,7 +118,7 @@ const CustomLanguageSelector: React.FC<CustomLanguageSelectorProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

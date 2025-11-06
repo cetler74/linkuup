@@ -268,7 +268,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
               {t('auth.register')}
             </h2>
             <p className="text-center text-gray-600 mt-2">
-              I am registering as:
+              {t('auth.registeringAs')}
             </p>
           </div>
 
@@ -300,10 +300,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
                   <User className="h-12 w-12 mx-auto mb-4" style={{color: formData.user_type === 'customer' ? '#2a2a2e' : '#9ca3af'}} />
                 </div>
                 <h3 className="text-xl font-bold mb-2" style={{color: '#2a2a2e'}}>
-                  Customer (Looking for services)
+                  {t('auth.customerOption')}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Find and book services from local businesses
+                  {t('auth.customerDescription')}
                 </p>
               </div>
             </button>
@@ -337,10 +337,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold mb-2" style={{color: '#2a2a2e'}}>
-                  Business Owner (Offering services)
+                  {t('auth.businessOwnerOption')}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Manage your business and offer services to customers
+                  {t('auth.businessOwnerDescription')}
                 </p>
               </div>
             </button>
@@ -455,7 +455,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           <div>
             <label htmlFor="first_name" className="block text-sm font-medium mb-2" style={{color: '#2a2a2e'}}>
-              First Name
+              {t('auth.firstName')}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -470,14 +470,14 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
                 value={formData.first_name}
                 onChange={handleChange}
                 className="w-full pl-10 pr-3 py-3 sm:py-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-200 text-gray-900 text-sm sm:text-base"
-                placeholder="First Name"
+                placeholder={t('auth.firstName')}
               />
             </div>
           </div>
 
           <div>
             <label htmlFor="last_name" className="block text-sm font-medium mb-2" style={{color: '#2a2a2e'}}>
-              Last Name
+              {t('auth.lastName')}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -492,7 +492,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
                 value={formData.last_name}
                 onChange={handleChange}
                 className="w-full pl-10 pr-3 py-3 sm:py-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-200 text-gray-900 text-sm sm:text-base"
-                placeholder="Last Name"
+                placeholder={t('auth.lastName')}
               />
             </div>
           </div>
@@ -523,7 +523,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
           {(formData.user_type === 'customer' || showManualFormForOwner) && (
             <div>
               <label htmlFor="password" className="block text-sm font-medium mb-2" style={{color: '#2a2a2e'}}>
-                {t('auth.password')} {formData.user_type === 'customer' && <span className="text-gray-500 text-xs">(optional if using OAuth)</span>}
+                {t('auth.password')} {formData.user_type === 'customer' && <span className="text-gray-500 text-xs">{t('auth.passwordOptionalOAuth')}</span>}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -613,7 +613,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
                     {t('gdpr.dataProcessing')} <span className="text-red-500">*</span>
                   </label>
                   <p className="text-gray-600 text-xs mt-1">
-                    I consent to my personal data being processed and used internally by LinkUup to provide the requested services, including account management, bookings and service-related communication.
+                    {t('auth.dataProcessingConsentText')}
                   </p>
                 </div>
               </div>
@@ -690,7 +690,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
               </h3>
               <p className="text-sm text-green-600 mb-6">
                 {userType === 'business_owner' 
-                  ? (selectedPlan ? `Welcome! Your ${selectedPlan.name} trial is started or will start after you create your first place.` : t('auth.registrationSuccessOwner'))
+                  ? (selectedPlan ? t('auth.trialStartedMessage', { planName: selectedPlan.name }) : t('auth.registrationSuccessOwner'))
                   : t('auth.registrationSuccessCustomer')
                 }
               </p>

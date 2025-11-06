@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 
 const SearchResultsWithImages: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchResults, setSearchResults] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +67,7 @@ const SearchResultsWithImages: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [filters.search, filters.cidade, filters.regiao, filters.is_bio_diamond, t]);
+  }, [filters.search, filters.cidade, filters.tipo, filters.regiao, filters.is_bio_diamond, t]);
 
   // Update filters when URL params change
   useEffect(() => {
@@ -88,6 +88,17 @@ const SearchResultsWithImages: React.FC = () => {
 
   const handleFilterChange = (key: string, value: string | boolean) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    
+    // Update URL parameters when filter changes
+    const newParams = new URLSearchParams(searchParams);
+    if (value === '' || value === false) {
+      // Remove parameter if value is empty or false
+      newParams.delete(key);
+    } else {
+      // Set parameter if value exists
+      newParams.set(key, String(value));
+    }
+    setSearchParams(newParams, { replace: true });
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -103,9 +114,11 @@ const SearchResultsWithImages: React.FC = () => {
       regiao: '',
       is_bio_diamond: false
     });
+    // Clear URL parameters
+    setSearchParams({}, { replace: true });
   };
 
-  const hasActiveFilters = filters.search || filters.cidade || filters.regiao || filters.is_bio_diamond;
+  const hasActiveFilters = filters.search || filters.cidade || filters.tipo || filters.regiao || filters.is_bio_diamond;
 
   // Listen for card hover events from cards
   useEffect(() => {
@@ -207,7 +220,7 @@ const SearchResultsWithImages: React.FC = () => {
             <div className="flex items-center gap-2">
               {hasActiveFilters && (
                 <span className="bg-[#1E90FF] text-white text-xs px-2 py-1 rounded-full font-medium">
-                  {[filters.search, filters.cidade, filters.regiao, filters.is_bio_diamond].filter(Boolean).length}
+                  {[filters.search, filters.cidade, filters.tipo, filters.regiao, filters.is_bio_diamond].filter(Boolean).length}
                 </span>
               )}
               <svg 
@@ -303,7 +316,7 @@ const SearchResultsWithImages: React.FC = () => {
                     {t('search.services')}
                   </label>
                   <Select
-                    value={filters.tipo}
+                    value={filters.tipo || ''}
                     onValueChange={(value) => handleFilterChange('tipo', value)}
                   >
                     <SelectTrigger className="input-field" style={{ 
@@ -319,15 +332,15 @@ const SearchResultsWithImages: React.FC = () => {
                       <SelectItem value="salon">{t('search.salon')}</SelectItem>
                       <SelectItem value="barber">{t('search.barber')}</SelectItem>
                       <SelectItem value="nails">{t('search.nails')}</SelectItem>
-                      <SelectItem value="spa_sauna">{t('search.spaSauna')}</SelectItem>
-                      <SelectItem value="medical_spa">{t('search.medicalSpa')}</SelectItem>
+                      <SelectItem value="spaSauna">{t('search.spaSauna')}</SelectItem>
+                      <SelectItem value="medicalSpa">{t('search.medicalSpa')}</SelectItem>
                       <SelectItem value="massage">{t('search.massage')}</SelectItem>
-                      <SelectItem value="fitness_rehab">{t('search.fitnessRehab')}</SelectItem>
+                      <SelectItem value="fitnessRehab">{t('search.fitnessRehab')}</SelectItem>
                       <SelectItem value="physiotherapy">{t('search.physiotherapy')}</SelectItem>
-                      <SelectItem value="medical_offices">{t('search.medicalOffices')}</SelectItem>
-                      <SelectItem value="tattoo_piercing">{t('search.tattooPiercing')}</SelectItem>
-                      <SelectItem value="pet_grooming">{t('search.petGrooming')}</SelectItem>
-                      <SelectItem value="tanning_clinic">{t('search.tanningClinic')}</SelectItem>
+                      <SelectItem value="medicalOffices">{t('search.medicalOffices')}</SelectItem>
+                      <SelectItem value="tattooPiercing">{t('search.tattooPiercing')}</SelectItem>
+                      <SelectItem value="petGrooming">{t('search.petGrooming')}</SelectItem>
+                      <SelectItem value="tanningClinic">{t('search.tanningClinic')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

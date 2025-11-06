@@ -6,7 +6,6 @@ import {
   LogOut,
   LayoutDashboard,
   User as UserIcon,
-  User,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -135,10 +134,6 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ onLogout }) => {
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Account</DropdownMenuLabel>
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
-            Profile Settings
-          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
               navigate(isCustomer ? '/customer/dashboard' : '/owner/dashboard');

@@ -193,26 +193,26 @@ const CreateFirstPlace: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{backgroundColor: '#2a2a2e'}}>
+      <div className="min-h-screen flex items-center justify-center" style={{backgroundColor: '#F5F5F5'}}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-          <p className="mt-4 text-white/70">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1E90FF] mx-auto"></div>
+          <p className="mt-4 text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{backgroundColor: '#2a2a2e'}}>
+    <div className="min-h-screen" style={{backgroundColor: '#F5F5F5'}}>
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-full mb-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-6" style={{backgroundColor: '#1E90FF'}}>
             <BuildingOfficeIcon className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Create Your First Place</h1>
-          <p className="text-white/70 text-lg">
-            Let's set up your business location to get started with LinkUup
+          <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: 'Poppins, sans-serif', color: '#333333' }}>{t('owner.dashboard.createFirstPlaceTitle')}</h1>
+          <p className="text-lg" style={{ fontFamily: 'Open Sans, sans-serif', color: '#9E9E9E' }}>
+            {t('owner.dashboard.createFirstPlaceSubtitle')}
           </p>
         </div>
 
@@ -222,29 +222,39 @@ const CreateFirstPlace: React.FC = () => {
             {[1, 2, 3].map((stepNumber) => (
               <React.Fragment key={stepNumber}>
                 <div className="flex items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                    step >= stepNumber 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-700 text-gray-400'
-                  }`}>
+                  <div 
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
+                    style={{
+                      backgroundColor: step >= stepNumber ? '#1E90FF' : '#E0E0E0',
+                      color: step >= stepNumber ? '#FFFFFF' : '#9E9E9E'
+                    }}
+                  >
                     {step > stepNumber ? (
                       <CheckIcon className="h-5 w-5" />
                     ) : (
                       stepNumber
                     )}
                   </div>
-                  <span className={`ml-2 text-sm font-medium ${
-                    step >= stepNumber ? 'text-white' : 'text-gray-400'
-                  }`}>
-                    {stepNumber === 1 && 'Basic Info'}
-                    {stepNumber === 2 && 'Location'}
-                    {stepNumber === 3 && 'Contact'}
+                  <span 
+                    className="ml-2 text-sm font-medium"
+                    style={{
+                      fontFamily: 'Open Sans, sans-serif',
+                      fontWeight: 500,
+                      color: step >= stepNumber ? '#333333' : '#9E9E9E'
+                    }}
+                  >
+                    {stepNumber === 1 && t('owner.dashboard.basicInfo')}
+                    {stepNumber === 2 && t('owner.dashboard.location')}
+                    {stepNumber === 3 && t('owner.dashboard.contact')}
                   </span>
                 </div>
                 {stepNumber < 3 && (
-                  <div className={`w-8 h-0.5 ${
-                    step > stepNumber ? 'bg-blue-600' : 'bg-gray-700'
-                  }`} />
+                  <div 
+                    className="w-8 h-0.5"
+                    style={{
+                      backgroundColor: step > stepNumber ? '#1E90FF' : '#E0E0E0'
+                    }}
+                  />
                 )}
               </React.Fragment>
             ))}
@@ -253,19 +263,26 @@ const CreateFirstPlace: React.FC = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="bg-gray-800 rounded-xl shadow-lg border border-gray-700 p-8">
+          <div 
+            className="rounded-lg p-8"
+            style={{
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #E0E0E0'
+            }}
+          >
             {/* Step 1: Basic Information */}
             {step === 1 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-white mb-4">Basic Information</h2>
-                  <p className="text-gray-400 mb-6">Tell us about your business</p>
+                  <h2 className="text-xl font-semibold mb-4" style={{ fontFamily: 'Poppins, sans-serif', color: '#333333' }}>{t('owner.dashboard.basicInformation')}</h2>
+                  <p className="mb-6" style={{ fontFamily: 'Open Sans, sans-serif', color: '#9E9E9E' }}>{t('owner.dashboard.basicInformationDescription')}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Business Name *
+                    <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                      {t('owner.dashboard.businessName')} *
                     </label>
                     <input
                       type="text"
@@ -273,17 +290,32 @@ const CreateFirstPlace: React.FC = () => {
                       required
                       value={formData.name}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      className="w-full px-4 py-3 rounded-lg transition-all duration-200"
+                      style={{
+                        backgroundColor: '#F5F5F5',
+                        border: '1px solid #E0E0E0',
+                        color: '#333333',
+                        fontFamily: 'Open Sans, sans-serif',
+                        fontSize: '14px'
+                      }}
                       placeholder="Enter your business name"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#1E90FF';
+                        e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#E0E0E0';
+                        e.target.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Business URL Slug
+                    <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                      {t('owner.dashboard.businessUrlSlug')}
                     </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-3 text-gray-300 text-sm z-10">
+                      <span className="absolute left-4 top-3 text-sm z-10" style={{ fontFamily: 'Open Sans, sans-serif', color: '#9E9E9E' }}>
                         linkuup.portugalexpatdirectory.com/
                       </span>
                       <input
@@ -294,28 +326,58 @@ const CreateFirstPlace: React.FC = () => {
                           const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
                           setFormData(prev => ({ ...prev, slug: value }));
                         }}
-                        className="w-full pl-[280px] pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        className="w-full pl-[280px] pr-4 py-3 rounded-lg transition-all duration-200"
+                        style={{
+                          backgroundColor: '#F5F5F5',
+                          border: '1px solid #E0E0E0',
+                          color: '#333333',
+                          fontFamily: 'Open Sans, sans-serif',
+                          fontSize: '14px'
+                        }}
                         placeholder="auto-generated-slug"
                         pattern="[a-z0-9\-]+"
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#1E90FF';
+                          e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#E0E0E0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                       />
                     </div>
-                    <p className="mt-1 text-xs text-gray-300">
-                      Auto-generated from business name. You can customize it. Only lowercase letters, numbers, and hyphens allowed.
+                    <p className="mt-1 text-xs" style={{ fontFamily: 'Open Sans, sans-serif', color: '#9E9E9E' }}>
+                      {t('owner.dashboard.businessUrlSlugHint')}
                     </p>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Business Sector *
+                  <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                    {t('owner.dashboard.businessSector')} *
                   </label>
-                    <select
-                      name="sector"
-                      required
-                      value={formData.sector}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    >
+                  <select
+                    name="sector"
+                    required
+                    value={formData.sector}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 rounded-lg transition-all duration-200"
+                    style={{
+                      backgroundColor: '#F5F5F5',
+                      border: '1px solid #E0E0E0',
+                      color: '#333333',
+                      fontFamily: 'Open Sans, sans-serif',
+                      fontSize: '14px'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#1E90FF';
+                      e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#E0E0E0';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  >
                       <option value="">{t('search.selectService')}</option>
                       <option value="allServices">{t('search.allServices')}</option>
                       <option value="salon">{t('search.salon')}</option>
@@ -334,38 +396,63 @@ const CreateFirstPlace: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Business Description
+                  <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                    {t('owner.dashboard.businessDescription')}
                   </label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
                     rows={4}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Describe your business and what services you offer"
+                    className="w-full px-4 py-3 rounded-lg transition-all duration-200"
+                    style={{
+                      backgroundColor: '#F5F5F5',
+                      border: '1px solid #E0E0E0',
+                      color: '#333333',
+                      fontFamily: 'Open Sans, sans-serif',
+                      fontSize: '14px'
+                    }}
+                    placeholder={t('owner.dashboard.businessDescriptionPlaceholder')}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#1E90FF';
+                      e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#E0E0E0';
+                      e.target.style.boxShadow = 'none';
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-4">
-                    Location Type
+                  <label className="block text-sm font-medium mb-4" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                    {t('owner.dashboard.locationType')}
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <button
                       type="button"
                       onClick={() => handleLocationTypeChange('fixed')}
-                      className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                        formData.location_type === 'fixed'
-                          ? 'border-blue-500 bg-blue-500/10'
-                          : 'border-gray-600 bg-gray-700 hover:border-gray-500'
-                      }`}
+                      className="p-4 rounded-lg border-2 transition-all duration-200"
+                      style={{
+                        borderColor: formData.location_type === 'fixed' ? '#1E90FF' : '#E0E0E0',
+                        backgroundColor: formData.location_type === 'fixed' ? 'rgba(30, 144, 255, 0.1)' : '#F5F5F5'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (formData.location_type !== 'fixed') {
+                          e.currentTarget.style.borderColor = '#1E90FF';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (formData.location_type !== 'fixed') {
+                          e.currentTarget.style.borderColor = '#E0E0E0';
+                        }
+                      }}
                     >
                       <div className="flex items-center space-x-3">
-                        <BuildingOfficeIcon className="h-6 w-6 text-white" />
+                        <BuildingOfficeIcon className="h-6 w-6" style={{ color: formData.location_type === 'fixed' ? '#1E90FF' : '#333333' }} />
                         <div className="text-left">
-                          <div className="text-white font-medium">Fixed Location</div>
-                          <div className="text-gray-400 text-sm">Physical business address</div>
+                          <div className="font-medium" style={{ fontFamily: 'Open Sans, sans-serif', color: '#333333' }}>{t('owner.dashboard.fixedLocation')}</div>
+                          <div className="text-sm" style={{ fontFamily: 'Open Sans, sans-serif', color: '#9E9E9E' }}>{t('owner.dashboard.fixedLocationDescription')}</div>
                         </div>
                       </div>
                     </button>
@@ -373,17 +460,27 @@ const CreateFirstPlace: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleLocationTypeChange('mobile')}
-                      className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                        formData.location_type === 'mobile'
-                          ? 'border-blue-500 bg-blue-500/10'
-                          : 'border-gray-600 bg-gray-700 hover:border-gray-500'
-                      }`}
+                      className="p-4 rounded-lg border-2 transition-all duration-200"
+                      style={{
+                        borderColor: formData.location_type === 'mobile' ? '#1E90FF' : '#E0E0E0',
+                        backgroundColor: formData.location_type === 'mobile' ? 'rgba(30, 144, 255, 0.1)' : '#F5F5F5'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (formData.location_type !== 'mobile') {
+                          e.currentTarget.style.borderColor = '#1E90FF';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (formData.location_type !== 'mobile') {
+                          e.currentTarget.style.borderColor = '#E0E0E0';
+                        }
+                      }}
                     >
                       <div className="flex items-center space-x-3">
-                        <MapPinIcon className="h-6 w-6 text-white" />
+                        <MapPinIcon className="h-6 w-6" style={{ color: formData.location_type === 'mobile' ? '#1E90FF' : '#333333' }} />
                         <div className="text-left">
-                          <div className="text-white font-medium">Mobile Service</div>
-                          <div className="text-gray-400 text-sm">Service area or mobile business</div>
+                          <div className="font-medium" style={{ fontFamily: 'Open Sans, sans-serif', color: '#333333' }}>{t('owner.dashboard.mobileService')}</div>
+                          <div className="text-sm" style={{ fontFamily: 'Open Sans, sans-serif', color: '#9E9E9E' }}>{t('owner.dashboard.mobileServiceDescription')}</div>
                         </div>
                       </div>
                     </button>
@@ -396,14 +493,14 @@ const CreateFirstPlace: React.FC = () => {
             {step === 2 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-white mb-4">Location Details</h2>
-                  <p className="text-gray-400 mb-6">Where is your business located?</p>
+                  <h2 className="text-xl font-semibold mb-4" style={{ fontFamily: 'Poppins, sans-serif', color: '#333333' }}>{t('owner.dashboard.locationDetails')}</h2>
+                  <p className="mb-6" style={{ fontFamily: 'Open Sans, sans-serif', color: '#9E9E9E' }}>{t('owner.dashboard.locationDetailsDescription')}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Address *
+                    <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                      {t('owner.dashboard.address')} *
                     </label>
                     <input
                       type="text"
@@ -411,14 +508,29 @@ const CreateFirstPlace: React.FC = () => {
                       required
                       value={formData.address}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      className="w-full px-4 py-3 rounded-lg transition-all duration-200"
+                      style={{
+                        backgroundColor: '#F5F5F5',
+                        border: '1px solid #E0E0E0',
+                        color: '#333333',
+                        fontFamily: 'Open Sans, sans-serif',
+                        fontSize: '14px'
+                      }}
                       placeholder="Street address"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#1E90FF';
+                        e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#E0E0E0';
+                        e.target.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      City *
+                    <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                      {t('owner.dashboard.city')} *
                     </label>
                     <input
                       type="text"
@@ -426,30 +538,60 @@ const CreateFirstPlace: React.FC = () => {
                       required
                       value={formData.city}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      className="w-full px-4 py-3 rounded-lg transition-all duration-200"
+                      style={{
+                        backgroundColor: '#F5F5F5',
+                        border: '1px solid #E0E0E0',
+                        color: '#333333',
+                        fontFamily: 'Open Sans, sans-serif',
+                        fontSize: '14px'
+                      }}
                       placeholder="City"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#1E90FF';
+                        e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#E0E0E0';
+                        e.target.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Postal Code
+                    <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                      {t('owner.dashboard.postalCode')}
                     </label>
                     <input
                       type="text"
                       name="postal_code"
                       value={formData.postal_code}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      className="w-full px-4 py-3 rounded-lg transition-all duration-200"
+                      style={{
+                        backgroundColor: '#F5F5F5',
+                        border: '1px solid #E0E0E0',
+                        color: '#333333',
+                        fontFamily: 'Open Sans, sans-serif',
+                        fontSize: '14px'
+                      }}
                       placeholder="1234-567"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#1E90FF';
+                        e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#E0E0E0';
+                        e.target.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Coordinates (Optional)
+                    <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                      {t('owner.dashboard.coordinatesOptional')}
                     </label>
                     <div className="flex space-x-2">
                       <input
@@ -460,8 +602,23 @@ const CreateFirstPlace: React.FC = () => {
                           ...prev, 
                           latitude: e.target.value ? parseFloat(e.target.value) : undefined 
                         }))}
-                        className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Latitude"
+                        className="flex-1 px-4 py-3 rounded-lg transition-all duration-200"
+                        style={{
+                          backgroundColor: '#F5F5F5',
+                          border: '1px solid #E0E0E0',
+                          color: '#333333',
+                          fontFamily: 'Open Sans, sans-serif',
+                          fontSize: '14px'
+                        }}
+                        placeholder={t('owner.dashboard.latitude')}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#1E90FF';
+                          e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#E0E0E0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                       />
                       <input
                         type="number"
@@ -471,16 +628,34 @@ const CreateFirstPlace: React.FC = () => {
                           ...prev, 
                           longitude: e.target.value ? parseFloat(e.target.value) : undefined 
                         }))}
-                        className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Longitude"
+                        className="flex-1 px-4 py-3 rounded-lg transition-all duration-200"
+                        style={{
+                          backgroundColor: '#F5F5F5',
+                          border: '1px solid #E0E0E0',
+                          color: '#333333',
+                          fontFamily: 'Open Sans, sans-serif',
+                          fontSize: '14px'
+                        }}
+                        placeholder={t('owner.dashboard.longitude')}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#1E90FF';
+                          e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#E0E0E0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                       />
                     </div>
                     <button
                       type="button"
                       onClick={getCurrentLocation}
-                      className="mt-2 text-sm text-blue-400 hover:text-blue-300 transition-colors duration-200"
+                      className="mt-2 text-sm transition-colors duration-200"
+                      style={{ fontFamily: 'Open Sans, sans-serif', color: '#1E90FF' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#1877D2'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#1E90FF'}
                     >
-                      📍 Use current location
+                      {t('owner.dashboard.useCurrentLocation')}
                     </button>
                   </div>
                 </div>
@@ -491,41 +666,71 @@ const CreateFirstPlace: React.FC = () => {
             {step === 3 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-white mb-4">Contact Information</h2>
-                  <p className="text-gray-400 mb-6">How can customers reach you?</p>
+                  <h2 className="text-xl font-semibold mb-4" style={{ fontFamily: 'Poppins, sans-serif', color: '#333333' }}>{t('owner.dashboard.contactInformation')}</h2>
+                  <p className="mb-6" style={{ fontFamily: 'Open Sans, sans-serif', color: '#9E9E9E' }}>{t('owner.dashboard.contactInformationDescription')}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Phone Number
+                    <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                      {t('owner.dashboard.phoneNumber')}
                     </label>
                     <div className="relative">
-                      <PhoneIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <PhoneIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5" style={{ color: '#9E9E9E' }} />
                       <input
                         type="tel"
                         name="phone"
                         value={formData.phone}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        className="w-full pl-10 pr-4 py-3 rounded-lg transition-all duration-200"
+                        style={{
+                          backgroundColor: '#F5F5F5',
+                          border: '1px solid #E0E0E0',
+                          color: '#333333',
+                          fontFamily: 'Open Sans, sans-serif',
+                          fontSize: '14px'
+                        }}
                         placeholder="+351 123 456 789"
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#1E90FF';
+                          e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#E0E0E0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Email Address
+                    <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500, color: '#333333' }}>
+                      {t('owner.dashboard.emailAddress')}
                     </label>
                     <div className="relative">
-                      <EnvelopeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <EnvelopeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5" style={{ color: '#9E9E9E' }} />
                       <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        className="w-full pl-10 pr-4 py-3 rounded-lg transition-all duration-200"
+                        style={{
+                          backgroundColor: '#F5F5F5',
+                          border: '1px solid #E0E0E0',
+                          color: '#333333',
+                          fontFamily: 'Open Sans, sans-serif',
+                          fontSize: '14px'
+                        }}
                         placeholder="business@example.com"
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#1E90FF';
+                          e.target.style.boxShadow = '0 0 4px rgba(30, 144, 255, 0.4)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#E0E0E0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                       />
                     </div>
                   </div>
@@ -537,37 +742,67 @@ const CreateFirstPlace: React.FC = () => {
                     name="booking_enabled"
                     checked={formData.booking_enabled}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 rounded"
+                    style={{
+                      accentColor: '#1E90FF'
+                    }}
                   />
-                  <label className="text-gray-300">
-                    Enable online booking for this place
+                  <label style={{ fontFamily: 'Open Sans, sans-serif', color: '#333333' }}>
+                    {t('owner.dashboard.enableOnlineBooking')}
                   </label>
                 </div>
               </div>
             )}
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between pt-6 border-t border-gray-700">
+            <div className="flex justify-between pt-6" style={{ borderTop: '1px solid #E0E0E0' }}>
               <button
                 type="button"
                 onClick={prevStep}
                 disabled={step === 1}
-                className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                  step === 1
-                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-700 text-white hover:bg-gray-600'
-                }`}
+                className="px-6 py-3 rounded-lg font-medium transition-all duration-200"
+                style={{
+                  fontFamily: 'Open Sans, sans-serif',
+                  fontWeight: 500,
+                  backgroundColor: step === 1 ? '#E0E0E0' : '#F5F5F5',
+                  color: step === 1 ? '#9E9E9E' : '#333333',
+                  border: '1px solid #E0E0E0',
+                  cursor: step === 1 ? 'not-allowed' : 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  if (step !== 1) {
+                    e.currentTarget.style.backgroundColor = '#E0E0E0';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (step !== 1) {
+                    e.currentTarget.style.backgroundColor = '#F5F5F5';
+                  }
+                }}
               >
-                Previous
+                {t('owner.dashboard.previous')}
               </button>
 
               <div className="flex space-x-3">
                 <button
                   type="button"
                   onClick={() => navigate('/owner/dashboard')}
-                  className="px-6 py-3 bg-gray-700 text-white rounded-lg font-medium hover:bg-gray-600 transition-all duration-200"
+                  className="px-6 py-3 rounded-lg font-medium transition-all duration-200"
+                  style={{
+                    fontFamily: 'Open Sans, sans-serif',
+                    fontWeight: 500,
+                    backgroundColor: '#F5F5F5',
+                    color: '#333333',
+                    border: '1px solid #E0E0E0'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#E0E0E0';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F5F5F5';
+                  }}
                 >
-                  Cancel
+                  {t('owner.dashboard.cancel')}
                 </button>
 
                 {step < 3 ? (
@@ -575,31 +810,57 @@ const CreateFirstPlace: React.FC = () => {
                     type="button"
                     onClick={nextStep}
                     disabled={!isStepValid(step)}
-                    className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                      isStepValid(step)
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                    }`}
+                    className="px-6 py-3 rounded-lg font-medium transition-all duration-200"
+                    style={{
+                      fontFamily: 'Open Sans, sans-serif',
+                      fontWeight: 600,
+                      backgroundColor: isStepValid(step) ? '#1E90FF' : '#E0E0E0',
+                      color: isStepValid(step) ? '#FFFFFF' : '#9E9E9E',
+                      cursor: isStepValid(step) ? 'pointer' : 'not-allowed'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (isStepValid(step)) {
+                        e.currentTarget.style.backgroundColor = '#1877D2';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (isStepValid(step)) {
+                        e.currentTarget.style.backgroundColor = '#1E90FF';
+                      }
+                    }}
                   >
-                    Next
+                    {t('owner.dashboard.next')}
                   </button>
                 ) : (
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`px-8 py-3 rounded-lg font-medium transition-all duration-200 ${
-                      loading
-                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
+                    className="px-8 py-3 rounded-lg font-medium transition-all duration-200"
+                    style={{
+                      fontFamily: 'Open Sans, sans-serif',
+                      fontWeight: 600,
+                      backgroundColor: loading ? '#E0E0E0' : '#FF5A5F',
+                      color: loading ? '#9E9E9E' : '#FFFFFF',
+                      cursor: loading ? 'not-allowed' : 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!loading) {
+                        e.currentTarget.style.backgroundColor = '#E53E3E';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!loading) {
+                        e.currentTarget.style.backgroundColor = '#FF5A5F';
+                      }
+                    }}
                   >
                     {loading ? (
                       <div className="flex items-center space-x-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Creating...</span>
+                        <span>{t('owner.dashboard.creating')}</span>
                       </div>
                     ) : (
-                      'Create Place'
+                      t('owner.dashboard.createPlace')
                     )}
                   </button>
                 )}

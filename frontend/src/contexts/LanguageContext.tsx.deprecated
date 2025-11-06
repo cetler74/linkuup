@@ -77,7 +77,7 @@ const getTranslations = (language: Language): Record<string, string> => {
       'nav.about': 'Sobre',
       'nav.contact': 'Contacto',
       'nav.login': 'Entrar',
-      'nav.register': 'Registrar',
+      'nav.register': 'Registar',
       'nav.logout': 'Sair',
       'nav.language': 'Idioma',
       'nav.searchPlaceholder': 'Buscar salões...',
@@ -407,7 +407,7 @@ const getTranslations = (language: Language): Record<string, string> => {
 
       // Auth
       'auth.login': 'Entrar',
-      'auth.register': 'Registrar',
+      'auth.register': 'Registar',
       'auth.email': 'Email',
       'auth.password': 'Senha',
       'auth.confirmPassword': 'Confirmar Senha',
@@ -415,7 +415,7 @@ const getTranslations = (language: Language): Record<string, string> => {
       'auth.phone': 'Telefone',
       'auth.rememberMe': 'Lembrar de mim',
       'auth.forgotPassword': 'Esqueceu a senha?',
-      'auth.switchToRegister': 'Não tem uma conta? Registre-se',
+      'auth.switchToRegister': 'Não tem uma conta? Registe-se',
       'auth.switchToLogin': 'Já tem uma conta? Entre',
       'auth.loginSuccess': 'Login realizado com sucesso',
       'auth.registerSuccess': 'Registro realizado com sucesso',

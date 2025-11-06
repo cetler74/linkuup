@@ -6,7 +6,8 @@ import {
   XMarkIcon,
   MapPinIcon,
   BuildingOfficeIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  ClipboardDocumentIcon
 } from '@heroicons/react/24/outline';
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -80,6 +81,7 @@ const PlacesManagement: React.FC = () => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -214,6 +216,7 @@ const PlacesManagement: React.FC = () => {
               const images = await fetchPlaceImages(salon.id);
               return {
                 id: salon.id,
+                slug: salon.slug || '',
                 name: salon.nome,
                 sector: salon.regiao || 'Beauty',
                 description: salon.about,
@@ -240,6 +243,7 @@ const PlacesManagement: React.FC = () => {
               console.error(`❌ Error fetching images for place ${salon.id}:`, error);
               return {
                 id: salon.id,
+                slug: salon.slug || '',
                 name: salon.nome,
                 sector: salon.regiao || 'Beauty',
                 description: salon.about,
@@ -570,6 +574,13 @@ const PlacesManagement: React.FC = () => {
         alert('Error deleting place. Please try again.');
       }
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   const resetForm = () => {
@@ -1012,6 +1023,29 @@ const PlacesManagement: React.FC = () => {
                         readOnly
                       />
                     </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
+                        Business URL
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          className="input-field flex-1"
+                          type="text"
+                          value={`https://linkuup.portugalexpatdirectory.com/${selectedPlace.slug || selectedPlace.id}`}
+                          readOnly
+                        />
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(`https://linkuup.portugalexpatdirectory.com/${selectedPlace.slug || selectedPlace.id}`)}
+                          className="px-4 py-2 bg-bright-blue text-white rounded-lg hover:bg-bright-blue/90 transition-colors font-medium flex items-center gap-2"
+                          title="Copy URL"
+                        >
+                          <ClipboardDocumentIcon className="h-5 w-5" />
+                          {copied ? 'Copied!' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="mt-6 flex flex-wrap justify-end gap-3">
@@ -1143,22 +1177,17 @@ const PlacesManagement: React.FC = () => {
                       <label className="block text-sm font-medium text-charcoal mb-1 font-body">
                         Business URL Slug
                       </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-charcoal/70 text-sm z-10">
-                          linkuup.portugalexpatdirectory.com/
-                        </span>
-                        <input
-                          type="text"
-                          value={formData.slug}
-                          onChange={(e) => {
-                            const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-                            setFormData({ ...formData, slug: value });
-                          }}
-                          className="input-field pl-[265px]"
-                          placeholder="auto-generated-slug"
-                          pattern="[a-z0-9\-]+"
-                        />
-                      </div>
+                      <input
+                        type="text"
+                        value={formData.slug}
+                        onChange={(e) => {
+                          const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                          setFormData({ ...formData, slug: value });
+                        }}
+                        className="input-field"
+                        placeholder="auto-generated-slug"
+                        pattern="[a-z0-9\-]+"
+                      />
                       <p className="text-xs text-charcoal/60 mt-1">
                         Auto-generated from name. You can customize it.
                       </p>

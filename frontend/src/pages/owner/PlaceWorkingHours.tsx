@@ -136,17 +136,6 @@ const PlaceWorkingHours: React.FC = () => {
       <aside className={`w-1/3 max-w-sm flex flex-col border-r border-medium-gray bg-white lg:block ${
         sidebarOpen ? 'block' : 'hidden'
       }`}>
-        <div className="p-4 border-b border-medium-gray flex justify-between items-center">
-          <h2 className="text-xl font-bold text-charcoal font-display">My Places</h2>
-          <button
-            className="lg:hidden p-1 text-charcoal/60 hover:text-charcoal"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
         
         {/* Search */}
         <div className="p-4">

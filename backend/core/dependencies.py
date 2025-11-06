@@ -124,7 +124,7 @@ async def get_current_business_owner(
     print(f"⚠️ User {current_user.id} has no active trial or subscription - blocking access")
     raise HTTPException(
         status_code=status.HTTP_402_PAYMENT_REQUIRED,
-        detail="subscription_required: Your trial has ended. Please subscribe to continue.",
+        detail="subscription_required: Your trial has ended. Please complete payment to continue.",
     )
 
 async def get_current_admin(

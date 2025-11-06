@@ -8,6 +8,8 @@ import { PlaceProvider } from './contexts/PlaceContext';
 import Header from './components/common/Header';
 import Footer from './components/common/Footer';
 import NotFoundPage from './components/common/NotFoundPage';
+import CookieConsent from './components/common/CookieConsent';
+import { MixpanelTracker } from './components/analytics/MixpanelTracker';
 import ShaderBackground from './components/common/ShaderBackground';
 import ShaderBackgroundCSS from './components/common/ShaderBackgroundCSS';
 import WebGLShaderBackground from './components/common/WebGLShaderBackground';
@@ -189,11 +191,30 @@ function App() {
   // ============================================
   const USE_INTERACTIVE_BACKGROUND = true;
 
+  // Test Mixpanel on app mount
+  React.useEffect(() => {
+    // Import and test Mixpanel after component mounts
+    import('./utils/mixpanel').then(({ default: mixpanel, testMixpanel }) => {
+      console.log('🎯 App mounted, testing Mixpanel...');
+      setTimeout(() => {
+        testMixpanel();
+        // Force flush events
+        try {
+          mixpanel.flush();
+          console.log('✅ Flushed Mixpanel events');
+        } catch (error) {
+          console.error('❌ Error flushing Mixpanel:', error);
+        }
+      }, 3000);
+    });
+  }, []);
+
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <Router>
+            <MixpanelTracker />
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/search" element={
@@ -435,6 +456,7 @@ function App() {
               {/* Add more routes as needed */}
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
+            <CookieConsent />
           </Router>
         </AuthProvider>
       </QueryClientProvider>

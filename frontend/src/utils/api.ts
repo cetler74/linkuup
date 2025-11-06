@@ -1577,7 +1577,7 @@ export const billingAPI = {
     const response = await api.get('/billing/subscription');
     return response.data;
   },
-  changePlan: async (planCode: 'basic' | 'pro'): Promise<{ status: string; subscriptionId?: string }> => {
+  changePlan: async (planCode: 'basic' | 'pro'): Promise<{ status: string; subscriptionId?: string; requiresPayment?: boolean; checkoutUrl?: string }> => {
     const response = await api.post('/billing/change-plan', { planCode });
     return response.data;
   },
@@ -1587,6 +1587,10 @@ export const billingAPI = {
   },
   createSetupIntent: async (): Promise<{ clientSecret: string }> => {
     const response = await api.post('/billing/create-setup-intent');
+    return response.data;
+  },
+  getPlans: async (): Promise<{ plans: Array<{ id: number; code: string; name: string; price_cents: number; currency: string; trial_days: number; features: any[] }> }> => {
+    const response = await api.get('/subscriptions/plans');
     return response.data;
   },
 };

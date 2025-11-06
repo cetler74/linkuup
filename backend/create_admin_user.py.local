@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+import asyncio
+import sys
+import os
+from datetime import datetime
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select
+from core.config import settings
+from core.security import get_password_hash
+from models.user import User
+
+async def create_admin_user(email: str, password: str, name: str):
+    print(f"🚀 Creating administrator user: {email}")
+    
+    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.email == email))
+        existing_user = result.scalar_one_or_none()
+        
+        if existing_user:
+            print(f"⚠️  User exists! Updating to admin...")
+            existing_user.is_admin = True
+            existing_user.user_type = "platform_admin"
+            existing_user.password_hash = get_password_hash(password)
+            existing_user.name = name
+            existing_user.is_active = True
+        else:
+            admin_user = User(
+                email=email,
+                password_hash=get_password_hash(password),
+                name=name,
+                user_type="platform_admin",
+                is_admin=True,
+                is_active=True,
+                is_business_owner=False,
+                is_owner=False,
+                gdpr_data_processing_consent=True,
+                gdpr_data_processing_consent_date=datetime.now(),
+                gdpr_consent_version="1.0",
+            )
+            session.add(admin_user)
+        
+        await session.commit()
+        print(f"✅ Admin user created/updated successfully!")
+    
+    await engine.dispose()
+
+if __name__ == "__main__":
+    if len(sys.argv) < 4:
+        print("Usage: python3 create_admin_user.py <email> <password> <name>")
+        sys.exit(1)
+    asyncio.run(create_admin_user(sys.argv[1], sys.argv[2], sys.argv[3]))

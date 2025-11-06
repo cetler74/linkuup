@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { authAPI } from '../utils/api';
+import mixpanel from '../utils/mixpanel';
 
 // Auth types
 interface User {
@@ -85,7 +86,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('🔑 Token found, fetching user data...');
           const userData = await authAPI.getCurrentUser();
           console.log('✅ User data fetched:', userData);
-          setUser({
+          const identifiedUser = {
             id: userData.id,
             email: userData.email,
             name: userData.first_name || userData.email,
@@ -94,7 +95,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             profile_picture: (userData as any).profile_picture,
             oauth_provider: (userData as any).oauth_provider,
             oauth_id: (userData as any).oauth_id,
+          };
+          setUser(identifiedUser);
+          
+          // Identify user in Mixpanel
+          mixpanel.identify(String(userData.id));
+          mixpanel.people.set({
+            $email: userData.email,
+            $name: userData.first_name || userData.email,
+            user_type: userData.user_type,
+            is_admin: userData.is_admin,
           });
+          
           console.log('✅ User logged in successfully');
         } catch (error: any) {
           console.error('❌ Failed to fetch user data:', error);
@@ -140,6 +152,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(newUser);
       
+      // Identify user in Mixpanel
+      mixpanel.identify(String(userData.id));
+      mixpanel.people.set({
+        $email: userData.email,
+        $name: userData.first_name || userData.email,
+        user_type: userData.user_type,
+        is_admin: userData.is_admin,
+      });
+      mixpanel.track('User Logged In', {
+        user_type: userData.user_type,
+        is_admin: userData.is_admin,
+      });
+      
       // Redirect based on user type
       if (newUser.user_type === 'platform_admin' || newUser.is_admin) {
         return '/admin/dashboard';
@@ -172,6 +197,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(newUser);
       
+      // Identify user in Mixpanel
+      mixpanel.identify(String(response.user.id));
+      mixpanel.people.set({
+        $email: response.user.email,
+        $name: response.user.first_name || response.user.email,
+        user_type: response.user.user_type,
+        is_admin: response.user.is_admin,
+      });
+      mixpanel.track('User Registered', {
+        user_type: response.user.user_type,
+        is_admin: response.user.is_admin,
+      });
+      
       // Redirect based on user type
       if (newUser.user_type === 'platform_admin' || newUser.is_admin) {
         return '/admin/dashboard';
@@ -187,6 +225,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Track logout event in Mixpanel before clearing
+    if (user) {
+      mixpanel.track('User Logged Out', {
+        user_id: user.id,
+        user_type: user.user_type,
+      });
+    }
+    // Reset Mixpanel identity
+    mixpanel.reset();
+    
     localStorage.removeItem('auth_token');
     localStorage.removeItem('refresh_token');
     setUser(null);

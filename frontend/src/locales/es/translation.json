@@ -584,9 +584,9 @@
     },
     "features": {
       "title": "¿Por qué Elegir LinkUup?",
-      "verifiedProfessionals": {
-        "title": "Profesionales Verificados",
-        "description": "Todos los profesionales están verificados y comprobados para tu seguridad y tranquilidad."
+      "customerSupport": {
+        "title": "Atención al Cliente",
+        "description": "Equipo de soporte dedicado disponible para ayudarte con cualquier duda o problema que puedas tener."
       },
       "realReviews": {
         "title": "Reseñas Reales",
@@ -662,10 +662,13 @@
     "email": "Email",
     "phone": "Teléfono",
     "address": "Dirección",
+    "hours": "Horarios",
     "supportHours": "Horarios de Soporte",
     "businessHours": "Horario comercial",
     "mondayFriday": "Lunes a Viernes: 9:00 - 18:00",
     "weekendSupport": "Fin de semana: Soporte limitado",
+    "weekdays": "Lunes a Viernes: 9:00 - 18:00",
+    "weekends": "Sábado y Domingo: Soporte limitado",
     "forSalons": "Para Salones",
     "salonInfo": "¿Eres propietario de un salón? Únete a nuestra red y comienza a recibir reservas online.",
     "managerPortal": "Portal del Gerente",
@@ -891,5 +894,14 @@
       "period": "Período",
       "duration": "Duración"
     }
+  },
+  "cookieConsent": {
+    "title": "Este sitio web utiliza cookies",
+    "description": "Utilizamos cookies para personalizar el contenido y los anuncios, proporcionar funciones de redes sociales y analizar nuestro tráfico. También compartimos información sobre su uso de nuestro sitio con nuestros socios de redes sociales, publicidad y análisis que pueden combinarla con otra información que les haya proporcionado o que hayan recopilado del uso de sus servicios.",
+    "detailedDescription": "Utilizamos cookies para personalizar el contenido y los anuncios, proporcionar funciones de redes sociales y analizar nuestro tráfico. También compartimos información sobre su uso de nuestro sitio con nuestros socios de redes sociales, publicidad y análisis que pueden combinarla con otra información que les haya proporcionado o que hayan recopilado del uso de sus servicios.",
+    "showDetails": "Mostrar detalles",
+    "hideDetails": "Ocultar detalles",
+    "accept": "Aceptar",
+    "decline": "Rechazar"
   }
 }

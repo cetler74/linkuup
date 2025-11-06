@@ -331,18 +331,6 @@ const ServicesManagement: React.FC = () => {
       <aside className={`w-1/3 max-w-sm flex flex-col border-r border-[#E0E0E0] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] lg:block ${
         sidebarOpen ? 'block' : 'hidden'
       }`}>
-        <div className="p-4 border-b border-[#E0E0E0] flex justify-between items-center">
-          <h2 className="text-xl font-bold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('owner.places.myPlaces')}</h2>
-          <button
-            className="lg:hidden p-1 text-[#9E9E9E] hover:text-[#1E90FF]"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        
         {/* Search */}
         <div className="p-4">
           <div className="relative">

@@ -584,9 +584,9 @@
     },
     "features": {
       "title": "Warum LinkUup wählen?",
-      "verifiedProfessionals": {
-        "title": "Verifizierte Fachkräfte",
-        "description": "Alle Fachkräfte sind überprüft und verifiziert für Ihre Sicherheit und Ihr Wohlbefinden."
+      "customerSupport": {
+        "title": "Kundensupport",
+        "description": "Dediziertes Support-Team steht Ihnen zur Verfügung, um Ihnen bei Fragen oder Problemen zu helfen."
       },
       "realReviews": {
         "title": "Echte Bewertungen",
@@ -662,10 +662,13 @@
     "email": "E-Mail",
     "phone": "Telefon",
     "address": "Adresse",
+    "hours": "Öffnungszeiten",
     "supportHours": "Support-Zeiten",
     "businessHours": "Geschäftszeiten",
     "mondayFriday": "Montag bis Freitag: 9:00 - 18:00",
     "weekendSupport": "Wochenende: Begrenzter Support",
+    "weekdays": "Montag bis Freitag: 9:00 - 18:00",
+    "weekends": "Samstag & Sonntag: Begrenzter Support",
     "forSalons": "Für Salons",
     "salonInfo": "Sind Sie Salonbesitzer? Treten Sie unserem Netzwerk bei und beginnen Sie, Online-Buchungen zu erhalten.",
     "managerPortal": "Manager-Portal",
@@ -891,5 +894,14 @@
       "period": "Zeitraum",
       "duration": "Dauer"
     }
+  },
+  "cookieConsent": {
+    "title": "Diese Website verwendet Cookies",
+    "description": "Wir verwenden Cookies, um Inhalte und Anzeigen zu personalisieren, Social-Media-Funktionen bereitzustellen und unseren Traffic zu analysieren. Wir teilen auch Informationen über Ihre Nutzung unserer Website mit unseren Partnern für Social Media, Werbung und Analyse, die diese mit anderen Informationen kombinieren können, die Sie ihnen bereitgestellt haben oder die sie aus Ihrer Nutzung ihrer Dienste gesammelt haben.",
+    "detailedDescription": "Wir verwenden Cookies, um Inhalte und Anzeigen zu personalisieren, Social-Media-Funktionen bereitzustellen und unseren Traffic zu analysieren. Wir teilen auch Informationen über Ihre Nutzung unserer Website mit unseren Partnern für Social Media, Werbung und Analyse, die diese mit anderen Informationen kombinieren können, die Sie ihnen bereitgestellt haben oder die sie aus Ihrer Nutzung ihrer Dienste gesammelt haben.",
+    "showDetails": "Details anzeigen",
+    "hideDetails": "Details ausblenden",
+    "accept": "Akzeptieren",
+    "decline": "Ablehnen"
   }
 }

@@ -78,13 +78,21 @@ async def create_subscription_and_get_client_secret(
     billing_customer = await _get_billing_customer(db, user.id)
     has_default_pm = bool(getattr(billing_customer, "default_payment_method", None))
 
-    if not has_default_pm:
-        # Start a 14-day trial at subscription level, no immediate payment intent
+    # Get plan to determine trial_days
+    from models.subscription import Plan
+    plan_result = await db.execute(select(Plan).where(Plan.code == plan_code, Plan.is_active == True))
+    plan = plan_result.scalar_one_or_none()
+    trial_days = plan.trial_days if plan else 14
+    
+    # Only start trial if trial_days > 0 and no payment method
+    # If trial_days = 0 (e.g., Pro plan), require payment immediately
+    if not has_default_pm and trial_days > 0:
+        # Start a trial at subscription level, no immediate payment intent
         sub = stripe.Subscription.create(
             customer=customer_id,
             items=[{"price": price_id}],
             payment_behavior="allow_incomplete",
-            trial_period_days=14,
+            trial_period_days=trial_days,
         )
         # Persist local subscription and user trial window for immediate access
         try:
@@ -108,7 +116,7 @@ async def create_subscription_and_get_client_secret(
             from datetime import datetime, timezone, timedelta
             now = datetime.now(timezone.utc)
             user.trial_start = now
-            user.trial_end = now + timedelta(days=14)
+            user.trial_end = now + timedelta(days=trial_days)
             user.trial_status = "active"
             await db.commit()
             
@@ -180,6 +188,42 @@ def create_setup_intent(customer_id: str) -> str:
     return setup_intent.get("client_secret")
 
 
+def create_checkout_session_for_registration(plan_code: str, registration_data: dict) -> dict:
+    """
+    Create Stripe Checkout Session for Pro plan registration.
+    Account will be created after payment succeeds via webhook.
+    """
+    _init_stripe()
+    from core.config import settings
+    
+    price_id = get_price_id_for_plan(plan_code)
+    
+    # Create checkout session in subscription mode
+    session = stripe.checkout.Session.create(
+        mode="subscription",
+        line_items=[{
+            "price": price_id,
+            "quantity": 1,
+        }],
+        success_url=f"{settings.APP_URL}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{settings.APP_URL}/register?canceled=true",
+        metadata={
+            "registration_data": json.dumps(registration_data),
+            "plan_code": plan_code,
+            "create_account_after_payment": "true",
+        },
+        customer_email=registration_data.get("email"),
+        subscription_data={
+            "metadata": {
+                "registration_data": json.dumps(registration_data),
+                "plan_code": plan_code,
+            }
+        }
+    )
+    
+    return {"url": session.url, "session_id": session.id}
+
+
 def _get_subscription_item_id(sub: dict) -> Optional[str]:
     try:
         items = sub.get("items", {}).get("data", [])
@@ -188,6 +232,72 @@ def _get_subscription_item_id(sub: dict) -> Optional[str]:
     except Exception:
         return None
     return None
+
+
+async def create_checkout_session_for_upgrade(user_id: int, user_email: str, plan_code: str, db: AsyncSession) -> dict:
+    """
+    Create Stripe Checkout Session for plan upgrade.
+    Used when upgrading to Pro plan (no trial) - payment required before upgrade.
+    """
+    _init_stripe()
+    from core.config import settings
+    from models.billing import BillingCustomer
+    
+    price_id = get_price_id_for_plan(plan_code)
+    
+    # Get or create Stripe customer
+    result = await db.execute(select(BillingCustomer).where(BillingCustomer.user_id == user_id))
+    billing_customer = result.scalar_one_or_none()
+    
+    customer_id = None
+    if billing_customer and billing_customer.stripe_customer_id:
+        customer_id = billing_customer.stripe_customer_id
+    else:
+        # Create Stripe customer
+        customer = stripe.Customer.create(
+            email=user_email,
+            metadata={
+                "app_user_id": str(user_id),
+            },
+        )
+        customer_id = customer["id"]
+        
+        # Persist billing customer
+        if not billing_customer:
+            billing_customer = BillingCustomer(
+                user_id=user_id,
+                stripe_customer_id=customer_id,
+            )
+            db.add(billing_customer)
+        else:
+            billing_customer.stripe_customer_id = customer_id
+        await db.commit()
+    
+    # Create checkout session in subscription mode for upgrade
+    session = stripe.checkout.Session.create(
+        mode="subscription",
+        customer=customer_id,
+        line_items=[{
+            "price": price_id,
+            "quantity": 1,
+        }],
+        success_url=f"{settings.APP_URL}/payment/success?upgrade=true&plan={plan_code}",
+        cancel_url=f"{settings.APP_URL}/billing?canceled=true",
+        metadata={
+            "upgrade": "true",
+            "user_id": str(user_id),
+            "plan_code": plan_code,
+        },
+        subscription_data={
+            "metadata": {
+                "upgrade": "true",
+                "user_id": str(user_id),
+                "plan_code": plan_code,
+            }
+        }
+    )
+    
+    return {"url": session.url, "session_id": session.id}
 
 
 def change_subscription_price(stripe_subscription_id: str, new_price_id: str) -> dict:

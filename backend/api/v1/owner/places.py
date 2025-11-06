@@ -232,19 +232,27 @@ async def create_place(
             
             if plan:
                 now = datetime.now(timezone.utc)
-                trial_end = now + timedelta(days=plan.trial_days or 14)
-                sub = UserPlaceSubscription(
-                    user_id=current_user.id,
-                    place_id=place.id,
-                    plan_id=plan.id,
-                    status=SubscriptionStatusEnum.TRIALING,
-                    trial_start_at=now,
-                    trial_end_at=trial_end,
-                    current_period_start=now,
-                    current_period_end=trial_end,
-                )
-                db.add(sub)
-                await db.commit()
+                trial_days = plan.trial_days or 14
+                
+                # Skip trial subscription creation if trial_days = 0
+                # User must go through payment flow for paid plans
+                if trial_days == 0:
+                    # User will need to subscribe through billing endpoint
+                    pass
+                else:
+                    trial_end = now + timedelta(days=trial_days)
+                    sub = UserPlaceSubscription(
+                        user_id=current_user.id,
+                        place_id=place.id,
+                        plan_id=plan.id,
+                        status=SubscriptionStatusEnum.TRIALING,
+                        trial_start_at=now,
+                        trial_end_at=trial_end,
+                        current_period_start=now,
+                        current_period_end=trial_end,
+                    )
+                    db.add(sub)
+                    await db.commit()
     except Exception as e:
         # Don't fail place creation if subscription creation fails
         print(f"⚠️ Warning: Could not create subscription for place {place.id}: {e}")

@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import RegisterForm from '../components/auth/RegisterForm';
-import HeroCarousel from '../components/common/HeroCarousel';
+import InteractiveBackground from '../components/common/InteractiveBackground';
 import Header from '../components/common/Header';
 import PricingSelection from '../components/auth/PricingSelection';
 import PaymentFlow from '../components/auth/PaymentFlow';
 import type { PricingPlan } from '../components/auth/PricingSelection';
+import { useAuth } from '../contexts/AuthContext';
 
 type RegistrationStep = 'form' | 'pricing' | 'payment' | 'success';
 
 const JoinPage: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<RegistrationStep>('form');
+  const [searchParams] = useSearchParams();
+  const isTrial = searchParams.get('trial') === 'true';
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>(isTrial ? 'pricing' : 'form');
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [registeredUser, setRegisteredUser] = useState<any>(null);
+  const [dataConsent, setDataConsent] = useState(false);
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [error, setError] = useState('');
+  const { loginWithGoogle, loginWithFacebook } = useAuth();
 
   const handleSwitchToLogin = () => {
     // Redirect to login page
@@ -21,7 +29,12 @@ const JoinPage: React.FC = () => {
   const handleRegistrationSuccess = (user: any, userType: string) => {
     setRegisteredUser(user);
     if (userType === 'business_owner') {
-      setCurrentStep('pricing');
+      // If we have a selected plan (from trial flow), proceed to payment
+      if (selectedPlan) {
+        setCurrentStep('payment');
+      } else {
+        setCurrentStep('pricing');
+      }
     } else {
       setCurrentStep('success');
     }
@@ -29,32 +42,46 @@ const JoinPage: React.FC = () => {
 
   const handlePlanSelect = (plan: PricingPlan) => {
     setSelectedPlan(plan);
-    setCurrentStep('payment');
+    setError(''); // Clear any previous errors
+    // Don't change step - keep pricing visible to show OAuth options
+    // This matches the login page flow
   };
 
-  const handlePaymentSuccess = (transactionId: string) => {
+  const handleDataConsentChange = (consent: boolean) => {
+    setDataConsent(consent);
+    setError(''); // Clear any previous errors
+  };
+
+  const handleManualRegister = () => {
+    setShowManualForm(true);
+    setCurrentStep('form');
+  };
+
+  const handlePaymentSuccess = (_transactionId: string) => {
     setCurrentStep('success');
   };
 
-  const handlePaymentError = (error: string) => {
+  const handlePaymentError = (_error: string) => {
     setCurrentStep('pricing');
   };
 
   const handleBackToPricing = () => {
+    setShowManualForm(false);
     setCurrentStep('pricing');
   };
 
   const handleBackToForm = () => {
+    setShowManualForm(false);
     setCurrentStep('form');
   };
 
   return (
     <div className="w-full min-h-screen flex flex-col relative overflow-x-hidden">
-      {/* Hero Carousel Background - only show on form step */}
-      {currentStep === 'form' && (
-        <div className="absolute inset-0">
-          <HeroCarousel className="w-full h-full" showTitle={false} />
-        </div>
+      {/* Background - solid blue for trial, interactive for regular join */}
+      {isTrial ? (
+        <div className="fixed inset-0 z-0 bg-bright-blue" />
+      ) : (
+        <InteractiveBackground opacity={0.4} />
       )}
       
       {/* Header - always visible */}
@@ -69,13 +96,46 @@ const JoinPage: React.FC = () => {
             <RegisterForm 
               onSwitchToLogin={handleSwitchToLogin}
               onRegistrationSuccess={handleRegistrationSuccess}
+              skipTypeSelection={isTrial}
+              preselectedPlan={selectedPlan}
             />
           )}
           
           {currentStep === 'pricing' && (
             <PricingSelection
               onPlanSelect={handlePlanSelect}
-              onBack={handleBackToForm}
+              onBack={isTrial ? undefined : handleBackToForm}
+              dataConsent={dataConsent}
+              onDataConsentChange={handleDataConsentChange}
+              onOAuthGoogle={() => {
+                if (!dataConsent) {
+                  setError('You must consent to data processing to continue');
+                  return;
+                }
+                if (!selectedPlan) {
+                  setError('Please select a plan first');
+                  return;
+                }
+                setError('');
+                loginWithGoogle('business_owner', selectedPlan.id);
+              }}
+              onOAuthFacebook={() => {
+                if (!dataConsent) {
+                  setError('You must consent to data processing to continue');
+                  return;
+                }
+                if (!selectedPlan) {
+                  setError('Please select a plan first');
+                  return;
+                }
+                setError('');
+                loginWithFacebook('business_owner', selectedPlan.id);
+              }}
+              showOAuth={true}
+              error={error}
+              onManualRegister={handleManualRegister}
+              showManualForm={showManualForm}
+              wideCards={isTrial}
             />
           )}
           

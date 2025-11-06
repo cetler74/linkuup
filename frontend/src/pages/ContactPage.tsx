@@ -257,13 +257,13 @@ const ContactPage: React.FC = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="relative z-10 py-16">
+      <section className="relative z-10 py-16 bg-bright-blue">
         <div className="max-w-4xl mx-auto container-padding">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-charcoal mb-4 font-display">
+            <h2 className="text-3xl font-bold text-white mb-4 font-display">
               {t('contact.faqTitle')}
             </h2>
-            <div className="w-24 h-1 bg-bright-blue mx-auto"></div>
+            <div className="w-24 h-1 bg-white mx-auto"></div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

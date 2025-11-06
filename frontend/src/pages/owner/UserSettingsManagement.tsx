@@ -8,6 +8,7 @@ import {
   MegaphoneIcon,
   ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
+import { billingAPI } from '../../utils/api';
 
 interface UserPermissions {
   bookings: boolean;
@@ -35,9 +36,16 @@ const UserSettingsManagement: React.FC = () => {
     feature: 'rewards' | 'campaigns' | 'messaging' | 'time_off' | null;
   }>({ feature: null });
   const [upgrading, setUpgrading] = useState(false);
+  const [plans, setPlans] = useState<Array<{ code: string; trial_days: number }>>([]);
 
   useEffect(() => {
     fetchUserPermissions();
+    (async () => {
+      try {
+        const plansData = await billingAPI.getPlans();
+        setPlans(plansData.plans);
+      } catch (_) {}
+    })();
   }, []);
 
   const fetchUserPermissions = async () => {
@@ -127,15 +135,24 @@ const UserSettingsManagement: React.FC = () => {
       const firstPlaceId = Array.isArray(places) && places.length > 0 ? places[0].id : undefined;
       if (!firstPlaceId) throw new Error('No place found to upgrade');
 
-      const upgradeRes = await fetch(`${apiBase}/subscriptions/change-plan`, {
+      const upgradeRes = await fetch(`${apiBase}/billing/change-plan`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ place_id: firstPlaceId, plan_code: 'pro' }),
+        body: JSON.stringify({ planCode: 'pro' }),
       });
+      
       if (!upgradeRes.ok) throw new Error('Upgrade failed');
+      
+      const upgradeData = await upgradeRes.json();
+      
+      // Check if payment is required (redirect to checkout)
+      if (upgradeData.requiresPayment && upgradeData.checkoutUrl) {
+        window.location.href = upgradeData.checkoutUrl;
+        return;
+      }
 
       setShowUpgradeModal({ feature: null });
       setMessage({ type: 'success', text: 'Upgraded to Pro. You can enable Rewards in Feature Settings.' });
@@ -167,7 +184,12 @@ const UserSettingsManagement: React.FC = () => {
                 <div className="mb-3">
                   <div className="text-2xl font-bold text-charcoal">€5,95</div>
                   <div className="text-sm text-charcoal/70">per month</div>
-                  <div className="text-xs text-charcoal/60 mt-1">14-day trial</div>
+                  {(() => {
+                    const basicPlan = plans.find(p => p.code === 'basic');
+                    return basicPlan ? (
+                      <div className="text-xs text-charcoal/60 mt-1">{basicPlan.trial_days}-day trial</div>
+                    ) : null;
+                  })()}
                 </div>
                 <ul className="text-sm text-charcoal/80 list-disc pl-4 space-y-1">
                   <li>Booking with email notifications</li>
@@ -186,7 +208,12 @@ const UserSettingsManagement: React.FC = () => {
                 <div className="mb-3">
                   <div className="text-2xl font-bold text-charcoal">€10,95</div>
                   <div className="text-sm text-charcoal/70">per month</div>
-                  <div className="text-xs text-charcoal/60 mt-1">14-day trial</div>
+                  {(() => {
+                    const proPlan = plans.find(p => p.code === 'pro');
+                    return proPlan && proPlan.trial_days > 0 ? (
+                      <div className="text-xs text-charcoal/60 mt-1">{proPlan.trial_days}-day trial</div>
+                    ) : null;
+                  })()}
                 </div>
                 <ul className="text-sm text-charcoal/80 list-disc pl-4 space-y-1">
                   <li>Everything in Basic</li>

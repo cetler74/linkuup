@@ -200,7 +200,14 @@ const SettingsManagement: React.FC = () => {
           const confirm = window.confirm(`${pretty} is available on Pro. Upgrade to Pro and enable it now?`);
           if (confirm) {
             try {
-              await api.post('/subscriptions/change-plan', { place_id: selectedPlace.id, plan_code: 'pro' });
+              const upgradeResponse = await api.post('/billing/change-plan', { planCode: 'pro' });
+              
+              // Check if payment is required (redirect to checkout)
+              if (upgradeResponse.data?.requiresPayment && upgradeResponse.data?.checkoutUrl) {
+                window.location.href = upgradeResponse.data.checkoutUrl;
+                return;
+              }
+              
               // Retry enabling after upgrade
               await api.put(`/owner/places/${selectedPlace.id}/settings/features`, {
                 ...featureSettings,

@@ -612,12 +612,18 @@ const HomePage: React.FC = () => {
               <h3 className="text-2xl font-bold text-charcoal mb-4">{t('home.startFreeTrial')}</h3>
               <p className="text-charcoal/70 mb-6">{t('home.startFreeTrialDesc')}</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button className="btn-secondary px-8 py-2 text-lg font-semibold">
+                <Link 
+                  to="/join?trial=true" 
+                  className="btn-secondary px-8 py-2 text-lg font-semibold"
+                >
                   {t('home.startFreeTrialButton')}
-                </button>
-                <button className="btn-outline px-8 py-2 text-lg font-semibold">
+                </Link>
+                <Link 
+                  to="/contact" 
+                  className="btn-outline px-8 py-2 text-lg font-semibold"
+                >
                   {t('home.scheduleDemo')}
-                </button>
+                </Link>
               </div>
             </div>
           </div>

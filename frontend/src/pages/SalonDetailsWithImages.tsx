@@ -196,30 +196,67 @@ const SalonDetailsWithImages: React.FC = () => {
     ],
   };
 
-  // SEO Metadata
-  const seoTitle = `${salon.nome} - ${fullAddress || salon.cidade || 'Beauty Salon'}`;
+  // Enhanced SEO Metadata with location-based keywords
+  const locationKeywords = salon.cidade 
+    ? `${salon.cidade}, Portugal, ${salon.cidade} beauty salon, ${salon.cidade} barbershop`
+    : 'Portugal';
+  const serviceKeywords = salon.services?.map(s => s.name).join(', ') || '';
+  const seoTitle = `${salon.nome} - ${fullAddress || salon.cidade || 'Beauty Salon'} | Book Online`;
+  
+  // Enhanced meta description with call-to-action and key information
   const seoDescription = salon.about 
-    ? `${salon.nome}: ${salon.about.substring(0, 150)}...`
-    : `Book appointments at ${salon.nome}${fullAddress ? ` in ${fullAddress}` : ''}. ${salon.services?.length || 0} services available.`;
+    ? `${salon.nome} in ${salon.cidade || 'Portugal'}: ${salon.about.substring(0, 120)}... Book your appointment online today!`
+    : `Book appointments at ${salon.nome}${fullAddress ? ` in ${fullAddress}` : ''}. ${salon.services?.length || 0} services available. ${salon.reviews?.total_reviews ? `Rated ${salon.reviews.average_rating.toFixed(1)}/5 from ${salon.reviews.total_reviews} reviews.` : ''} Book online now!`;
+  
+  // Enhanced keywords with location and service-specific terms
+  const seoKeywords = `${salon.nome}, ${locationKeywords}, ${serviceKeywords}, beauty salon ${salon.cidade || ''}, book appointment online, salon booking ${salon.cidade || ''}`;
+
+  // Service Schema for individual services (helps with service-specific searches)
+  const serviceSchemas = salon.services?.map((service) => ({
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: service.name,
+    description: service.description || `${service.name} at ${salon.nome}`,
+    provider: {
+      '@type': 'LocalBusiness',
+      name: salon.nome,
+    },
+    areaServed: {
+      '@type': 'City',
+      name: salon.cidade || 'Portugal',
+    },
+    offers: {
+      '@type': 'Offer',
+      price: service.price,
+      priceCurrency: 'EUR',
+      availability: 'https://schema.org/InStock',
+    },
+  })) || [];
 
   return (
     <div className="min-h-screen bg-white">
       <SEOHead
         title={seoTitle}
         description={seoDescription}
-        keywords={`${salon.nome}, ${salon.cidade || ''}, beauty salon, ${salon.services?.map(s => s.name).join(', ') || ''}`}
+        keywords={seoKeywords}
         ogType="business.business"
         ogImage={salonImage}
       />
-      <StructuredData data={[localBusinessSchema, breadcrumbSchema]} />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumb */}
-        <nav className="mb-8">
-          <div className="flex items-center space-x-2 text-sm text-charcoal/70 font-body">
-            <Link to="/search" className="hover:text-charcoal font-body">{t('search.search')}</Link>
-            <span>/</span>
-            <span className="text-charcoal font-body">{salon.nome}</span>
-          </div>
+      <StructuredData data={[localBusinessSchema, breadcrumbSchema, ...serviceSchemas]} />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Breadcrumb Navigation */}
+        <nav aria-label="Breadcrumb" className="mb-8">
+          <ol className="flex items-center space-x-2 text-sm text-charcoal/70 font-body">
+            <li>
+              <Link to="/" className="hover:text-charcoal font-body">Home</Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link to="/search" className="hover:text-charcoal font-body">{t('search.search')}</Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li className="text-charcoal font-body" aria-current="page">{salon.nome}</li>
+          </ol>
         </nav>
 
         {/* Campaign Banner */}
@@ -231,9 +268,9 @@ const SalonDetailsWithImages: React.FC = () => {
         )}
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <article className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Image Gallery */}
-          <div className="lg:col-span-2">
+          <section className="lg:col-span-2">
             <SalonImageGallery 
               images={salon.images || []} 
               salonName={salon.nome}
@@ -439,10 +476,10 @@ const SalonDetailsWithImages: React.FC = () => {
               salonId={salon?.id || 0} 
               reviewSummary={salon.reviews || { average_rating: 0, total_reviews: 0 }}
             />
-          </div>
+          </section>
 
           {/* Right Column - Salon Info & Booking */}
-          <div className="lg:col-span-1">
+          <aside className="lg:col-span-1">
             <div className="sticky top-8 space-y-6">
               {/* Salon Info Card */}
               <div className="card">
@@ -572,9 +609,9 @@ const SalonDetailsWithImages: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </aside>
+        </article>
+      </main>
     </div>
   );
 };

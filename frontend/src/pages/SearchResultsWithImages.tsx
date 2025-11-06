@@ -142,7 +142,7 @@ const SearchResultsWithImages: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative bg-white">
       <SEOHead
         title={seoTitle}
         description={seoDescription}
@@ -162,8 +162,8 @@ const SearchResultsWithImages: React.FC = () => {
         {/* Page Header */}
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-section mb-2">{t('search.allSalons')}</h1>
-            <p className="text-charcoal/70">
+            <h1 className="text-section mb-2" style={{ fontFamily: 'Poppins, sans-serif', color: '#333333' }}>{t('search.allSalons')}</h1>
+            <p className="text-charcoal/70" style={{ fontFamily: 'Open Sans, sans-serif' }}>
               {isLoading ? t('search.searching') : searchResults ? `${searchResults.total} ${searchResults.total === 1 ? t('search.salonFound') : t('search.salonsFoundPlural')}` : ''}
             </p>
           </div>
@@ -173,9 +173,10 @@ const SearchResultsWithImages: React.FC = () => {
               onClick={() => setViewMode('list')}
               className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 viewMode === 'list'
-                  ? 'bg-bright-blue text-white'
-                  : 'bg-white text-charcoal hover:bg-light-gray border border-medium-gray'
+                  ? 'bg-[#1E90FF] text-white hover:bg-[#1877D2]'
+                  : 'bg-white text-[#333333] hover:bg-[#F5F5F5] border border-[#E0E0E0]'
               }`}
+              style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
             >
               <List className="h-4 w-4 mr-1" />
               {t('search.list')}
@@ -184,9 +185,10 @@ const SearchResultsWithImages: React.FC = () => {
               onClick={() => setViewMode('map')}
               className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 viewMode === 'map'
-                  ? 'bg-bright-blue text-white'
-                  : 'bg-white text-charcoal hover:bg-light-gray border border-medium-gray'
+                  ? 'bg-[#1E90FF] text-white hover:bg-[#1877D2]'
+                  : 'bg-white text-[#333333] hover:bg-[#F5F5F5] border border-[#E0E0E0]'
               }`}
+              style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
             >
               <Map className="h-4 w-4 mr-1" />
               {t('search.map')}
@@ -198,17 +200,18 @@ const SearchResultsWithImages: React.FC = () => {
         <div className="lg:hidden mb-6">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="w-full flex items-center justify-between bg-white rounded-lg shadow-form p-4 min-h-[48px] border border-medium-gray"
+            className="w-full flex items-center justify-between bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-4 min-h-[48px] border border-[#E0E0E0]"
+            style={{ fontFamily: 'Open Sans, sans-serif' }}
           >
-            <span className="font-semibold text-charcoal">{t('search.filters')}</span>
+            <span className="font-semibold text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 600 }}>{t('search.filters')}</span>
             <div className="flex items-center gap-2">
               {hasActiveFilters && (
-                <span className="bg-bright-blue text-white text-xs px-2 py-1 rounded-full">
+                <span className="bg-[#1E90FF] text-white text-xs px-2 py-1 rounded-full font-medium">
                   {[filters.search, filters.cidade, filters.regiao, filters.is_bio_diamond].filter(Boolean).length}
                 </span>
               )}
               <svg 
-                className={`w-5 h-5 transition-transform ${showFilters ? 'rotate-180' : ''}`} 
+                className={`w-5 h-5 transition-transform text-[#333333] ${showFilters ? 'rotate-180' : ''}`} 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -223,7 +226,7 @@ const SearchResultsWithImages: React.FC = () => {
           {/* Filters Sidebar */}
           <div className={`lg:w-80 ${showFilters ? 'block' : 'hidden'} lg:block lg:flex-shrink-0`}>
             <div 
-              className="bg-white rounded-lg shadow-form p-6 lg:sticky lg:top-8 border border-medium-gray filter-sidebar"
+              className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6 lg:sticky lg:top-8 border border-[#E0E0E0] filter-sidebar"
               onMouseEnter={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 window.dispatchEvent(new CustomEvent('cardHover', { 
@@ -241,11 +244,12 @@ const SearchResultsWithImages: React.FC = () => {
               }}
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-charcoal">{t('search.filters')}</h2>
+                <h2 className="text-lg font-semibold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('search.filters')}</h2>
                 {hasActiveFilters && (
                   <button
                     onClick={clearFilters}
-                    className="text-sm text-charcoal/60 hover:text-charcoal transition-colors duration-200"
+                    className="text-sm text-[#9E9E9E] hover:text-[#FF5A5F] transition-colors duration-200"
+                    style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
                   >
                     {t('search.clearAll')}
                   </button>
@@ -255,7 +259,7 @@ const SearchResultsWithImages: React.FC = () => {
               <form onSubmit={handleSearch} className="space-y-4">
                 {/* Search */}
                 <div>
-                  <label className="block font-medium text-charcoal mb-1">
+                  <label className="block font-medium text-[#333333] mb-1" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}>
                     {t('search.search')}
                   </label>
                   <input
@@ -264,12 +268,18 @@ const SearchResultsWithImages: React.FC = () => {
                     onChange={(e) => handleFilterChange('search', e.target.value)}
                     placeholder={t('search.salonNameOrService')}
                     className="input-field"
+                    style={{ 
+                      backgroundColor: '#F5F5F5',
+                      borderColor: '#E0E0E0',
+                      color: '#333333',
+                      fontFamily: 'Open Sans, sans-serif'
+                    }}
                   />
                 </div>
 
                 {/* City */}
                 <div>
-                  <label className="block font-medium text-charcoal mb-1">
+                  <label className="block font-medium text-[#333333] mb-1" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}>
                     {t('search.city')}
                   </label>
                   <input
@@ -278,19 +288,30 @@ const SearchResultsWithImages: React.FC = () => {
                     onChange={(e) => handleFilterChange('cidade', e.target.value)}
                     placeholder={t('search.enterCity')}
                     className="input-field"
+                    style={{ 
+                      backgroundColor: '#F5F5F5',
+                      borderColor: '#E0E0E0',
+                      color: '#333333',
+                      fontFamily: 'Open Sans, sans-serif'
+                    }}
                   />
                 </div>
 
                 {/* Services */}
                 <div>
-                  <label className="block font-medium text-charcoal mb-1">
+                  <label className="block font-medium text-[#333333] mb-1" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}>
                     {t('search.services')}
                   </label>
                   <Select
                     value={filters.tipo}
                     onValueChange={(value) => handleFilterChange('tipo', value)}
                   >
-                    <SelectTrigger className="input-field">
+                    <SelectTrigger className="input-field" style={{ 
+                      backgroundColor: '#F5F5F5',
+                      borderColor: '#E0E0E0',
+                      color: '#333333',
+                      fontFamily: 'Open Sans, sans-serif'
+                    }}>
                       <SelectValue placeholder={t('search.allServices') as string} />
                     </SelectTrigger>
                     <SelectContent>
@@ -314,7 +335,8 @@ const SearchResultsWithImages: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="w-full btn-primary"
+                  className="w-full bg-[#1E90FF] hover:bg-[#1877D2] text-white font-semibold py-2 px-6 rounded-lg transition-all duration-200 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] hover:shadow-md"
+                  style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 600 }}
                 >
                   {t('search.applyFilters')}
                 </button>
@@ -328,25 +350,33 @@ const SearchResultsWithImages: React.FC = () => {
             {/* Results */}
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1E90FF]"></div>
               </div>
             ) : error ? (
               <div className="text-center py-12">
-                <p className="text-red-600 mb-4">{error}</p>
-                <button onClick={performSearch} className="btn-primary">
+                <p className="text-[#FF5A5F] mb-4" style={{ fontFamily: 'Open Sans, sans-serif' }}>{error}</p>
+                <button 
+                  onClick={performSearch} 
+                  className="bg-[#1E90FF] hover:bg-[#1877D2] text-white font-semibold py-2 px-6 rounded-lg transition-all duration-200 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] hover:shadow-md"
+                  style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 600 }}
+                >
                   {t('search.tryAgain')}
                 </button>
               </div>
             ) : searchResults?.places?.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                <div className="text-gray-400 mb-4">
+              <div className="text-center py-12 bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
+                <div className="text-[#9E9E9E] mb-4">
                   <Search className="h-16 w-16 mx-auto" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">{t('search.noResults')}</h3>
-                <p className="text-gray-600 mb-4">
+                <h3 className="text-lg font-medium text-[#333333] mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>{t('search.noResults')}</h3>
+                <p className="text-[#9E9E9E] mb-4" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                   {t('search.tryDifferent')}
                 </p>
-                <button onClick={clearFilters} className="btn-primary">
+                <button 
+                  onClick={clearFilters} 
+                  className="bg-[#1E90FF] hover:bg-[#1877D2] text-white font-semibold py-2 px-6 rounded-lg transition-all duration-200 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] hover:shadow-md"
+                  style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 600 }}
+                >
                   {t('search.clearFilters')}
                 </button>
               </div>
@@ -369,16 +399,18 @@ const SearchResultsWithImages: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       <button
                         disabled={searchResults.current_page === 1}
-                        className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-2 text-sm font-medium text-[#333333] bg-white border border-[#E0E0E0] rounded-lg hover:bg-[#F5F5F5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
                       >
                         {t('search.previous')}
                       </button>
-                      <span className="px-3 py-2 text-sm text-gray-700">
+                      <span className="px-3 py-2 text-sm text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                         {t('search.page')} {searchResults.current_page} {t('search.of')} {searchResults.pages}
                       </span>
                       <button
                         disabled={searchResults.current_page === searchResults.pages}
-                        className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-2 text-sm font-medium text-[#333333] bg-white border border-[#E0E0E0] rounded-lg hover:bg-[#F5F5F5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
                       >
                         {t('search.next')}
                       </button>

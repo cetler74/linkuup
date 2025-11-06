@@ -70,12 +70,18 @@ async def register(user_in: RegisterRequest, db: AsyncSession = Depends(get_db))
     await db.commit()
     await db.refresh(user)
 
-    # Start a 14-day user-level trial for business owners (no card required)
+    # Start a user-level trial for business owners (no card required)
+    # Use trial_days from basic plan, fallback to 14 if plan not found
     if user.user_type == "business_owner":
         try:
+            from models.subscription import Plan
+            plan_result = await db.execute(select(Plan).where(Plan.code == "basic", Plan.is_active == True))
+            basic_plan = plan_result.scalar_one_or_none()
+            trial_days = basic_plan.trial_days if basic_plan else 14
+            
             now = datetime.now(timezone.utc)
             user.trial_start = now
-            user.trial_end = now + timedelta(days=14)
+            user.trial_end = now + timedelta(days=trial_days)
             user.trial_status = "active"
             await db.commit()
             await db.refresh(user)
@@ -98,21 +104,30 @@ async def register(user_in: RegisterRequest, db: AsyncSession = Depends(get_db))
                 plan = plan_result.scalar_one_or_none()
             
             # Create subscription if we have a plan and place_id
+            # Only create trial subscription if trial_days > 0
+            # If trial_days = 0, user must go through payment flow
             if plan and user_in.place_id:
                 now = datetime.now(timezone.utc)
-                trial_end = now + timedelta(days=plan.trial_days or 14)
-                sub = UserPlaceSubscription(
-                    user_id=user.id,
-                    place_id=user_in.place_id,
-                    plan_id=plan.id,
-                    status=SubscriptionStatusEnum.TRIALING,
-                    trial_start_at=now,
-                    trial_end_at=trial_end,
-                    current_period_start=now,
-                    current_period_end=trial_end,
-                )
-                db.add(sub)
-                await db.commit()
+                trial_days = plan.trial_days or 14
+                
+                # Skip subscription creation for plans with no trial (trial_days = 0)
+                if trial_days == 0:
+                    # User will need to subscribe through billing endpoint
+                    pass
+                else:
+                    trial_end = now + timedelta(days=trial_days)
+                    sub = UserPlaceSubscription(
+                        user_id=user.id,
+                        place_id=user_in.place_id,
+                        plan_id=plan.id,
+                        status=SubscriptionStatusEnum.TRIALING,
+                        trial_start_at=now,
+                        trial_end_at=trial_end,
+                        current_period_start=now,
+                        current_period_end=trial_end,
+                    )
+                    db.add(sub)
+                    await db.commit()
         except Exception as e:
             # Do not block registration on subscription creation; frontend will retry via /subscriptions/start-trial
             print(f"⚠️ Warning: Could not create subscription during registration: {e}")
@@ -481,12 +496,18 @@ async def _issue_tokens_for_user(
                 print(f"❌ Unexpected database error: {traceback.format_exc()}")
                 raise
 
-        # Start a 14-day user-level trial for business owners (no card required)
+        # Start a user-level trial for business owners (no card required)
+        # Use trial_days from basic plan, fallback to 14 if plan not found
         if user.user_type == "business_owner":
             try:
+                from models.subscription import Plan
+                plan_result = await db.execute(select(Plan).where(Plan.code == "basic", Plan.is_active == True))
+                basic_plan = plan_result.scalar_one_or_none()
+                trial_days = basic_plan.trial_days if basic_plan else 14
+                
                 now = datetime.now(timezone.utc)
                 user.trial_start = now
-                user.trial_end = now + timedelta(days=14)
+                user.trial_end = now + timedelta(days=trial_days)
                 user.trial_status = "active"
                 await db.commit()
                 await db.refresh(user)
@@ -495,6 +516,7 @@ async def _issue_tokens_for_user(
                 pass
         
         # For business owners: optionally start trial subscription per place
+        # Only create trial if trial_days > 0
         if user.user_type == "business_owner" and selected_plan_code and place_id:
             try:
                 from models.subscription import Plan, UserPlaceSubscription, SubscriptionStatusEnum
@@ -502,19 +524,26 @@ async def _issue_tokens_for_user(
                 plan = plan_result.scalar_one_or_none()
                 if plan:
                     now = datetime.now(timezone.utc)
-                    trial_end = now + timedelta(days=plan.trial_days or 14)
-                    sub = UserPlaceSubscription(
-                        user_id=user.id,
-                        place_id=place_id,
-                        plan_id=plan.id,
-                        status=SubscriptionStatusEnum.TRIALING,
-                        trial_start_at=now,
-                        trial_end_at=trial_end,
-                        current_period_start=now,
-                        current_period_end=trial_end,
-                    )
-                    db.add(sub)
-                    await db.commit()
+                    trial_days = plan.trial_days or 14
+                    
+                    # Skip subscription creation for plans with no trial (trial_days = 0)
+                    if trial_days == 0:
+                        # User will need to subscribe through billing endpoint
+                        pass
+                    else:
+                        trial_end = now + timedelta(days=trial_days)
+                        sub = UserPlaceSubscription(
+                            user_id=user.id,
+                            place_id=place_id,
+                            plan_id=plan.id,
+                            status=SubscriptionStatusEnum.TRIALING,
+                            trial_start_at=now,
+                            trial_end_at=trial_end,
+                            current_period_start=now,
+                            current_period_end=trial_end,
+                        )
+                        db.add(sub)
+                        await db.commit()
             except Exception:
                 # Do not block registration on subscription creation; frontend will retry via /subscriptions/start-trial
                 pass

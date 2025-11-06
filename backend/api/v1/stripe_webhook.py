@@ -33,12 +33,14 @@ async def stripe_webhook(request: Request):
 
     # Use independent DB session to avoid dependency stack in webhook thread
     async with AsyncSessionLocal() as db:
-        if event_type in ("customer.subscription.created", "customer.subscription.updated"):
+        if event_type == "checkout.session.completed":
+            await _handle_checkout_session_completed(db, data)
+        elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
             await _handle_subscription_updated(db, data)
         elif event_type == "customer.subscription.deleted":
             await _handle_subscription_deleted(db, data)
         elif event_type == "invoice.payment_succeeded":
-            await _handle_invoice_upsert(db, data)
+            await _handle_invoice_payment_succeeded(db, data)
         elif event_type == "invoice.payment_failed":
             await _handle_invoice_upsert(db, data)
         elif event_type in ("payment_intent.succeeded", "payment_intent.payment_failed"):
@@ -125,6 +127,188 @@ async def _handle_subscription_deleted(db: AsyncSession, obj: dict) -> None:
         
         # Cancel UserPlaceSubscription records for this user
         await _cancel_place_subscriptions_for_user(db, user_id)
+
+
+async def _handle_checkout_session_completed(db: AsyncSession, obj: dict) -> None:
+    """Handle checkout.session.completed - create user account if registration data exists."""
+    metadata = obj.get("metadata", {})
+    create_account = metadata.get("create_account_after_payment") == "true"
+    
+    if not create_account:
+        return  # Not a registration checkout
+    
+    registration_data_str = metadata.get("registration_data")
+    if not registration_data_str:
+        print("⚠️ No registration data found in checkout session metadata")
+        return
+    
+    try:
+        import json
+        registration_data = json.loads(registration_data_str)
+    except Exception as e:
+        print(f"⚠️ Failed to parse registration data: {e}")
+        return
+    
+    # Check if invoice is paid before creating account
+    subscription_id = obj.get("subscription")
+    if subscription_id:
+        import stripe
+        from core.config import settings
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        
+        try:
+            subscription = stripe.Subscription.retrieve(subscription_id)
+            latest_invoice_id = subscription.get("latest_invoice")
+            if latest_invoice_id:
+                invoice = stripe.Invoice.retrieve(latest_invoice_id)
+                if invoice.get("paid") and invoice.get("status") == "paid":
+                    # Invoice is paid, create account
+                    await _create_user_from_registration_data(db, registration_data)
+                else:
+                    print(f"⚠️ Invoice not paid yet for subscription {subscription_id}, waiting for invoice.payment_succeeded")
+        except Exception as e:
+            print(f"⚠️ Error checking invoice status: {e}")
+
+
+async def _handle_invoice_payment_succeeded(db: AsyncSession, obj: dict) -> None:
+    """Handle invoice.payment_succeeded - create account if registration pending, or handle upgrade."""
+    customer_id = obj.get("customer")
+    subscription_id = obj.get("subscription")
+    
+    # Check if subscription has registration metadata (new registration)
+    if subscription_id:
+        import stripe
+        from core.config import settings
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        
+        try:
+            subscription = stripe.Subscription.retrieve(subscription_id)
+            subscription_metadata = subscription.get("metadata", {})
+            registration_data_str = subscription_metadata.get("registration_data")
+            is_upgrade = subscription_metadata.get("upgrade") == "true"
+            
+            # Handle new registration
+            if registration_data_str:
+                import json
+                registration_data = json.loads(registration_data_str)
+                email = registration_data.get("email")
+                
+                if email:
+                    # Check if user already exists
+                    user_res = await db.execute(select(User).where(User.email == email))
+                    existing_user = user_res.scalar_one_or_none()
+                    
+                    if not existing_user:
+                        # Create user account now that payment is confirmed
+                        await _create_user_from_registration_data(db, registration_data)
+            
+            # Handle upgrade - ensure subscription is active
+            elif is_upgrade:
+                user_id_str = subscription_metadata.get("user_id")
+                plan_code = subscription_metadata.get("plan_code")
+                
+                if user_id_str and plan_code:
+                    user_id = int(user_id_str)
+                    # Update subscription status to active
+                    from models.billing import Subscription as BillingSubscription
+                    sub_res = await db.execute(
+                        select(BillingSubscription).where(BillingSubscription.user_id == user_id)
+                    )
+                    billing_sub = sub_res.scalar_one_or_none()
+                    
+                    if billing_sub:
+                        billing_sub.plan_code = plan_code
+                        billing_sub.status = "active"
+                        billing_sub.active = True
+                        await db.commit()
+                        print(f"✅ Upgraded user {user_id} to {plan_code} plan after payment")
+                        
+                        # Sync to place subscriptions
+                        await stripe_service.sync_subscription_to_places(
+                            db,
+                            user_id,
+                            plan_code,
+                            subscription,
+                            "active"
+                        )
+        except Exception as e:
+            print(f"⚠️ Error processing registration/upgrade in invoice.payment_succeeded: {e}")
+    
+    # Also handle invoice upsert
+    await _handle_invoice_upsert(db, obj)
+
+
+async def _create_user_from_registration_data(db: AsyncSession, registration_data: dict) -> None:
+    """Create user account from registration data after payment is confirmed."""
+    from core.security import get_password_hash
+    from datetime import datetime, timezone
+    from models.user import User
+    
+    email = registration_data.get("email")
+    if not email:
+        print("⚠️ No email in registration data")
+        return
+    
+    # Check if user already exists
+    user_res = await db.execute(select(User).where(User.email == email))
+    existing_user = user_res.scalar_one_or_none()
+    
+    if existing_user:
+        print(f"✅ User {email} already exists, skipping account creation")
+        return
+    
+    # Create user
+    user = User(
+        email=email,
+        password_hash=get_password_hash(registration_data.get("password", "")),
+        name=f"{registration_data.get('first_name', '')} {registration_data.get('last_name', '')}".strip(),
+        first_name=registration_data.get("first_name"),
+        last_name=registration_data.get("last_name"),
+        user_type=registration_data.get("user_type", "business_owner"),
+        is_active=True,
+        is_admin=False,
+        is_owner=registration_data.get("user_type") == "business_owner",
+        is_business_owner=registration_data.get("user_type") == "business_owner",
+        gdpr_data_processing_consent=registration_data.get("gdpr_data_processing_consent", False),
+        gdpr_data_processing_consent_date=datetime.now(timezone.utc) if registration_data.get("gdpr_data_processing_consent") else None,
+        gdpr_marketing_consent=registration_data.get("gdpr_marketing_consent", False),
+        gdpr_marketing_consent_date=datetime.now(timezone.utc) if registration_data.get("gdpr_marketing_consent") else None,
+        gdpr_consent_version="1.0"
+    )
+    
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    
+    print(f"✅ Created user account for {email} after payment confirmation")
+    
+    # Link Stripe customer to user
+    try:
+        import stripe
+        from core.config import settings
+        from models.billing import BillingCustomer
+        
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        subscription_id = registration_data.get("subscription_id")
+        if subscription_id:
+            subscription = stripe.Subscription.retrieve(subscription_id)
+            customer_id = subscription.get("customer")
+            
+            if customer_id:
+                # Check if billing customer already exists
+                bc_res = await db.execute(select(BillingCustomer).where(BillingCustomer.stripe_customer_id == customer_id))
+                bc = bc_res.scalar_one_or_none()
+                
+                if not bc:
+                    bc = BillingCustomer(
+                        user_id=user.id,
+                        stripe_customer_id=customer_id,
+                    )
+                    db.add(bc)
+                    await db.commit()
+                    print(f"✅ Linked Stripe customer {customer_id} to user {user.id}")
+    except Exception as e:
+        print(f"⚠️ Error linking Stripe customer: {e}")
 
 
 async def _handle_invoice_upsert(db: AsyncSession, obj: dict) -> None:

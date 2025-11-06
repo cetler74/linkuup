@@ -11,7 +11,15 @@ export default defineConfig({
     },
   },
   build: {
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['@heroicons/react', 'lucide-react'],
+          'map-vendor': ['leaflet', 'react-leaflet', 'mapbox-gl'],
+        }
+      },
       onwarn(warning, warn) {
         // Suppress TypeScript warnings during build
         if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return;

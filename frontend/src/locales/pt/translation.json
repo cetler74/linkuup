@@ -578,9 +578,9 @@
     },
     "features": {
       "title": "Por que Escolher o LinkUup?",
-      "verifiedProfessionals": {
-        "title": "Profissionais Verificados",
-        "description": "Todos os profissionais são verificados e checados para a sua segurança e tranquilidade."
+      "customerSupport": {
+        "title": "Suporte ao Cliente",
+        "description": "Equipa de suporte dedicada disponível para ajudá-lo com qualquer dúvida ou problema que possa ter."
       },
       "realReviews": {
         "title": "Avaliações Reais",
@@ -656,10 +656,13 @@
     "email": "Email",
     "phone": "Telefone",
     "address": "Morada",
+    "hours": "Horários",
     "supportHours": "Horários de Suporte",
     "businessHours": "Horário comercial",
     "mondayFriday": "Segunda a Sexta: 9:00 - 18:00",
     "weekendSupport": "Fim de semana: Suporte limitado",
+    "weekdays": "Segunda a Sexta: 9:00 - 18:00",
+    "weekends": "Sábado e Domingo: Suporte limitado",
     "forSalons": "Para Salões",
     "salonInfo": "É proprietário de um salão? Junte-se à nossa rede e comece a receber reservas online.",
     "managerPortal": "Portal do Gerente",
@@ -1116,5 +1119,14 @@
     "silver": "Prata",
     "gold": "Ouro",
     "platinum": "Platina"
+  },
+  "cookieConsent": {
+    "title": "Este site utiliza cookies",
+    "description": "Utilizamos cookies para personalizar conteúdo e anúncios, fornecer funcionalidades de redes sociais e analisar o nosso tráfego. Também partilhamos informações sobre a sua utilização do nosso site com os nossos parceiros de redes sociais, publicidade e análise, que podem combiná-las com outras informações que lhes forneceu ou que recolheram da sua utilização dos seus serviços.",
+    "detailedDescription": "Utilizamos cookies para personalizar conteúdo e anúncios, fornecer funcionalidades de redes sociais e analisar o nosso tráfego. Também partilhamos informações sobre a sua utilização do nosso site com os nossos parceiros de redes sociais, publicidade e análise, que podem combiná-las com outras informações que lhes forneceu ou que recolheram da sua utilização dos seus serviços.",
+    "showDetails": "Mostrar detalhes",
+    "hideDetails": "Ocultar detalhes",
+    "accept": "Aceitar",
+    "decline": "Recusar"
   }
 }

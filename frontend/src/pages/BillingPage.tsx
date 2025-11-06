@@ -13,20 +13,70 @@ const StripePaymentForm: React.FC<{ libs: any }> = ({ libs }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements) return;
-    setLoading(true);
-    setError(null);
-    const { error: stripeError } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {},
-      redirect: 'if_required',
-    });
-    setLoading(false);
-    if (stripeError) {
-      setError(stripeError.message || 'Payment failed');
+    if (!stripe || !elements) {
+      setError('Payment system not ready. Please wait a moment.');
       return;
     }
-    setSucceeded(true);
+    setLoading(true);
+    setError(null);
+    console.log('Confirming payment with Stripe...');
+    
+    try {
+      const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/payment/success?registration=true`,
+        },
+        redirect: 'if_required',
+      });
+      
+      if (stripeError) {
+        console.error('Payment confirmation error:', stripeError);
+        setError(stripeError.message || 'Payment failed');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Payment confirmed successfully:', paymentIntent);
+      setSucceeded(true);
+      
+      // After successful payment, wait a bit for Stripe webhook to process, then check subscription
+      setTimeout(async () => {
+        try {
+          console.log('Checking subscription status after payment...');
+          const sub = await billingAPI.getSubscription();
+          console.log('Subscription status:', sub);
+          
+          if (sub.status === 'active' || sub.status === 'trialing') {
+            // Check if this was from registration
+            const params = new URLSearchParams(window.location.search);
+            const paymentRequired = params.get('payment_required') === 'true';
+            if (paymentRequired) {
+              // Clear session storage and redirect to dashboard
+              sessionStorage.removeItem('pending_plan');
+              sessionStorage.removeItem('pending_plan_name');
+              console.log('Redirecting to dashboard...');
+              window.location.href = '/owner/dashboard';
+            } else {
+              // Regular payment flow - redirect to success page
+              window.location.href = '/payment/success?registration=true';
+            }
+          } else {
+            // Subscription not active yet - wait a bit more or redirect to success page
+            console.warn('Subscription not active yet, status:', sub.status);
+            window.location.href = '/payment/success?registration=true';
+          }
+        } catch (e) {
+          console.error('Error checking subscription:', e);
+          // If check fails, still redirect to success page
+          window.location.href = '/payment/success?registration=true';
+        }
+      }, 2000); // Increased delay to allow webhook processing
+    } catch (err: any) {
+      console.error('Unexpected error during payment:', err);
+      setError(err?.message || 'An unexpected error occurred');
+      setLoading(false);
+    }
   };
 
   return (
@@ -56,44 +106,102 @@ const BillingPage: React.FC = () => {
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
   const [subStatus, setSubStatus] = useState<string | null>(null);
   const [changing, setChanging] = useState<boolean>(false);
+  const [plans, setPlans] = useState<Array<{ code: string; trial_days: number }>>([]);
 
-  // Display reason notice if redirected due to payment requirement
+  const handleStart = async (plan?: 'basic' | 'pro') => {
+    const planToUse = plan || planCode;
+    if (!planToUse) {
+      console.warn('handleStart called but no plan provided');
+      return;
+    }
+    try {
+      console.log('Creating subscription for plan:', planToUse);
+      setError(null);
+      const res = await billingAPI.createSubscription(planToUse);
+      console.log('Subscription created:', res);
+      setClientSecret(res.clientSecret || null);
+      setTrialStarted(Boolean(res.trialStarted));
+    } catch (e: any) {
+      console.error('Failed to create subscription:', e);
+      setError(e?.message || 'Failed to start subscription');
+    }
+  };
+
+  // Display reason notice if redirected due to payment requirement and auto-start payment
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const reason = params.get('reason');
-    if (reason === 'payment_required') {
+    const planParam = params.get('plan');
+    const paymentRequired = params.get('payment_required') === 'true';
+    
+    if (planParam && (reason === 'payment_required' || paymentRequired)) {
+      // Auto-select plan from query params
+      const plan = planParam as 'basic' | 'pro';
+      setPlanCode(plan);
+      setNotice(`Complete your ${plan === 'pro' ? 'Pro' : 'Basic'} plan subscription. Payment is required to activate your account.`);
+      
+      // Auto-start payment if not already started
+      if (paymentRequired && !clientSecret && !trialStarted) {
+        // Use setTimeout to ensure state is updated first
+        setTimeout(() => {
+          handleStart(plan);
+        }, 100);
+      }
+    } else if (reason === 'payment_required') {
       setNotice('Access to premium features requires a subscription. Select a plan to continue.');
     } else {
       setNotice(null);
     }
   }, [location.search]);
-
-  const handleStart = async () => {
-    if (!planCode) return;
-    try {
-      setError(null);
-      const res = await billingAPI.createSubscription(planCode);
-      setClientSecret(res.clientSecret || null);
-      setTrialStarted(Boolean(res.trialStarted));
-    } catch (e: any) {
-      setError(e?.message || 'Failed to start subscription');
+  
+  // Separate effect to handle auto-starting subscription when plan is set and payment required
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const planParam = params.get('plan');
+    const paymentRequired = params.get('payment_required') === 'true';
+    
+    console.log('Auto-start effect:', { planParam, paymentRequired, planCode, clientSecret, trialStarted });
+    
+    // Only auto-start if we have a plan param, payment is required, and we haven't started yet
+    if (planParam && paymentRequired && !clientSecret && !trialStarted) {
+      const plan = planParam as 'basic' | 'pro';
+      // Ensure planCode matches (or set it if it doesn't)
+      if (planCode !== plan) {
+        setPlanCode(plan);
+      }
+      console.log('Auto-starting subscription creation for plan:', plan);
+      handleStart(plan);
     }
-  };
+  }, [location.search, clientSecret, trialStarted, planCode]);
 
   // After starting a trial (or immediate activation), send user to dashboard
+  // Also handle payment success for Pro plan registration
   useEffect(() => {
     if (trialStarted) {
       // slight delay to let any webhook/local state settle
+      const params = new URLSearchParams(location.search);
+      const paymentRequired = params.get('payment_required') === 'true';
+      
+      // If this was from registration, clear the pending plan info
+      if (paymentRequired) {
+        sessionStorage.removeItem('pending_plan');
+        sessionStorage.removeItem('pending_plan_name');
+      }
+      
       const t = setTimeout(() => navigate('/owner/dashboard'), 500);
       return () => clearTimeout(t);
     }
-  }, [trialStarted, navigate]);
+  }, [trialStarted, navigate, location.search]);
 
-  // Load current subscription to render Manage Plan section
+  // Load plans and current subscription
   useEffect(() => {
     (async () => {
       try {
-        const sub = await billingAPI.getSubscription();
+        const [plansData, sub] = await Promise.all([
+          billingAPI.getPlans(),
+          billingAPI.getSubscription()
+        ]);
+        setPlans(plansData.plans);
         setCurrentPlan((sub.planCode as any) || null);
         setSubStatus(sub.status || null);
       } catch (_) {}
@@ -104,7 +212,15 @@ const BillingPage: React.FC = () => {
     try {
       setChanging(true);
       setError(null);
-      await billingAPI.changePlan(target);
+      const response = await billingAPI.changePlan(target);
+      
+      // Check if payment is required
+      if (response.requiresPayment && response.checkoutUrl) {
+        // Redirect to Stripe Checkout for payment
+        window.location.href = response.checkoutUrl;
+        return;
+      }
+      
       // Refresh subscription info
       const sub = await billingAPI.getSubscription();
       setCurrentPlan((sub.planCode as any) || null);
@@ -195,13 +311,20 @@ const BillingPage: React.FC = () => {
               <div className="text-3xl font-extrabold">€5,95</div>
               <div className="text-gray-600">per month</div>
             </div>
-            {!hasActiveSubscription && (
-              <div className="mt-3 inline-block bg-green-50 text-green-700 text-xs font-medium px-2 py-1 rounded">10 day trial</div>
-            )}
+            {!hasActiveSubscription && (() => {
+              const basicPlan = plans.find(p => p.code === 'basic');
+              return basicPlan ? (
+                <div className="mt-3 inline-block bg-green-50 text-green-700 text-xs font-medium px-2 py-1 rounded">
+                  {basicPlan.trial_days} day trial
+                </div>
+              ) : null;
+            })()}
             <ul className="mt-4 space-y-2 text-sm text-gray-700">
-              <li>• Single calendar column</li>
-              <li>• Free email messages</li>
+              <li>• Calendar support for booking</li>
+              <li>• Free email notifications messages</li>
               <li>• 100 free marketing emails</li>
+              <li>• Unlimited Business locations</li>
+              <li>• Employee management - 2 Emplyees</li>
               <li>• Email and chat support</li>
             </ul>
           </div>
@@ -231,13 +354,15 @@ const BillingPage: React.FC = () => {
               <div className="text-gray-600">per month</div>
             </div>
             <ul className="mt-4 space-y-2 text-sm text-gray-700">
-              <li>• Multiple calendar columns</li>
-              <li>• Free email messages</li>
+              <li>• Calendar support for booking</li>
+              <li>• Free email notifications messages</li>
               <li>• 100 free marketing emails</li>
+              <li>• Unlimited Business locations</li>
+              <li>• Employee management - 10 Emplyees</li>
               <li>• Rewards program</li>
               <li>• Campaign program</li>
               <li>• Employee Time-off Management</li>
-              <li>• 24/7 phone and chat support</li>
+              <li>• Email and chat support</li>
             </ul>
           </div>
         </div>
@@ -248,9 +373,13 @@ const BillingPage: React.FC = () => {
           <div className="p-2 text-red-600 text-sm">Stripe key is not configured. Set VITE_STRIPE_PUBLISHABLE_KEY.</div>
         )}
         {error && <div className="text-red-600 text-sm">{error}</div>}
-        {trialStarted && (
-          <div className="p-2 text-green-600 text-sm">Your 14-day trial has started.</div>
-        )}
+        {trialStarted && (() => {
+          const selectedPlanData = plans.find(p => p.code === planCode);
+          const trialDays = selectedPlanData?.trial_days || 5;
+          return (
+            <div className="p-2 text-green-600 text-sm">Your {trialDays}-day trial has started.</div>
+          );
+        })()}
         
         {/* Show Stripe payment form if clientSecret is set */}
         {clientSecret && stripeLibs && stripePromise ? (

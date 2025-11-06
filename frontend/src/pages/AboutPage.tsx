@@ -17,7 +17,8 @@ import {
   Stethoscope,
   Sparkles,
   TrendingUp,
-  Globe
+  Globe,
+  MessageSquare
 } from 'lucide-react';
 import Header from '../components/common/Header';
 import Footer from '../components/common/Footer';
@@ -227,10 +228,10 @@ const AboutPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               <div className="card hover:scale-105 transition-all duration-300">
                 <div className="w-12 h-12 bg-bright-blue rounded-full flex items-center justify-center mb-4">
-                  <Shield className="w-6 h-6 text-white" />
+                  <MessageSquare className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-subsection mb-3">{t('about.features.verifiedProfessionals.title')}</h3>
-                <p className="text-charcoal/70">{t('about.features.verifiedProfessionals.description')}</p>
+                <h3 className="text-subsection mb-3">{t('about.features.customerSupport.title')}</h3>
+                <p className="text-charcoal/70">{t('about.features.customerSupport.description')}</p>
               </div>
 
               <div className="card hover:scale-105 transition-all duration-300">
@@ -397,11 +398,17 @@ const AboutPage: React.FC = () => {
                     <p className="text-charcoal/70 mb-6">{t('about.growBusiness.network.description')}</p>
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div>
-                        <div className="text-3xl font-bold text-bright-blue">10K+</div>
+                        <div className="flex items-center justify-center gap-2 text-3xl font-bold text-bright-blue">
+                          <span>Growing</span>
+                          <TrendingUp className="w-8 h-8" />
+                        </div>
                         <div className="text-sm text-charcoal/60">{t('about.growBusiness.network.activeUsers')}</div>
                       </div>
                       <div>
-                        <div className="text-3xl font-bold text-lime-green">500+</div>
+                        <div className="flex items-center justify-center gap-2 text-3xl font-bold text-lime-green">
+                          <span>Growing</span>
+                          <TrendingUp className="w-8 h-8" />
+                        </div>
                         <div className="text-sm text-charcoal/60">{t('about.growBusiness.network.professionals')}</div>
                       </div>
                     </div>

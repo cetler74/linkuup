@@ -192,8 +192,15 @@ async def start_trial(
         # Idempotent: if already on same plan and trialing/active, return success
         return {"status": "ok", "message": "Subscription already active or trialing"}
 
-    # Create new trial subscription
+    # Create new subscription - only trial if trial_days > 0
+    # If trial_days = 0, subscription should be created through payment flow
     from datetime import timedelta
+    if plan.trial_days == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This plan requires immediate payment. Please use the billing endpoint to subscribe."
+        )
+    
     trial_end = now + timedelta(days=plan.trial_days)
 
     sub = UserPlaceSubscription(

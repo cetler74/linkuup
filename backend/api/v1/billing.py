@@ -19,6 +19,10 @@ class CreateSubscriptionRequest(BaseModel):
 class ChangePlanRequest(BaseModel):
     planCode: str
 
+class CreateCheckoutSessionRequest(BaseModel):
+    planCode: str
+    registrationData: dict
+
 
 class SubscriptionResponse(BaseModel):
     subscriptionId: str | None = None
@@ -96,7 +100,32 @@ async def get_subscription(db: AsyncSession = Depends(get_db), current_user: Use
 
 @router.post("/change-plan")
 async def change_plan(req: ChangePlanRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Find active subscription for user
+    """Change plan - if upgrading to Pro (no trial), require payment first."""
+    # Check if target plan requires payment (no trial)
+    from models.subscription import Plan
+    plan_result = await db.execute(select(Plan).where(Plan.code == req.planCode, Plan.is_active == True))
+    target_plan = plan_result.scalar_one_or_none()
+    
+    if not target_plan:
+        raise HTTPException(status_code=400, detail=f"Invalid plan code: {req.planCode}")
+    
+    # If target plan has no trial, require payment before upgrade
+    plan_requires_payment = not target_plan.trial_days or target_plan.trial_days == 0
+    
+    if plan_requires_payment:
+        # Create checkout session for upgrade
+        try:
+            result = await stripe_service.create_checkout_session_for_upgrade(
+                user_id=current_user.id,
+                user_email=current_user.email,
+                plan_code=req.planCode,
+                db=db
+            )
+            return {"checkoutUrl": result["url"], "requiresPayment": True}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    
+    # For plans with trial, proceed with upgrade
     res = await db.execute(select(BillingSubscription).where(BillingSubscription.user_id == current_user.id, BillingSubscription.active == True))
     sub: BillingSubscription | None = res.scalar_one_or_none()
     if not sub or not sub.stripe_subscription_id:
@@ -108,7 +137,7 @@ async def change_plan(req: ChangePlanRequest, db: AsyncSession = Depends(get_db)
         # Optimistically update local plan_code; webhooks will sync definitive status
         sub.plan_code = req.planCode
         await db.commit()
-        return {"status": "ok", "subscriptionId": updated.get("id")}
+        return {"status": "ok", "subscriptionId": updated.get("id"), "requiresPayment": False}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -129,6 +158,20 @@ async def create_setup_intent(db: AsyncSession = Depends(get_db), current_user: 
     try:
         client_secret = await asyncio.to_thread(stripe_service.create_setup_intent, customer_id)
         return {"clientSecret": client_secret}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/create-checkout-session")
+async def create_checkout_session(req: CreateCheckoutSessionRequest, db: AsyncSession = Depends(get_db)):
+    """Create Stripe Checkout Session for Pro plan registration (account created after payment)."""
+    try:
+        result = await asyncio.to_thread(
+            stripe_service.create_checkout_session_for_registration,
+            plan_code=req.planCode,
+            registration_data=req.registrationData
+        )
+        return {"checkoutUrl": result["url"]}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 
 from models.customer_existing import CustomerPlaceAssociation
-from models.place_existing import Booking, Place
+from models.place_existing import Booking, Place, Service
 from models.user import User
 from models.rewards import CustomerReward
 from schemas.customer import CustomerResponse, CustomerListResponse
@@ -146,7 +146,9 @@ class CustomerService:
                     tier = customer_reward.tier
             
             # Get last service and campaign info
-            last_booking_query = select(Booking).where(
+            last_booking_query = select(Booking, Service.name.label('service_name')).outerjoin(
+                Service, Booking.service_id == Service.id
+            ).where(
                 and_(
                     Booking.place_id == place_id,
                     Booking.customer_email == row.customer_email
@@ -154,7 +156,14 @@ class CustomerService:
             ).order_by(desc(Booking.booking_date)).limit(1)
             
             last_booking_result = await self.db.execute(last_booking_query)
-            last_booking = last_booking_result.scalar_one_or_none()
+            last_booking_row = last_booking_result.first()
+            
+            last_service_name = None
+            if last_booking_row:
+                last_booking = last_booking_row[0]  # Booking object
+                last_service_name = last_booking_row[1] if len(last_booking_row) > 1 else None  # Service name from join
+            else:
+                last_booking = None
             
             customer = CustomerResponse(
                 user_id=user_id or 0,  # Use 0 if user doesn't exist in users table
@@ -169,7 +178,7 @@ class CustomerService:
                 points_balance=points_balance,
                 tier=tier,
                 # Additional fields for enhanced display
-                last_service_name=f"Service {last_booking.service_id}" if last_booking and last_booking.service_id else None,
+                last_service_name=last_service_name,
                 last_campaign_name=last_booking.campaign_name if last_booking else None,
                 last_campaign_type=last_booking.campaign_type if last_booking else None,
                 # Subscription and opt-in information

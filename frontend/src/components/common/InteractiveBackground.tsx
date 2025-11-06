@@ -33,10 +33,18 @@ const InteractiveBackground: React.FC<InteractiveBackgroundProps> = ({
   const particlesRef = useRef<Particle[]>([]);
   const timeRef = useRef(0);
   const shouldAnimateRef = useRef(true);
-  const [currentBgColor, setCurrentBgColor] = useState('#FFFFFF'); // Start with white
+  // Initialize with branding colors: Blue (#1E90FF), White (#FFFFFF), Red (#FF5A5F)
+  const getRandomBrandingColor = () => {
+    const brandingColors = ['#1E90FF', '#FFFFFF', '#FF5A5F']; // Blue, White, Red
+    return brandingColors[Math.floor(Math.random() * brandingColors.length)];
+  };
+  
+  const initialColor = getRandomBrandingColor();
+  const [currentBgColor, setCurrentBgColor] = useState(initialColor);
   const containerRef = useRef<HTMLDivElement>(null);
-  const targetBgColorRef = useRef('#FFFFFF');
+  const targetBgColorRef = useRef(initialColor);
   const bgColorTransitionRef = useRef(1); // 0 = current, 1 = target (for smooth transition)
+  const lastColorChangeRef = useRef(0); // Track last color change time for throttling
   
   // Helper function to convert hex to RGB
   const hexToRgb = (hex: string) => {
@@ -54,6 +62,7 @@ const InteractiveBackground: React.FC<InteractiveBackgroundProps> = ({
       setMousePos({ x: e.clientX, y: e.clientY });
       setIsInteracting(true);
       shouldAnimateRef.current = true;
+      
       setTimeout(() => {
         setIsInteracting(false);
       }, 1500);
@@ -64,18 +73,20 @@ const InteractiveBackground: React.FC<InteractiveBackgroundProps> = ({
       if (e.detail && e.detail.hovered && e.detail.x && e.detail.y) {
         setHoverTarget({ x: e.detail.x, y: e.detail.y });
         
-        // Randomly change background color when card is hovered
-        const colors = ['#FFFFFF', '#1E90FF', '#FF5A5F']; // White, Bright Blue, Coral Red
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
-        console.log('Card hovered, changing color to:', randomColor); // Debug
+        // Randomly change background color when card is hovered (use branding colors)
+        const brandingColors = ['#1E90FF', '#FFFFFF', '#FF5A5F']; // Blue, White, Red
+        const randomColor = brandingColors[Math.floor(Math.random() * brandingColors.length)];
         targetBgColorRef.current = randomColor;
         bgColorTransitionRef.current = 0; // Start transition
+        lastColorChangeRef.current = Date.now();
       } else if (e.detail && e.detail.hovered === false) {
         setHoverTarget(null);
-        // Return to white when card is not hovered
-        console.log('Card unhovered, returning to white'); // Debug
-        targetBgColorRef.current = '#FFFFFF';
+        // Use branding colors
+        const brandingColors = ['#1E90FF', '#FFFFFF', '#FF5A5F']; // Blue, White, Red
+        const randomColor = brandingColors[Math.floor(Math.random() * brandingColors.length)];
+        targetBgColorRef.current = randomColor;
         bgColorTransitionRef.current = 0;
+        lastColorChangeRef.current = Date.now();
       }
     };
 
@@ -123,7 +134,8 @@ const InteractiveBackground: React.FC<InteractiveBackgroundProps> = ({
       targetX: typeof window !== 'undefined' ? Math.random() * window.innerWidth : 0,
       targetY: typeof window !== 'undefined' ? Math.random() * window.innerHeight : 0,
       size: 1 + Math.random() * 2,
-      color: i % 3 === 0 ? 'rgba(18, 119, 216, 0.4)' : 'rgba(225, 145, 54, 0.3)'
+      // Use branding colors: Blue (#1E90FF), White (#FFFFFF), Red (#FF5A5F)
+      color: i % 3 === 0 ? 'rgba(30, 144, 255, 0.4)' : i % 3 === 1 ? 'rgba(255, 90, 95, 0.3)' : 'rgba(255, 255, 255, 0.2)'
     }));
   }, []);
 

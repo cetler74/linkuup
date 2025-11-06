@@ -212,15 +212,23 @@ const PricingPage: React.FC = () => {
                 <div className="space-y-4 mb-8 flex-grow">
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Single calendar column</span>
+                    <span className="text-charcoal">Calendar support for booking</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Free email messages</span>
+                    <span className="text-charcoal">Free email notifications messages</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
                     <span className="text-charcoal">100 free marketing emails</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
+                    <span className="text-charcoal">Unlimited Business locations</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
+                    <span className="text-charcoal">Employee management - 2 Emplyees</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
@@ -258,15 +266,23 @@ const PricingPage: React.FC = () => {
                 <div className="space-y-4 mb-8 flex-grow">
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Multiple calendar columns</span>
+                    <span className="text-charcoal">Calendar support for booking</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Free email messages</span>
+                    <span className="text-charcoal">Free email notifications messages</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
                     <span className="text-charcoal">100 free marketing emails</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
+                    <span className="text-charcoal">Unlimited Business locations</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
+                    <span className="text-charcoal">Employee management - 10 Emplyees</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
@@ -282,7 +298,7 @@ const PricingPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">24/7 phone and chat support</span>
+                    <span className="text-charcoal">Email and chat support</span>
                   </div>
                 </div>
 
@@ -420,18 +436,14 @@ const PricingPage: React.FC = () => {
                     </tr>
                     <tr>
                       <td className="py-4 px-6 text-charcoal">Employee Management</td>
-                      <td className="text-center py-4 px-6">-</td>
-                      <td className="text-center py-4 px-6">
-                        <CheckCircle className="w-5 h-5 text-bright-blue mx-auto" />
-                      </td>
-                      <td className="text-center py-4 px-6">
-                        <CheckCircle className="w-5 h-5 text-bright-blue mx-auto" />
-                      </td>
+                      <td className="text-center py-4 px-6">2 Employees</td>
+                      <td className="text-center py-4 px-6">10 Employees</td>
+                      <td className="text-center py-4 px-6">Unlimited</td>
                     </tr>
                     <tr>
                       <td className="py-4 px-6 text-charcoal">Support Level</td>
                       <td className="text-center py-4 px-6">Email & Chat</td>
-                      <td className="text-center py-4 px-6">24/7 Phone & Chat</td>
+                      <td className="text-center py-4 px-6">Email & Chat</td>
                       <td className="text-center py-4 px-6">Priority Support</td>
                     </tr>
                   </tbody>

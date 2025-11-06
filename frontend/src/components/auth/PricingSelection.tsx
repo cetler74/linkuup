@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CheckCircle, ArrowRight, Star } from 'lucide-react';
+import { billingAPI } from '../../utils/api';
 
 export interface PricingPlan {
   id: string;
@@ -15,7 +16,7 @@ export interface PricingPlan {
 
 interface PricingSelectionProps {
   onPlanSelect: (plan: PricingPlan) => void;
-  onBack: () => void;
+  onBack?: () => void;
   loading?: boolean;
   dataConsent?: boolean;
   onDataConsentChange?: (consent: boolean) => void;
@@ -25,6 +26,7 @@ interface PricingSelectionProps {
   error?: string;
   onManualRegister?: () => void;
   showManualForm?: boolean;
+  wideCards?: boolean; // If true, cards are 3x wider (1 column instead of 3)
 }
 
 const PricingSelection: React.FC<PricingSelectionProps> = ({ 
@@ -38,23 +40,39 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
   showOAuth = false,
   error,
   onManualRegister,
-  showManualForm = false
+  showManualForm = false,
+  wideCards = false
 }) => {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [backendPlans, setBackendPlans] = useState<Array<{ code: string; trial_days: number }>>([]);
 
-  const pricingPlans: PricingPlan[] = [
+  // Load plans from backend
+  useEffect(() => {
+    (async () => {
+      try {
+        const plansData = await billingAPI.getPlans();
+        setBackendPlans(plansData.plans);
+      } catch (_) {
+        // Silently fail, will use hardcoded plans
+      }
+    })();
+  }, []);
+
+  const pricingPlans: PricingPlan[] = useMemo(() => [
     {
       id: 'basic',
       name: 'Basic',
       price: 5.95,
       period: 'month',
       features: [
-        'Single calendar column',
-        'Free email messages',
+        'Calendar support for booking',
+        'Free email notifications messages',
         '100 free marketing emails',
+        'Unlimited Business locations',
+        'Employee management - 2 Emplyees',
         'Email and chat support'
       ],
-      trialDays: 10
+      trialDays: backendPlans.find(p => p.code === 'basic')?.trial_days
     },
     {
       id: 'pro',
@@ -62,17 +80,20 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
       price: 10.95,
       period: 'month',
       features: [
-        'Multiple calendar columns',
-        'Free email messages',
+        'Calendar support for booking',
+        'Free email notifications messages',
         '100 free marketing emails',
+        'Unlimited Business locations',
+        'Employee management - 10 Emplyees',
         'Rewards program',
         'Campaign program',
         'Employee Time-off Management',
-        '24/7 phone and chat support'
+        'Email and chat support'
       ],
-      isPopular: true
+      isPopular: true,
+      trialDays: backendPlans.find(p => p.code === 'pro')?.trial_days
     }
-  ];
+  ], [backendPlans]);
 
   const handlePlanSelect = (plan: PricingPlan) => {
     setSelectedPlan(plan.id);
@@ -80,7 +101,7 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className={`w-full mx-auto ${wideCards ? '' : 'max-w-[112rem]'}`}>
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-charcoal mb-4">
           Choose Your Plan
@@ -90,60 +111,85 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 w-full">
         {pricingPlans.map((plan) => (
           <div
             key={plan.id}
-            className={`card hover:scale-105 transition-all duration-300 relative flex flex-col h-full cursor-pointer ${
-              plan.isPopular ? 'border-2 border-bright-blue shadow-elevated' : ''
+            className={`card hover:scale-105 transition-all duration-300 relative flex flex-col h-full w-full text-left ${
+              plan.isPopular ? 'ring-2 ring-bright-blue shadow-elevated' : ''
             } ${selectedPlan === plan.id ? 'ring-2 ring-bright-blue' : ''}`}
             onClick={() => handlePlanSelect(plan)}
           >
             {plan.isPopular && (
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <div className="bg-bright-blue text-white px-4 py-2 rounded-full text-sm font-medium">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <div className="bg-bright-blue text-white px-3 py-1 rounded-full text-xs font-medium">
                   Most Popular
                 </div>
               </div>
             )}
 
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-charcoal mb-2">{plan.name}</h3>
-              <div className="mb-4">
+            {/* CardHeader */}
+            <div className="px-6 pt-6 pb-4">
+              <h3 className="font-medium text-xl text-charcoal mb-2">
+                {plan.name}
+              </h3>
+              <div className="text-charcoal/70 text-sm mb-2">
                 {plan.originalPrice && plan.originalPrice !== plan.price && (
-                  <span className="text-sm text-charcoal/70 line-through">
+                  <span className="text-sm text-charcoal/70 line-through mr-2">
                     €{plan.originalPrice}
                   </span>
                 )}
-                <div className="text-4xl font-bold text-charcoal">€{plan.price.toFixed(2).replace('.', ',')}</div>
-                <div className="text-charcoal/70">per {plan.period}</div>
+                <span className="font-medium text-charcoal text-lg">
+                  €{plan.price.toFixed(2).replace('.', ',')}
+                </span>
+                <span className="text-charcoal/70">/month</span>
+                {plan.trialDays && plan.trialDays > 0 ? (
+                  <div className="mt-2">
+                    <span className="bg-lime-green/20 text-lime-green text-xs font-medium px-2 py-1 rounded-full">
+                      {plan.trialDays} day trial
+                    </span>
+                  </div>
+                ) : plan.id === 'pro' ? (
+                  <div className="mt-2">
+                    <span className="bg-amber-100 text-amber-700 text-xs font-medium px-2 py-1 rounded-full">
+                      Payment required
+                    </span>
+                  </div>
+                ) : null}
               </div>
-              {plan.trialDays && (
-                <div className="bg-lime-green/20 text-lime-green text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
-                  {plan.trialDays} day trial
-                </div>
-              )}
             </div>
 
-            <div className="space-y-4 mb-6 flex-grow">
-              {plan.features.map((feature, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                  <span className="text-charcoal">{feature}</span>
-                </div>
-              ))}
+            {/* CardContent */}
+            <div className="px-6 pb-6 flex-1">
+              <div className="grid gap-2">
+                {plan.features.map((feature, index) => (
+                  <div
+                    className="flex gap-2 text-charcoal/70 text-sm items-start"
+                    key={index}
+                  >
+                    <CheckCircle className="h-4 w-4 text-bright-blue flex-none mt-0.5" />
+                    <span>{feature}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="mt-auto">
+            {/* CardFooter */}
+            <div className="px-6 pb-6 mt-auto">
               <button
-                className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-                  selectedPlan === plan.id
-                    ? 'bg-bright-blue text-white'
+                className={`w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                  selectedPlan === plan.id || plan.isPopular
+                    ? 'bg-bright-blue text-white hover:bg-bright-blue/90'
                     : 'bg-gray-100 text-charcoal hover:bg-gray-200'
                 }`}
                 disabled={loading}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePlanSelect(plan);
+                }}
               >
                 {selectedPlan === plan.id ? 'Selected' : 'Select Plan'}
+                {selectedPlan === plan.id && <ArrowRight className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -152,7 +198,7 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
 
       {/* Data Consent Section for Business Owners */}
       <div className="space-y-4 border-t pt-6 mt-6 mb-6">
-        <h3 className="text-lg font-semibold text-charcoal">Data Processing Consent</h3>
+        <h3 className="text-lg font-semibold text-white">Data Processing Consent</h3>
         <div className="space-y-2">
           <div className="flex items-start">
             <div className="flex items-center h-5 mt-1">
@@ -166,10 +212,10 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
               />
             </div>
             <div className="ml-3 text-sm">
-              <label htmlFor="gdpr_data_processing_consent" className="font-medium text-charcoal">
+              <label htmlFor="gdpr_data_processing_consent" className="font-medium text-white">
                 Data Processing Consent <span className="text-red-500">*</span>
               </label>
-              <p className="text-charcoal/70 text-xs mt-1">
+              <p className="text-white text-xs mt-1">
                 I consent to my personal data being processed and used internally by LinkUup to provide the requested services, including account management, bookings and service-related communication.
               </p>
             </div>
@@ -239,7 +285,7 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
               <button
                 type="button"
                 onClick={onManualRegister}
-                className="text-sm text-charcoal hover:underline"
+                className="text-sm text-white hover:underline"
               >
                 Or register manually
               </button>
@@ -249,17 +295,19 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
       )}
 
       <div className="flex justify-between items-center">
-        <button
-          onClick={onBack}
-          className="btn-secondary flex items-center gap-2"
-          disabled={loading}
-        >
-          <ArrowRight className="w-4 h-4 rotate-180" />
-          Back to Registration
-        </button>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="btn-secondary flex items-center gap-2 text-white"
+            disabled={loading}
+          >
+            <ArrowRight className="w-4 h-4 rotate-180" />
+            Back to Registration
+          </button>
+        )}
 
         {selectedPlan && (
-          <div className="flex items-center gap-2 text-sm text-charcoal/70">
+          <div className="flex items-center gap-2 text-sm text-white">
             <Star className="w-4 h-4 text-yellow-500" />
             <span>You can upgrade or downgrade anytime</span>
           </div>

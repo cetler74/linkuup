@@ -579,9 +579,9 @@
     },
     "features": {
       "title": "Why Choose LinkUup?",
-      "verifiedProfessionals": {
-        "title": "Verified Professionals",
-        "description": "All professionals are background-checked and verified for your safety and peace of mind."
+      "customerSupport": {
+        "title": "Customer Support",
+        "description": "Dedicated support team available to help you with any questions or issues you may have."
       },
       "realReviews": {
         "title": "Real Reviews",
@@ -657,10 +657,13 @@
     "email": "Email",
     "phone": "Phone",
     "address": "Address",
+    "hours": "Hours",
     "supportHours": "Support Hours",
     "businessHours": "Business hours",
     "mondayFriday": "Monday to Friday: 9:00 - 18:00",
     "weekendSupport": "Weekend: Limited support",
+    "weekdays": "Monday to Friday: 9:00 - 18:00",
+    "weekends": "Saturday & Sunday: Limited support",
     "forSalons": "For Salons",
     "salonInfo": "Are you a salon owner? Join our network and start receiving online bookings.",
     "managerPortal": "Manager Portal",
@@ -1117,5 +1120,14 @@
     "silver": "Silver",
     "gold": "Gold",
     "platinum": "Platinum"
+  },
+  "cookieConsent": {
+    "title": "This website uses cookies",
+    "description": "We use cookies to personalise content and ads, to provide social media features and to analyse our traffic. We also share information about your use of our site with our social media, advertising and analytics partners who may combine it with other information that you've provided to them or that they've collected from your use of their services.",
+    "detailedDescription": "We use cookies to personalise content and ads, to provide social media features and to analyse our traffic. We also share information about your use of our site with our social media, advertising and analytics partners who may combine it with other information that you've provided to them or that they've collected from your use of their services.",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "accept": "Accept",
+    "decline": "Decline"
   }
 }

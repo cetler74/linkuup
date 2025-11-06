@@ -6,7 +6,7 @@ import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import OAuthButtons from './OAuthButtons';
 import PricingSelection from './PricingSelection';
 import type { PricingPlan } from './PricingSelection';
-import api, { ownerAPI } from '../../utils/api';
+import api, { ownerAPI, billingAPI } from '../../utils/api';
 
 interface RegisterRequest {
   first_name: string;
@@ -23,17 +23,19 @@ interface RegisterRequest {
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
   onRegistrationSuccess?: (user: any, userType: string) => void;
+  skipTypeSelection?: boolean;
+  preselectedPlan?: PricingPlan | null;
 }
 
 type RegistrationStep = 'type_selection' | 'form' | 'pricing' | 'success';
 
-const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
+const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSelection = false, preselectedPlan = null }) => {
   const [formData, setFormData] = useState<RegisterRequest>({
     first_name: '',
     last_name: '',
     email: '',
     password: '',
-    user_type: 'customer',
+    user_type: skipTypeSelection ? 'business_owner' : 'customer',
     gdpr_data_processing_consent: false,
     gdpr_marketing_consent: false,
   });
@@ -42,8 +44,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [userType, setUserType] = useState<'customer' | 'business_owner' | null>(null);
-  const [currentStep, setCurrentStep] = useState<RegistrationStep>('type_selection');
-  const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>(() => {
+    // If we have a preselected plan, skip directly to form (registration)
+    if (preselectedPlan) {
+      return 'form';
+    }
+    // If skipTypeSelection is true, go to pricing to select a plan
+    return skipTypeSelection ? 'pricing' : 'type_selection';
+  });
+  const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(preselectedPlan);
   const [showManualFormForOwner, setShowManualFormForOwner] = useState(false);
   const isSubmittingRef = useRef(false);
   const { register, loginWithGoogle, loginWithFacebook } = useAuth();
@@ -87,6 +96,46 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     setLoading(true);
 
     try {
+      // For business owners with Pro plan (no trial), payment must be completed BEFORE account creation
+      if (formData.user_type === 'business_owner' && selectedPlan) {
+        const planHasNoTrial = !selectedPlan.trialDays || selectedPlan.trialDays === 0;
+        
+        if (planHasNoTrial) {
+          // Create Stripe checkout session WITHOUT creating account first
+          // Account will be created after payment succeeds via webhook
+          try {
+            const checkoutResponse = await api.post('/billing/create-checkout-session', {
+              planCode: selectedPlan.id,
+              registrationData: {
+                first_name: formData.first_name,
+                last_name: formData.last_name,
+                email: formData.email,
+                password: formData.password,
+                user_type: formData.user_type,
+                gdpr_data_processing_consent: formData.gdpr_data_processing_consent,
+                gdpr_marketing_consent: formData.gdpr_marketing_consent,
+                selected_plan_code: selectedPlan.id,
+              }
+            });
+            
+            if (checkoutResponse.data?.checkoutUrl) {
+              // Redirect to Stripe Checkout - account will be created after payment
+              window.location.href = checkoutResponse.data.checkoutUrl;
+              return; // Exit early - don't create account yet
+            } else {
+              throw new Error('Failed to create checkout session');
+            }
+          } catch (checkoutError: any) {
+            // If checkout creation fails, show error
+            setError(checkoutError?.response?.data?.detail || 'Failed to create payment session. Please try again.');
+            setLoading(false);
+            isSubmittingRef.current = false;
+            return;
+          }
+        }
+      }
+
+      // For all other cases (customers, or business owners with trial), create account normally
       const payload: RegisterRequest = {
         ...formData,
         selected_plan_code: formData.user_type === 'business_owner' ? selectedPlan?.id : undefined,
@@ -94,19 +143,22 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
       await register(payload as any);
       setUserType(payload.user_type);
 
-      // If owner and plan chosen, attempt to start trial for first place (if exists)
+      // If owner and plan chosen with trial, start trial for first place
       if (payload.user_type === 'business_owner' && selectedPlan) {
-        try {
-          const places = await ownerAPI.getOwnerPlaces();
-          const firstPlace = Array.isArray(places) ? places[0] : undefined;
-          if (firstPlace?.id) {
-            await api.post('/subscriptions/start-trial', {
-              place_id: firstPlace.id,
-              plan_code: selectedPlan.id,
-            });
+        const planHasTrial = selectedPlan.trialDays && selectedPlan.trialDays > 0;
+        if (planHasTrial) {
+          try {
+            const places = await ownerAPI.getOwnerPlaces();
+            const firstPlace = Array.isArray(places) ? places[0] : undefined;
+            if (firstPlace?.id) {
+              await api.post('/subscriptions/start-trial', {
+                place_id: firstPlace.id,
+                plan_code: selectedPlan.id,
+              });
+            }
+          } catch (e) {
+            // Non-blocking; user can start trial after creating a place
           }
-        } catch (e) {
-          // Non-blocking; user can start trial after creating a place
         }
       }
 
@@ -291,7 +343,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
 
   if (currentStep === 'pricing') {
     return (
-      <div className="w-full max-w-6xl mx-auto">
+      <div className="w-full max-w-7xl mx-auto">
         <PricingSelection
           onPlanSelect={handlePlanSelect}
           onBack={handleBackToForm}
@@ -324,6 +376,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
           error={error}
           onManualRegister={handleManualRegisterForOwner}
           showManualForm={showManualFormForOwner}
+          wideCards={true}
         />
       </div>
     );

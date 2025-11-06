@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PlusIcon, CalendarIcon, ClockIcon, UserIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, CalendarIcon, ClockIcon, UserIcon, BuildingOfficeIcon, PencilIcon, MapPinIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useOwnerApi } from '../../utils/ownerApi';
 import { useQueryClient } from '@tanstack/react-query';
 import EmployeeSelector from '../../components/owner/EmployeeSelector';
@@ -101,7 +101,7 @@ const BookingsManagement: React.FC = () => {
     useAcceptBooking
   } = useOwnerApi();
   
-  const { selectedPlaceId, selectedPlace } = usePlaceContext();
+  const { selectedPlaceId, selectedPlace, places, setSelectedPlace, setSelectedPlaceId } = usePlaceContext();
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showRecurringModal, setShowRecurringModal] = useState(false);
@@ -110,6 +110,8 @@ const BookingsManagement: React.FC = () => {
   const [editingBooking, setEditingBooking] = useState<any>(null);
   const [view, setView] = useState<'calendar' | 'list'>('calendar');
   const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day'>('month');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_email: '',
@@ -126,6 +128,12 @@ const BookingsManagement: React.FC = () => {
   const { data: bookings = [], isLoading: bookingsLoading } = usePlaceBookings(selectedPlaceId || 0);
   const { data: employees = [] } = usePlaceEmployees(selectedPlaceId || 0);
   const { data: services = [] } = usePlaceServices(selectedPlaceId || 0);
+
+  // Filter places based on search term
+  const filteredPlaces = places.filter(place =>
+    place.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    place.city?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   
   const createBookingMutation = useCreateBooking();
   const updateBookingMutation = useUpdateBooking();
@@ -482,12 +490,96 @@ const BookingsManagement: React.FC = () => {
   }
 
   return (
-    <div className="w-full bg-light-gray">
+    <div className="flex h-screen bg-light-gray">
+      {/* Mobile Menu Button */}
+      <button
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-form border border-medium-gray"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+      >
+        <svg className="w-6 h-6 text-charcoal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Sidebar */}
+      <aside className={`w-1/3 max-w-sm flex flex-col border-r border-medium-gray bg-white lg:block ${
+        sidebarOpen ? 'block' : 'hidden'
+      }`}>
+        
+        {/* Search */}
+        <div className="p-4">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-5 w-5 text-charcoal/60" />
+            </div>
+            <input
+              type="text"
+              className="input-field pl-10"
+              placeholder="Search for a place"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Places List */}
+        <div className="flex-grow overflow-y-auto">
+          <div className="flex flex-col">
+            {filteredPlaces.map((place) => (
+              <div
+                key={place.id}
+                className={`flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between cursor-pointer transition-colors ${
+                  selectedPlace?.id === place.id
+                    ? 'bg-bright-blue/10 border-l-4 border-bright-blue'
+                    : 'bg-white hover:bg-light-gray'
+                }`}
+                onClick={() => {
+                  setSelectedPlace(place);
+                  setSelectedPlaceId(place.id);
+                  setSidebarOpen(false); // Close sidebar on mobile when place is selected
+                }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="text-charcoal/60 flex items-center justify-center rounded-lg bg-light-gray shrink-0 size-12">
+                    {place.location_type === 'fixed' ? (
+                      <BuildingOfficeIcon className="h-6 w-6" />
+                    ) : (
+                      <MapPinIcon className="h-6 w-6" />
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-center">
+                    <p className="text-charcoal text-base font-medium leading-normal line-clamp-1 font-body">
+                      {place.name}
+                    </p>
+                    <p className="text-charcoal/60 text-sm font-normal leading-normal line-clamp-2 font-body">
+                      {place.location_type === 'fixed' ? 'Fixed Location' : 'Mobile/Service Area'}
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0">
+                  <div className="text-charcoal/60 flex size-7 items-center justify-center">
+                    <PencilIcon className="h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </aside>
+
       {/* Main Content */}
-      <main className="w-full p-4 lg:p-6 bg-light-gray overflow-y-auto">
+      <main className="w-full lg:w-2/3 flex-grow p-4 lg:p-6 bg-light-gray overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
             <div className="flex items-center gap-4">
+              <button
+                className="lg:hidden p-2 text-charcoal/60 hover:text-charcoal"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
               <h1 className="text-charcoal text-2xl lg:text-3xl font-bold leading-tight font-display">
                 Bookings Management
               </h1>
@@ -752,7 +844,7 @@ const BookingsManagement: React.FC = () => {
             <div className="card">
               <div className="text-center py-12">
                 <BuildingOfficeIcon className="mx-auto h-12 w-12 text-charcoal/40" />
-                <h3 className="mt-2 text-sm font-medium text-charcoal font-body font-display">No place selected</h3>
+                <h3 className="mt-2 text-sm font-medium text-charcoal font-display">No place selected</h3>
                 <p className="mt-1 text-sm text-charcoal/60 font-body">
                   Select a place from the sidebar to manage its bookings, or create a new booking.
                 </p>

@@ -13,10 +13,7 @@ import {
   Bars3Icon,
   XMarkIcon,
   CalendarDaysIcon,
-  GiftIcon,
-  MagnifyingGlassIcon,
-  MapPinIcon,
-  PencilIcon
+  GiftIcon
 } from '@heroicons/react/24/outline';
 import Header from '../common/Header';
 import { useUserPermissions } from '../../contexts/UserPermissionsContext';
@@ -29,11 +26,10 @@ interface OwnerLayoutProps {
 
 const OwnerLayout: React.FC<OwnerLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
   const { isFeatureEnabled } = useUserPermissions();
   const { t } = useTranslation();
-  const { selectedPlace, selectedPlaceId, setSelectedPlace, setSelectedPlaceId, places, setPlaces } = usePlaceContext();
+  const { places, setPlaces } = usePlaceContext();
   const { usePlaces } = useOwnerApi();
   const { data: placesData = [] } = usePlaces();
 
@@ -50,12 +46,6 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ children }) => {
       setPlaces(formattedPlaces);
     }
   }, [placesData, setPlaces]);
-
-  // Filter places based on search term
-  const filteredPlaces = places.filter(place =>
-    place.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    place.city?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const allNavigationItems = [
     { name: t('owner.layout.dashboard'), href: '/owner', icon: HomeIcon, feature: null },
@@ -166,88 +156,10 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ children }) => {
               </div>
             </div>
           </div>
-
-          {/* My Places Sidebar */}
-          <div className="w-80 max-w-sm flex flex-col border-r border-[#E0E0E0] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)]">
-            <div className="p-4 border-b border-[#E0E0E0] flex justify-between items-center">
-              <h2 className="text-xl font-bold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>My Places</h2>
-            </div>
-            
-            {/* Search */}
-            <div className="p-4">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-[#333333]/60" />
-                </div>
-                <input
-                  type="text"
-                  className="w-full pl-10 pr-3 py-2 border border-[#E0E0E0] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent"
-                  placeholder="Search for a place"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Places List */}
-            <div className="flex-grow overflow-y-auto">
-              <div className="flex flex-col">
-                {filteredPlaces.map((place) => (
-                  <div
-                    key={place.id}
-                    className={`flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between cursor-pointer transition-colors ${
-                      selectedPlace?.id === place.id
-                        ? 'bg-[#1E90FF] bg-opacity-10 border-l-4 border-[#1E90FF]'
-                        : 'bg-white hover:bg-[#F5F5F5]'
-                    }`}
-                    onClick={() => {
-                      setSelectedPlace(place);
-                      setSelectedPlaceId(place.id);
-                    }}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`flex items-center justify-center rounded-lg shrink-0 size-12 ${
-                        selectedPlace?.id === place.id ? 'bg-[#1E90FF]' : 'bg-[#F5F5F5]'
-                      }`}>
-                        {place.location_type === 'fixed' ? (
-                          <BuildingOfficeIcon className={`h-6 w-6 ${
-                            selectedPlace?.id === place.id ? 'text-white' : 'text-[#1E90FF]'
-                          }`} />
-                        ) : (
-                          <MapPinIcon className={`h-6 w-6 ${
-                            selectedPlace?.id === place.id ? 'text-white' : 'text-[#1E90FF]'
-                          }`} />
-                        )}
-                      </div>
-                      <div className="flex flex-col justify-center">
-                        <p className={`text-base font-medium leading-normal line-clamp-1 ${
-                          selectedPlace?.id === place.id ? 'text-[#1E90FF]' : 'text-[#333333]'
-                        }`} style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                          {place.name}
-                        </p>
-                        <p className={`text-sm font-normal leading-normal line-clamp-2 ${
-                          selectedPlace?.id === place.id ? 'text-[#1E90FF]' : 'text-[#333333]/60'
-                        }`} style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                          {place.location_type === 'fixed' ? 'Fixed Location' : 'Mobile/Service Area'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="shrink-0">
-                      <div className={`flex size-7 items-center justify-center ${
-                        selectedPlace?.id === place.id ? 'text-[#1E90FF]' : 'text-[#333333]/60'
-                      }`}>
-                        <PencilIcon className="h-4 w-4" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Main content */}
-        <div className="md:pl-[576px] flex flex-col flex-1">
+        <div className="flex flex-col flex-1">
           <div className="sticky top-0 z-10 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-white">
             <button
               type="button"

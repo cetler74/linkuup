@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { billingAPI } from '../../utils/api';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -12,6 +13,18 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ open, onClose, feature = 'f
   const navigate = useNavigate();
   const [upgrading, setUpgrading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [plans, setPlans] = useState<Array<{ code: string; trial_days: number }>>([]);
+
+  useEffect(() => {
+    if (open) {
+      (async () => {
+        try {
+          const plansData = await billingAPI.getPlans();
+          setPlans(plansData.plans);
+        } catch (_) {}
+      })();
+    }
+  }, [open]);
 
   if (!open) return null;
 
@@ -38,19 +51,27 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ open, onClose, feature = 'f
       }
 
       // Perform upgrade
-      const upgradeRes = await fetch(`${apiBase}/subscriptions/change-plan`, {
+      const upgradeRes = await fetch(`${apiBase}/billing/change-plan`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ place_id: firstPlaceId, plan_code: 'pro', feature_to_enable: feature }),
+        body: JSON.stringify({ planCode: 'pro' }),
       });
 
       if (!upgradeRes.ok) {
         const data = await upgradeRes.json().catch(() => ({}));
         setErrorMessage(data?.detail || 'Upgrade failed. Please try again.');
         setUpgrading(false);
+        return;
+      }
+      
+      const upgradeData = await upgradeRes.json();
+      
+      // Check if payment is required (redirect to checkout)
+      if (upgradeData.requiresPayment && upgradeData.checkoutUrl) {
+        window.location.href = upgradeData.checkoutUrl;
         return;
       }
 
@@ -105,7 +126,12 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ open, onClose, feature = 'f
             <div className="mb-3">
               <div className="text-2xl font-bold text-charcoal">€5,95</div>
               <div className="text-sm text-charcoal/70">per month</div>
-              <div className="text-xs text-charcoal/60 mt-1">14-day trial</div>
+              {(() => {
+                const basicPlan = plans.find(p => p.code === 'basic');
+                return basicPlan ? (
+                  <div className="text-xs text-charcoal/60 mt-1">{basicPlan.trial_days}-day trial</div>
+                ) : null;
+              })()}
             </div>
             <ul className="text-sm text-charcoal/80 list-disc pl-4 space-y-1">
               <li>Booking with email notifications</li>
@@ -126,7 +152,12 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ open, onClose, feature = 'f
             <div className="mb-3">
               <div className="text-2xl font-bold text-charcoal">€10,95</div>
               <div className="text-sm text-charcoal/70">per month</div>
-              <div className="text-xs text-charcoal/60 mt-1">14-day trial</div>
+              {(() => {
+                const proPlan = plans.find(p => p.code === 'pro');
+                return proPlan && proPlan.trial_days > 0 ? (
+                  <div className="text-xs text-charcoal/60 mt-1">{proPlan.trial_days}-day trial</div>
+                ) : null;
+              })()}
             </div>
             <ul className="text-sm text-charcoal/80 list-disc pl-4 space-y-1">
               <li>Everything in Basic</li>

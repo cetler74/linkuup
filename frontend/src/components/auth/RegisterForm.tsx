@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -25,11 +25,12 @@ interface RegisterFormProps {
   onRegistrationSuccess?: (user: any, userType: string) => void;
   skipTypeSelection?: boolean;
   preselectedPlan?: PricingPlan | null;
+  showManualForm?: boolean;
 }
 
 type RegistrationStep = 'type_selection' | 'form' | 'pricing' | 'success';
 
-const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSelection = false, preselectedPlan = null }) => {
+const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSelection = false, preselectedPlan = null, showManualForm = false }) => {
   const [formData, setFormData] = useState<RegisterRequest>({
     first_name: '',
     last_name: '',
@@ -45,6 +46,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
   const [success, setSuccess] = useState(false);
   const [userType, setUserType] = useState<'customer' | 'business_owner' | null>(null);
   const [currentStep, setCurrentStep] = useState<RegistrationStep>(() => {
+    // If showManualForm is true, show the form directly
+    if (showManualForm) {
+      return 'form';
+    }
     // If we have a preselected plan, skip directly to form (registration)
     if (preselectedPlan) {
       return 'form';
@@ -53,11 +58,22 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
     return skipTypeSelection ? 'pricing' : 'type_selection';
   });
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(preselectedPlan);
-  const [showManualFormForOwner, setShowManualFormForOwner] = useState(false);
+  const [showManualFormForOwner, setShowManualFormForOwner] = useState(showManualForm);
   const isSubmittingRef = useRef(false);
   const { register, loginWithGoogle, loginWithFacebook } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  // Update selectedPlan and showManualFormForOwner when props change
+  useEffect(() => {
+    if (preselectedPlan) {
+      setSelectedPlan(preselectedPlan);
+    }
+    setShowManualFormForOwner(showManualForm);
+    if (showManualForm) {
+      setCurrentStep('form');
+    }
+  }, [preselectedPlan, showManualForm]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -401,7 +417,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
   };
 
   // Show form for customers or business owners doing manual registration
-  if (formData.user_type !== 'customer' && !showManualFormForOwner) {
+  // If showManualForm prop is true, always show the form
+  if (!showManualForm && formData.user_type !== 'customer' && !showManualFormForOwner) {
     return null;
   }
 

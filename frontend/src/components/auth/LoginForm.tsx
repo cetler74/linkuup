@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
@@ -11,7 +11,7 @@ interface LoginRequest {
 }
 
 interface LoginFormProps {
-  onSwitchToRegister: () => void;
+  onSwitchToRegister?: () => void;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
@@ -168,14 +168,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
           </div>
 
           <div className="text-center pt-4">
-            <button
-              type="button"
-              onClick={onSwitchToRegister}
+            <Link
+              to="/join"
               className="text-sm font-medium hover:opacity-75 transition-opacity duration-200"
               style={{color: '#2a2a2e'}}
             >
               {t('auth.switchToRegister')}
-            </button>
+            </Link>
           </div>
         </form>
       </div>

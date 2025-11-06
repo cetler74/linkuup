@@ -98,6 +98,7 @@ const JoinPage: React.FC = () => {
               onRegistrationSuccess={handleRegistrationSuccess}
               skipTypeSelection={isTrial}
               preselectedPlan={selectedPlan}
+              showManualForm={showManualForm}
             />
           )}
           

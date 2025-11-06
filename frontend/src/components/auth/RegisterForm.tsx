@@ -143,7 +143,16 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
             }
           } catch (checkoutError: any) {
             // If checkout creation fails, show error
-            setError(checkoutError?.response?.data?.detail || 'Failed to create payment session. Please try again.');
+            const errorMessage = checkoutError?.response?.data?.detail 
+              || checkoutError?.response?.data?.message
+              || checkoutError?.message
+              || 'Failed to create payment session. Please try again.';
+            console.error('❌ Checkout session creation error:', {
+              error: checkoutError,
+              response: checkoutError?.response,
+              detail: checkoutError?.response?.data?.detail,
+            });
+            setError(errorMessage);
             setLoading(false);
             isSubmittingRef.current = false;
             return;

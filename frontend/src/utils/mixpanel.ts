@@ -31,9 +31,13 @@ mixpanel.init(MIXPANEL_TOKEN, {
           user_agent: navigator.userAgent,
           url: window.location.href,
         });
-        // Force flush immediately
-        mixpanelInstance.flush();
-        console.log('✅ Test event sent and flushed');
+        // Force flush immediately (if method exists)
+        if (typeof mixpanelInstance.flush === 'function') {
+          mixpanelInstance.flush();
+          console.log('✅ Test event sent and flushed');
+        } else {
+          console.log('✅ Test event sent (flush not available)');
+        }
       } catch (error) {
         console.error('❌ Error sending test event:', error);
       }
@@ -55,9 +59,13 @@ export const trackPageView = (pageName: string, additionalProperties?: Record<st
       page: pageName,
       ...additionalProperties,
     });
-    // Force flush to send immediately
-    mixpanel.flush();
-    console.log('✅ Page view tracked and flushed');
+    // Force flush to send immediately (if method exists)
+    if (typeof mixpanel.flush === 'function') {
+      mixpanel.flush();
+      console.log('✅ Page view tracked and flushed');
+    } else {
+      console.log('✅ Page view tracked (flush not available)');
+    }
   } catch (error) {
     console.error('❌ Error tracking page view:', error);
   }
@@ -76,9 +84,13 @@ export const testMixpanel = () => {
       timestamp: new Date().toISOString(),
       url: window.location.href,
     });
-    // Force flush to send immediately
-    mixpanel.flush();
-    console.log('✅ Manual test event sent and flushed');
+    // Force flush to send immediately (if method exists)
+    if (typeof mixpanel.flush === 'function') {
+      mixpanel.flush();
+      console.log('✅ Manual test event sent and flushed');
+    } else {
+      console.log('✅ Manual test event sent (flush not available)');
+    }
     
     // Check if there are pending requests
     console.log('Pending requests:', mixpanel.__request_queue || 'No queue');

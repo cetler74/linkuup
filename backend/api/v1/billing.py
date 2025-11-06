@@ -23,6 +23,9 @@ class CreateCheckoutSessionRequest(BaseModel):
     planCode: str
     registrationData: dict
 
+class VerifyCheckoutSessionRequest(BaseModel):
+    session_id: str
+
 
 class SubscriptionResponse(BaseModel):
     subscriptionId: str | None = None
@@ -166,14 +169,116 @@ async def create_setup_intent(db: AsyncSession = Depends(get_db), current_user: 
 async def create_checkout_session(req: CreateCheckoutSessionRequest, db: AsyncSession = Depends(get_db)):
     """Create Stripe Checkout Session for Pro plan registration (account created after payment)."""
     try:
+        # Validate request data
+        if not req.planCode:
+            raise HTTPException(status_code=400, detail="planCode is required")
+        if not req.registrationData:
+            raise HTTPException(status_code=400, detail="registrationData is required")
+        if not req.registrationData.get("email"):
+            raise HTTPException(status_code=400, detail="email is required in registrationData")
+        
         result = await asyncio.to_thread(
             stripe_service.create_checkout_session_for_registration,
             plan_code=req.planCode,
             registration_data=req.registrationData
         )
         return {"checkoutUrl": result["url"]}
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        import traceback
+        error_detail = str(e)
+        print(f"❌ Error creating checkout session: {error_detail}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=400, detail=error_detail)
+
+
+@router.post("/verify-checkout-session")
+async def verify_checkout_session(req: VerifyCheckoutSessionRequest, db: AsyncSession = Depends(get_db)):
+    """Verify checkout session and create user if payment was successful and user doesn't exist.
+    This is a fallback mechanism in case webhooks fail or aren't configured.
+    """
+    import stripe
+    from core.config import settings
+    from api.v1.stripe_webhook import _create_user_from_registration_data, _ensure_subscription_and_features
+    import json
+    
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    
+    try:
+        session_id = req.session_id
+        print(f"🔍 Verifying checkout session: {session_id}")
+        
+        # Retrieve checkout session from Stripe
+        session = stripe.checkout.Session.retrieve(session_id)
+        
+        # Check if payment was successful
+        payment_status = session.get("payment_status")
+        if payment_status != "paid":
+            return {"success": False, "message": f"Payment not completed. Status: {payment_status}"}
+        
+        # Check if this is a registration checkout
+        metadata = session.get("metadata", {})
+        create_account = metadata.get("create_account_after_payment") == "true"
+        
+        if not create_account:
+            return {"success": False, "message": "Not a registration checkout"}
+        
+        # Get registration data
+        registration_data_str = metadata.get("registration_data")
+        if not registration_data_str:
+            return {"success": False, "message": "No registration data found"}
+        
+        registration_data = json.loads(registration_data_str)
+        email = registration_data.get("email")
+        
+        if not email:
+            return {"success": False, "message": "No email in registration data"}
+        
+        # Check if user already exists
+        from sqlalchemy import select
+        from models.user import User
+        user_res = await db.execute(select(User).where(User.email == email))
+        existing_user = user_res.scalar_one_or_none()
+        
+        if existing_user:
+            # User exists, ensure subscription is created
+            subscription_id = session.get("subscription")
+            plan_code = metadata.get("plan_code") or registration_data.get("selected_plan_code")
+            
+            if subscription_id:
+                await _ensure_subscription_and_features(db, existing_user.id, subscription_id, plan_code)
+            
+            return {"success": True, "message": "User already exists", "user_id": existing_user.id}
+        
+        # User doesn't exist, create it
+        subscription_id = session.get("subscription")
+        plan_code = metadata.get("plan_code") or registration_data.get("selected_plan_code")
+        
+        print(f"✅ Payment successful, creating user account for {email}")
+        await _create_user_from_registration_data(db, registration_data, subscription_id, plan_code)
+        
+        # Get the created user
+        user_res = await db.execute(select(User).where(User.email == email))
+        created_user = user_res.scalar_one_or_none()
+        
+        if created_user:
+            return {"success": True, "message": "User created successfully", "user_id": created_user.id}
+        else:
+            return {"success": False, "message": "User creation failed"}
+            
+    except Exception as e:
+        error_type = type(e).__name__
+        error_msg = str(e)
+        print(f"❌ Error verifying checkout session ({error_type}): {error_msg}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        
+        # Check if it's a Stripe error
+        if hasattr(stripe, 'error') and isinstance(e, stripe.error.StripeError):
+            return {"success": False, "message": f"Stripe error: {error_msg}"}
+        else:
+            return {"success": False, "message": f"Error: {error_msg}"}
 
 
 @router.post("/sync-subscription")

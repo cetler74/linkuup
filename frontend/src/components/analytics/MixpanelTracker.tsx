@@ -31,9 +31,13 @@ export const MixpanelTracker = () => {
           pathname: location.pathname,
           search: location.search,
         });
-        // Force flush immediately
-        mixpanel.flush();
-        console.log('✅ $pageview event sent and flushed');
+        // Force flush immediately (if method exists)
+        if (typeof mixpanel.flush === 'function') {
+          mixpanel.flush();
+          console.log('✅ $pageview event sent and flushed');
+        } else {
+          console.log('✅ $pageview event sent (flush not available)');
+        }
       } catch (error) {
         console.error('❌ Error tracking $pageview:', error);
       }

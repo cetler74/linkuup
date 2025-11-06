@@ -1,4 +1,5 @@
 from typing import Optional, Tuple
+import json
 import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -193,35 +194,62 @@ def create_checkout_session_for_registration(plan_code: str, registration_data: 
     Create Stripe Checkout Session for Pro plan registration.
     Account will be created after payment succeeds via webhook.
     """
-    _init_stripe()
-    from core.config import settings
-    
-    price_id = get_price_id_for_plan(plan_code)
-    
-    # Create checkout session in subscription mode
-    session = stripe.checkout.Session.create(
-        mode="subscription",
-        line_items=[{
-            "price": price_id,
-            "quantity": 1,
-        }],
-        success_url=f"{settings.APP_URL}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{settings.APP_URL}/register?canceled=true",
-        metadata={
-            "registration_data": json.dumps(registration_data),
-            "plan_code": plan_code,
-            "create_account_after_payment": "true",
-        },
-        customer_email=registration_data.get("email"),
-        subscription_data={
-            "metadata": {
+    try:
+        _init_stripe()
+        from core.config import settings
+        
+        # Validate inputs
+        if not plan_code:
+            raise ValueError("plan_code is required")
+        if not registration_data:
+            raise ValueError("registration_data is required")
+        if not registration_data.get("email"):
+            raise ValueError("email is required in registration_data")
+        
+        # Validate APP_URL is set
+        if not settings.APP_URL:
+            raise RuntimeError("APP_URL is not configured")
+        
+        price_id = get_price_id_for_plan(plan_code)
+        
+        if not price_id:
+            raise ValueError(f"Could not get price ID for plan_code: {plan_code}")
+        
+        # Create checkout session in subscription mode
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            line_items=[{
+                "price": price_id,
+                "quantity": 1,
+            }],
+            success_url=f"{settings.APP_URL}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{settings.APP_URL}/register?canceled=true",
+            metadata={
                 "registration_data": json.dumps(registration_data),
                 "plan_code": plan_code,
+                "create_account_after_payment": "true",
+            },
+            customer_email=registration_data.get("email"),
+            subscription_data={
+                "metadata": {
+                    "registration_data": json.dumps(registration_data),
+                    "plan_code": plan_code,
+                }
             }
-        }
-    )
-    
-    return {"url": session.url, "session_id": session.id}
+        )
+        
+        if not session or not session.url:
+            raise RuntimeError("Failed to create Stripe checkout session")
+        
+        return {"url": session.url, "session_id": session.id}
+    except stripe.error.StripeError as e:
+        error_msg = f"Stripe error: {str(e)}"
+        print(f"❌ {error_msg}")
+        raise RuntimeError(error_msg)
+    except Exception as e:
+        error_msg = f"Error creating checkout session: {str(e)}"
+        print(f"❌ {error_msg}")
+        raise
 
 
 def _get_subscription_item_id(sub: dict) -> Optional[str]:
@@ -347,8 +375,7 @@ async def sync_subscription_to_places(
         places = places_res.scalars().all()
         
         if not places:
-            print(f"⚠️ No places found for user {user_id}")
-            return
+            print(f"ℹ️ No places found for user {user_id}, will sync feature permissions only")
         
         # Determine subscription status
         if status in ("trialing", "active"):
@@ -369,48 +396,52 @@ async def sync_subscription_to_places(
         trial_start_dt = datetime.fromtimestamp(trial_start, tz=timezone.utc) if trial_start else now
         trial_end_dt = datetime.fromtimestamp(trial_end, tz=timezone.utc) if trial_end else (now + timedelta(days=plan.trial_days))
         
-        # Create/update UserPlaceSubscription for each place
-        for place in places:
-            # Check if subscription already exists
-            sub_res = await db.execute(
-                select(UserPlaceSubscription).where(
-                    UserPlaceSubscription.user_id == user_id,
-                    UserPlaceSubscription.place_id == place.id,
+        # Create/update UserPlaceSubscription for each place (if places exist)
+        if places:
+            for place in places:
+                # Check if subscription already exists
+                sub_res = await db.execute(
+                    select(UserPlaceSubscription).where(
+                        UserPlaceSubscription.user_id == user_id,
+                        UserPlaceSubscription.place_id == place.id,
+                    )
                 )
-            )
-            place_sub = sub_res.scalar_one_or_none()
+                place_sub = sub_res.scalar_one_or_none()
+                
+                if place_sub:
+                    # Update existing subscription
+                    place_sub.plan_id = plan.id
+                    place_sub.status = sub_status
+                    place_sub.current_period_start = period_start
+                    place_sub.current_period_end = period_end
+                    place_sub.trial_start_at = trial_start_dt
+                    place_sub.trial_end_at = trial_end_dt
+                else:
+                    # Create new subscription
+                    place_sub = UserPlaceSubscription(
+                        user_id=user_id,
+                        place_id=place.id,
+                        plan_id=plan.id,
+                        status=sub_status,
+                        current_period_start=period_start,
+                        current_period_end=period_end,
+                        trial_start_at=trial_start_dt,
+                        trial_end_at=trial_end_dt,
+                    )
+                    db.add(place_sub)
             
-            if place_sub:
-                # Update existing subscription
-                place_sub.plan_id = plan.id
-                place_sub.status = sub_status
-                place_sub.current_period_start = period_start
-                place_sub.current_period_end = period_end
-                place_sub.trial_start_at = trial_start_dt
-                place_sub.trial_end_at = trial_end_dt
-            else:
-                # Create new subscription
-                place_sub = UserPlaceSubscription(
-                    user_id=user_id,
-                    place_id=place.id,
-                    plan_id=plan.id,
-                    status=sub_status,
-                    current_period_start=period_start,
-                    current_period_end=period_end,
-                    trial_start_at=trial_start_dt,
-                    trial_end_at=trial_end_dt,
-                )
-                db.add(place_sub)
+            await db.commit()
+            print(f"✅ Synced subscription to place subscriptions for user {user_id}")
         
-        await db.commit()
-        
-        # Sync user feature permissions
+        # Always sync user feature permissions (even if no places exist yet)
         try:
             from api.v1.subscriptions import _sync_user_feature_permissions_for_plan
             await _sync_user_feature_permissions_for_plan(db, user_id, plan.id)
-            print(f"✅ Synced subscription to place subscriptions and permissions for user {user_id}")
+            print(f"✅ Synced feature permissions for user {user_id} with plan {plan_code}")
         except Exception as e:
             print(f"⚠️ Error syncing feature permissions: {e}")
+            import traceback
+            print(f"⚠️ Traceback: {traceback.format_exc()}")
     except Exception as e:
         print(f"⚠️ Error syncing subscription to places: {e}")
         import traceback

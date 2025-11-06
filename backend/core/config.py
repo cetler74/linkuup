@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: str = ""
     STRIPE_PRICE_BASIC: str = ""
     STRIPE_PRICE_PRO: str = ""
-    APP_URL: str = "http://localhost:3000"
+    APP_URL: str = "http://linkuup.portugalexpatdirectory.com"
     
     # Server Configuration
     HOST: str = "0.0.0.0"

@@ -198,10 +198,14 @@ function App() {
       console.log('🎯 App mounted, testing Mixpanel...');
       setTimeout(() => {
         testMixpanel();
-        // Force flush events
+        // Force flush events (if method exists)
         try {
-          mixpanel.flush();
-          console.log('✅ Flushed Mixpanel events');
+          if (typeof mixpanel.flush === 'function') {
+            mixpanel.flush();
+            console.log('✅ Flushed Mixpanel events');
+          } else {
+            console.log('✅ Mixpanel events tracked (flush not available)');
+          }
         } catch (error) {
           console.error('❌ Error flushing Mixpanel:', error);
         }

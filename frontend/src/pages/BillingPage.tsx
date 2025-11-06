@@ -324,7 +324,7 @@ const BillingPage: React.FC = () => {
               <li>• Free email notifications messages</li>
               <li>• 100 free marketing emails</li>
               <li>• Unlimited Business locations</li>
-              <li>• Employee management - 2 Emplyees</li>
+              <li>• Employee management - 2 Employees</li>
               <li>• Email and chat support</li>
             </ul>
           </div>
@@ -358,7 +358,7 @@ const BillingPage: React.FC = () => {
               <li>• Free email notifications messages</li>
               <li>• 100 free marketing emails</li>
               <li>• Unlimited Business locations</li>
-              <li>• Employee management - 10 Emplyees</li>
+              <li>• Employee management - 10 Employees</li>
               <li>• Rewards program</li>
               <li>• Campaign program</li>
               <li>• Employee Time-off Management</li>

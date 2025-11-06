@@ -69,7 +69,7 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
         'Free email notifications messages',
         '100 free marketing emails',
         'Unlimited Business locations',
-        'Employee management - 2 Emplyees',
+        'Employee management - 2 Employees',
         'Email and chat support'
       ],
       trialDays: backendPlans.find(p => p.code === 'basic')?.trial_days
@@ -84,7 +84,7 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
         'Free email notifications messages',
         '100 free marketing emails',
         'Unlimited Business locations',
-        'Employee management - 10 Emplyees',
+        'Employee management - 10 Employees',
         'Rewards program',
         'Campaign program',
         'Employee Time-off Management',
@@ -111,11 +111,11 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 w-full">
+      <div className="flex flex-col md:flex-row justify-center items-stretch gap-8 mb-8 w-full">
         {pricingPlans.map((plan) => (
           <div
             key={plan.id}
-            className={`card hover:scale-105 transition-all duration-300 relative flex flex-col h-full w-full text-left ${
+            className={`card hover:scale-105 transition-all duration-300 relative flex flex-col w-full md:w-1/2 max-w-md text-left ${
               plan.isPopular ? 'ring-2 ring-bright-blue shadow-elevated' : ''
             } ${selectedPlan === plan.id ? 'ring-2 ring-bright-blue' : ''}`}
             onClick={() => handlePlanSelect(plan)}
@@ -130,20 +130,25 @@ const PricingSelection: React.FC<PricingSelectionProps> = ({
 
             {/* CardHeader */}
             <div className="px-6 pt-6 pb-4">
-              <h3 className="font-medium text-xl text-charcoal mb-2">
-                {plan.name}
-              </h3>
-              <div className="text-charcoal/70 text-sm mb-2">
+              <div className="text-center mb-2">
+                <h3 className="font-bold text-xl text-charcoal">
+                  {plan.name} €{plan.price.toFixed(2).replace('.', ',')}
+                </h3>
+              </div>
+              <div className="text-charcoal/70 text-sm mb-2 text-center">
                 {plan.originalPrice && plan.originalPrice !== plan.price && (
                   <span className="text-sm text-charcoal/70 line-through mr-2">
                     €{plan.originalPrice}
                   </span>
                 )}
-                <span className="font-medium text-charcoal text-lg">
-                  €{plan.price.toFixed(2).replace('.', ',')}
-                </span>
                 <span className="text-charcoal/70">/month</span>
-                {plan.trialDays && plan.trialDays > 0 ? (
+                {plan.id === 'basic' && plan.trialDays !== undefined && plan.trialDays > 0 ? (
+                  <div className="mt-2">
+                    <span className="bg-lime-green/20 text-lime-green text-xs font-medium px-2 py-1 rounded-full">
+                      {plan.trialDays} day trial
+                    </span>
+                  </div>
+                ) : plan.trialDays && plan.trialDays > 0 ? (
                   <div className="mt-2">
                     <span className="bg-lime-green/20 text-lime-green text-xs font-medium px-2 py-1 rounded-full">
                       {plan.trialDays} day trial

@@ -18,7 +18,6 @@ import {
   Send
 } from 'lucide-react';
 import axios from 'axios';
-import Footer from '../components/common/Footer';
 import Header from '../components/common/Header';
 import SEOHead from '../components/seo/SEOHead';
 import StructuredData from '../components/seo/StructuredData';
@@ -102,7 +101,7 @@ const PricingPage: React.FC = () => {
       if (response.data.success) {
         setSubmitStatus({ 
           type: 'success', 
-          message: response.data.message || 'Thank you for your interest! Our sales team will contact you within 24 hours.' 
+          message: response.data.message || t('pricing.contactSalesModal.success')
         });
         // Reset form
         setContactForm({
@@ -119,14 +118,14 @@ const PricingPage: React.FC = () => {
       } else {
         setSubmitStatus({ 
           type: 'error', 
-          message: response.data.message || 'Failed to send message. Please try again.' 
+          message: response.data.message || t('pricing.contactSalesModal.error')
         });
       }
     } catch (error: any) {
       console.error('Error submitting contact sales form:', error);
       setSubmitStatus({ 
         type: 'error', 
-        message: error.response?.data?.detail || error.message || 'Failed to send message. Please try again.' 
+        message: error.response?.data?.detail || error.message || t('pricing.contactSalesModal.error')
       });
     } finally {
       setIsSubmitting(false);
@@ -172,13 +171,13 @@ const PricingPage: React.FC = () => {
             <div className="mb-8">
               <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-6 py-3 mb-6">
                 <Star className="w-5 h-5 text-white" />
-                <span className="text-sm font-medium">Simple, Transparent Pricing</span>
+                <span className="text-sm font-medium">{t('pricing.simpleTransparent')}</span>
               </div>
               <h1 className="hero-title mb-6">
-                A service that grows with your business
+                {t('pricing.heroTitle')}
               </h1>
               <p className="hero-subtitle mb-8 max-w-3xl mx-auto">
-                Choose the perfect plan for your business needs. Start with our free trial and upgrade as you grow.
+                {t('pricing.heroSubtitle')}
               </p>
             </div>
           </div>
@@ -194,45 +193,49 @@ const PricingPage: React.FC = () => {
               {/* Basic Plan */}
               <div className="card hover:scale-105 transition-all duration-300 relative flex flex-col h-full">
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-charcoal mb-2">Basic</h3>
+                  <h3 className="text-2xl font-bold text-charcoal mb-2">{t('pricing.basic')}</h3>
                   <div className="mb-4">
                     <div className="text-4xl font-bold text-charcoal">€5,95</div>
-                    <div className="text-charcoal/70">per month</div>
+                    <div className="text-charcoal/70">{t('pricing.perMonth')}</div>
                   </div>
                   {(() => {
                     const basicPlan = plans.find(p => p.code === 'basic');
-                    return basicPlan ? (
-                      <div className="bg-lime-green/20 text-lime-green text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
-                        {basicPlan.trial_days} day trial
-                      </div>
-                    ) : null;
+                    const trialDays = basicPlan?.trial_days ?? 0;
+                    if (trialDays > 0) {
+                      return (
+                        <div className="bg-lime-green/20 text-lime-green text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
+                          {trialDays} {t('pricing.dayTrial')}
+                        </div>
+                      );
+                    }
+                    return null;
                   })()}
                 </div>
 
                 <div className="space-y-4 mb-8 flex-grow">
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Calendar support for booking</span>
+                    <span className="text-charcoal">{t('pricing.features.calendarSupport')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Free email notifications messages</span>
+                    <span className="text-charcoal">{t('pricing.features.emailNotifications')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">100 free marketing emails</span>
+                    <span className="text-charcoal">{t('pricing.features.marketingEmails')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Unlimited Business locations</span>
+                    <span className="text-charcoal">{t('pricing.features.unlimitedLocations')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Employee management - 2 Emplyees</span>
+                    <span className="text-charcoal">{t('pricing.features.employeeManagement2')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Email and chat support</span>
+                    <span className="text-charcoal">{t('pricing.features.emailChatSupport')}</span>
                   </div>
                 </div>
 
@@ -241,7 +244,7 @@ const PricingPage: React.FC = () => {
                     to="/join" 
                     className="btn-primary w-full text-center inline-flex items-center justify-center gap-2"
                   >
-                    Start now
+                    {t('pricing.startNow')}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
@@ -251,54 +254,66 @@ const PricingPage: React.FC = () => {
               <div className="card hover:scale-105 transition-all duration-300 relative border-2 border-bright-blue shadow-elevated flex flex-col h-full">
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <div className="bg-bright-blue text-white px-4 py-2 rounded-full text-sm font-medium">
-                    Most Popular
+                    {t('pricing.mostPopular')}
                   </div>
                 </div>
                 
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-charcoal mb-2">Pro</h3>
+                  <h3 className="text-2xl font-bold text-charcoal mb-2">{t('pricing.pro')}</h3>
                   <div className="mb-4">
                     <div className="text-4xl font-bold text-charcoal">€10,95</div>
-                    <div className="text-charcoal/70">per month</div>
+                    <div className="text-charcoal/70">{t('pricing.perMonth')}</div>
                   </div>
+                  {(() => {
+                    const proPlan = plans.find(p => p.code === 'pro');
+                    const trialDays = proPlan?.trial_days ?? 0;
+                    if (trialDays > 0) {
+                      return (
+                        <div className="bg-lime-green/20 text-lime-green text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
+                          {trialDays} {t('pricing.dayTrial')}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 <div className="space-y-4 mb-8 flex-grow">
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Calendar support for booking</span>
+                    <span className="text-charcoal">{t('pricing.features.calendarSupport')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Free email notifications messages</span>
+                    <span className="text-charcoal">{t('pricing.features.emailNotifications')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">100 free marketing emails</span>
+                    <span className="text-charcoal">{t('pricing.features.marketingEmails')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Unlimited Business locations</span>
+                    <span className="text-charcoal">{t('pricing.features.unlimitedLocations')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Employee management - 10 Emplyees</span>
+                    <span className="text-charcoal">{t('pricing.features.employeeManagement10')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Rewards program</span>
+                    <span className="text-charcoal">{t('pricing.features.rewardsProgram')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Campaign program</span>
+                    <span className="text-charcoal">{t('pricing.features.campaignProgram')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Employee Time-off Management</span>
+                    <span className="text-charcoal">{t('pricing.features.timeOffManagement')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Email and chat support</span>
+                    <span className="text-charcoal">{t('pricing.features.emailChatSupport')}</span>
                   </div>
                 </div>
 
@@ -307,7 +322,7 @@ const PricingPage: React.FC = () => {
                     to="/join" 
                     className="btn-primary w-full text-center inline-flex items-center justify-center gap-2"
                   >
-                    Start now
+                    {t('pricing.startNow')}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
@@ -316,33 +331,33 @@ const PricingPage: React.FC = () => {
               {/* Enterprise Plan */}
               <div className="card hover:scale-105 transition-all duration-300 relative flex flex-col h-full">
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-charcoal mb-2">Enterprise</h3>
+                  <h3 className="text-2xl font-bold text-charcoal mb-2">{t('pricing.enterprise')}</h3>
                   <div className="mb-4">
-                    <div className="text-4xl font-bold text-charcoal">Custom rates</div>
-                    <div className="text-charcoal/70">Enterprise solutions available for high-volume businesses with over 20 team members</div>
+                    <div className="text-4xl font-bold text-charcoal">{t('pricing.customRates')}</div>
+                    <div className="text-charcoal/70">{t('pricing.enterpriseDescription')}</div>
                   </div>
                 </div>
 
                 <div className="space-y-4 mb-8 flex-grow">
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Everything in Pro</span>
+                    <span className="text-charcoal">{t('pricing.featuresTable.pro')} - {t('pricing.featuresTable.unlimited')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Custom integrations</span>
+                    <span className="text-charcoal">{t('pricing.featuresTable.customIntegrations')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Dedicated account manager</span>
+                    <span className="text-charcoal">{t('pricing.featuresTable.dedicatedManager')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Priority support</span>
+                    <span className="text-charcoal">{t('pricing.featuresTable.prioritySupport')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-bright-blue flex-shrink-0" />
-                    <span className="text-charcoal">Custom training</span>
+                    <span className="text-charcoal">{t('pricing.featuresTable.customTraining')}</span>
                   </div>
                 </div>
 
@@ -351,7 +366,7 @@ const PricingPage: React.FC = () => {
                     onClick={handleContactSales}
                     className="btn-outline w-full text-center inline-flex items-center justify-center gap-2"
                   >
-                    Contact sales
+                    {t('pricing.contactSales')}
                     <Mail className="w-4 h-4" />
                   </button>
                 </div>
@@ -366,9 +381,9 @@ const PricingPage: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-section mb-6">Compare Features</h2>
+              <h2 className="text-section mb-6">{t('pricing.compareFeatures')}</h2>
               <p className="text-lg text-charcoal/70 max-w-3xl mx-auto">
-                See what's included in each plan to choose the right one for your business
+                {t('pricing.compareSubtitle')}
               </p>
             </div>
 
@@ -377,15 +392,15 @@ const PricingPage: React.FC = () => {
                 <table className="w-full">
                   <thead className="bg-bright-blue/10">
                     <tr>
-                      <th className="text-left py-4 px-6 font-semibold text-charcoal">Features</th>
-                      <th className="text-center py-4 px-6 font-semibold text-charcoal">Basic</th>
-                      <th className="text-center py-4 px-6 font-semibold text-charcoal">Pro</th>
-                      <th className="text-center py-4 px-6 font-semibold text-charcoal">Enterprise</th>
+                      <th className="text-left py-4 px-6 font-semibold text-charcoal">{t('pricing.featuresTable.features')}</th>
+                      <th className="text-center py-4 px-6 font-semibold text-charcoal">{t('pricing.featuresTable.basic')}</th>
+                      <th className="text-center py-4 px-6 font-semibold text-charcoal">{t('pricing.featuresTable.pro')}</th>
+                      <th className="text-center py-4 px-6 font-semibold text-charcoal">{t('pricing.featuresTable.enterprise')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-medium-gray">
                     <tr>
-                      <td className="py-4 px-6 text-charcoal">Calendar Management</td>
+                      <td className="py-4 px-6 text-charcoal">{t('pricing.featuresTable.calendarManagement')}</td>
                       <td className="text-center py-4 px-6">
                         <CheckCircle className="w-5 h-5 text-bright-blue mx-auto" />
                       </td>
@@ -397,7 +412,7 @@ const PricingPage: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-6 text-charcoal">Email Messages</td>
+                      <td className="py-4 px-6 text-charcoal">{t('pricing.featuresTable.emailMessages')}</td>
                       <td className="text-center py-4 px-6">
                         <CheckCircle className="w-5 h-5 text-bright-blue mx-auto" />
                       </td>
@@ -409,13 +424,13 @@ const PricingPage: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-6 text-charcoal">Marketing Emails</td>
+                      <td className="py-4 px-6 text-charcoal">{t('pricing.featuresTable.marketingEmails')}</td>
                       <td className="text-center py-4 px-6">100</td>
                       <td className="text-center py-4 px-6">100</td>
-                      <td className="text-center py-4 px-6">Unlimited</td>
+                      <td className="text-center py-4 px-6">{t('pricing.featuresTable.unlimited')}</td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-6 text-charcoal">Rewards Program</td>
+                      <td className="py-4 px-6 text-charcoal">{t('pricing.featuresTable.rewardsProgram')}</td>
                       <td className="text-center py-4 px-6">-</td>
                       <td className="text-center py-4 px-6">
                         <CheckCircle className="w-5 h-5 text-bright-blue mx-auto" />
@@ -425,7 +440,7 @@ const PricingPage: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-6 text-charcoal">Campaign Program</td>
+                      <td className="py-4 px-6 text-charcoal">{t('pricing.featuresTable.campaignProgram')}</td>
                       <td className="text-center py-4 px-6">-</td>
                       <td className="text-center py-4 px-6">
                         <CheckCircle className="w-5 h-5 text-bright-blue mx-auto" />
@@ -435,16 +450,16 @@ const PricingPage: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-6 text-charcoal">Employee Management</td>
-                      <td className="text-center py-4 px-6">2 Employees</td>
-                      <td className="text-center py-4 px-6">10 Employees</td>
-                      <td className="text-center py-4 px-6">Unlimited</td>
+                      <td className="py-4 px-6 text-charcoal">{t('pricing.featuresTable.employeeManagement')}</td>
+                      <td className="text-center py-4 px-6">2 {t('pricing.featuresTable.employees')}</td>
+                      <td className="text-center py-4 px-6">10 {t('pricing.featuresTable.employees')}</td>
+                      <td className="text-center py-4 px-6">{t('pricing.featuresTable.unlimited')}</td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-6 text-charcoal">Support Level</td>
-                      <td className="text-center py-4 px-6">Email & Chat</td>
-                      <td className="text-center py-4 px-6">Email & Chat</td>
-                      <td className="text-center py-4 px-6">Priority Support</td>
+                      <td className="py-4 px-6 text-charcoal">{t('pricing.featuresTable.supportLevel')}</td>
+                      <td className="text-center py-4 px-6">{t('pricing.featuresTable.emailChat')}</td>
+                      <td className="text-center py-4 px-6">{t('pricing.featuresTable.emailChat')}</td>
+                      <td className="text-center py-4 px-6">{t('pricing.featuresTable.prioritySupport')}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -459,9 +474,9 @@ const PricingPage: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-section mb-6">Why Choose LinkUup?</h2>
+              <h2 className="text-section mb-6">{t('pricing.whyChoose')}</h2>
               <p className="text-lg text-charcoal/70 max-w-3xl mx-auto">
-                Join thousands of businesses that trust LinkUup to manage their bookings and grow their customer base
+                {t('pricing.whyChooseSubtitle')}
               </p>
             </div>
 
@@ -470,24 +485,24 @@ const PricingPage: React.FC = () => {
                 <div className="w-12 h-12 bg-bright-blue rounded-full flex items-center justify-center mb-4">
                   <Shield className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-subsection mb-3">Secure & Reliable</h3>
-                <p className="text-charcoal/70">Your data is protected with enterprise-grade security and 99.9% uptime guarantee.</p>
+                <h3 className="text-subsection mb-3">{t('pricing.secureReliable')}</h3>
+                <p className="text-charcoal/70">{t('pricing.secureReliableDesc')}</p>
               </div>
 
               <div className="card hover:scale-105 transition-all duration-300">
                 <div className="w-12 h-12 bg-lime-green rounded-full flex items-center justify-center mb-4">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-subsection mb-3">Grow Your Business</h3>
-                <p className="text-charcoal/70">Increase bookings by up to 40% with our smart marketing tools and customer management.</p>
+                <h3 className="text-subsection mb-3">{t('pricing.growBusiness')}</h3>
+                <p className="text-charcoal/70">{t('pricing.growBusinessDesc')}</p>
               </div>
 
               <div className="card hover:scale-105 transition-all duration-300">
                 <div className="w-12 h-12 bg-coral-red rounded-full flex items-center justify-center mb-4">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-subsection mb-3">Easy to Use</h3>
-                <p className="text-charcoal/70">Get started in minutes with our intuitive interface. No technical knowledge required.</p>
+                <h3 className="text-subsection mb-3">{t('pricing.easyToUse')}</h3>
+                <p className="text-charcoal/70">{t('pricing.easyToUseDesc')}</p>
               </div>
             </div>
           </div>
@@ -499,13 +514,13 @@ const PricingPage: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center text-white">
             <h2 className="text-section mb-6">
-              Ready to Get Started?
+              {t('pricing.readyToStart')}
             </h2>
             <p className="hero-subtitle mb-8">
-              Join thousands of businesses already using LinkUup to manage their bookings and grow their customer base.
+              {t('pricing.readyToStartSubtitle')}
             </p>
             <p className="text-white/90 mb-12 font-medium text-lg">
-              Start your free trial today - no credit card required!
+              {t('pricing.noCreditCard')}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -513,14 +528,14 @@ const PricingPage: React.FC = () => {
                 to="/join?trial=true" 
                 className="btn-hero group"
               >
-                <span>Start Free Trial</span>
+                <span>{t('pricing.startFreeTrial')}</span>
                 <ArrowRight className="btn-hero-arrow" />
               </Link>
               <button 
                 onClick={handleContactSales}
                 className="bg-white/20 hover:bg-white/30 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 backdrop-blur-sm border border-white/30"
               >
-                Contact Sales
+                {t('pricing.contactSales')}
               </button>
             </div>
           </div>
@@ -532,7 +547,7 @@ const PricingPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-charcoal">Contact Sales</h3>
+              <h3 className="text-2xl font-bold text-charcoal">{t('pricing.contactSalesModal.title')}</h3>
               <button 
                 onClick={() => {
                   setIsContactFormOpen(false);
@@ -546,7 +561,7 @@ const PricingPage: React.FC = () => {
             
             <form onSubmit={handleContactSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-2">Name *</label>
+                <label className="block text-sm font-medium text-charcoal mb-2">{t('pricing.contactSalesModal.name')} *</label>
                 <input
                   type="text"
                   name="name"
@@ -554,12 +569,12 @@ const PricingPage: React.FC = () => {
                   value={contactForm.name}
                   onChange={handleInputChange}
                   className="input-field"
-                  placeholder="Your name"
+                  placeholder={t('pricing.contactSalesModal.namePlaceholder')}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-2">Email *</label>
+                <label className="block text-sm font-medium text-charcoal mb-2">{t('pricing.contactSalesModal.email')} *</label>
                 <input
                   type="email"
                   name="email"
@@ -567,24 +582,24 @@ const PricingPage: React.FC = () => {
                   value={contactForm.email}
                   onChange={handleInputChange}
                   className="input-field"
-                  placeholder="your@email.com"
+                  placeholder={t('pricing.contactSalesModal.emailPlaceholder')}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-2">Company</label>
+                <label className="block text-sm font-medium text-charcoal mb-2">{t('pricing.contactSalesModal.company')}</label>
                 <input
                   type="text"
                   name="company"
                   value={contactForm.company}
                   onChange={handleInputChange}
                   className="input-field"
-                  placeholder="Your company name"
+                  placeholder={t('pricing.contactSalesModal.companyPlaceholder')}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-2">Message *</label>
+                <label className="block text-sm font-medium text-charcoal mb-2">{t('pricing.contactSalesModal.message')} *</label>
                 <textarea
                   name="message"
                   required
@@ -592,7 +607,7 @@ const PricingPage: React.FC = () => {
                   onChange={handleInputChange}
                   className="input-field resize-none"
                   rows={4}
-                  placeholder="Tell us about your business needs..."
+                  placeholder={t('pricing.contactSalesModal.messagePlaceholder')}
                 />
               </div>
               
@@ -602,7 +617,7 @@ const PricingPage: React.FC = () => {
                 className="btn-primary w-full flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="h-5 w-5" />
-                <span>{isSubmitting ? 'Sending...' : 'Send Message'}</span>
+                <span>{isSubmitting ? t('pricing.contactSalesModal.sending') : t('pricing.contactSalesModal.sendMessage')}</span>
               </button>
               
               {submitStatus.type === 'success' && (
@@ -620,9 +635,6 @@ const PricingPage: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

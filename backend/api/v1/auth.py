@@ -28,14 +28,16 @@ try:
         LoginRequest, RegisterRequest, RefreshTokenRequest, TokenResponse, 
         UserResponse, AuthResponse, ValidateTokenResponse, LogoutResponse,
         ForgotPasswordRequest, ForgotPasswordResponse, ResetPasswordRequest, ResetPasswordResponse,
-        UpdateLanguagePreferenceRequest, UpdateLanguagePreferenceResponse
+        UpdateLanguagePreferenceRequest, UpdateLanguagePreferenceResponse,
+        UpdateProfileRequest, UpdateProfileResponse
     )
 except ImportError:
     from schemas.auth import (
         LoginRequest, RegisterRequest, RefreshTokenRequest, TokenResponse, 
         UserResponse, AuthResponse, ValidateTokenResponse, LogoutResponse,
         ForgotPasswordRequest, ForgotPasswordResponse, ResetPasswordRequest, ResetPasswordResponse,
-        UpdateLanguagePreferenceRequest, UpdateLanguagePreferenceResponse
+        UpdateLanguagePreferenceRequest, UpdateLanguagePreferenceResponse,
+        UpdateProfileRequest, UpdateProfileResponse
     )
 
 router = APIRouter()
@@ -322,10 +324,12 @@ async def get_current_user_info(request: Request, current_user: User = Depends(g
         profile_picture = None
         oauth_provider = None
         oauth_id = None
+        phone = None
         try:
             profile_picture = getattr(current_user, "profile_picture", None)
             oauth_provider = getattr(current_user, "oauth_provider", None)
             oauth_id = getattr(current_user, "oauth_id", None)
+            phone = getattr(current_user, "phone", None)
         except AttributeError:
             # Column doesn't exist yet - safe to ignore
             pass
@@ -347,6 +351,7 @@ async def get_current_user_info(request: Request, current_user: User = Depends(g
             profile_picture=profile_picture,
             oauth_provider=oauth_provider,
             oauth_id=oauth_id,
+            phone=phone,
         )
     except Exception as e:
         import traceback
@@ -435,11 +440,12 @@ async def _issue_tokens_for_user(
         error_type = type(query_error).__name__
         
         if ("profile_picture" in error_str or 
+            "phone" in error_str or
             "undefinedcolumn" in error_str.lower() or 
             "does not exist" in error_str or
             "ProgrammingError" in error_type):
-            print(f"⚠️ Profile picture column doesn't exist, querying without it")
-            # Query using raw SQL to exclude profile_picture column
+            print(f"⚠️ Profile picture or phone column doesn't exist, querying without it")
+            # Query using raw SQL to exclude profile_picture and phone columns
             from sqlalchemy import text
             query_text = text("""
                 SELECT id, email, password_hash, name, customer_id, auth_token, is_admin, is_active,
@@ -447,7 +453,8 @@ async def _issue_tokens_for_user(
                        refresh_token, token_expires_at, refresh_token_expires_at, last_login_at,
                        gdpr_data_processing_consent, gdpr_data_processing_consent_date,
                        gdpr_marketing_consent, gdpr_marketing_consent_date, gdpr_consent_version,
-                       oauth_provider, oauth_id, trial_start, trial_end, trial_status
+                       oauth_provider, oauth_id, trial_start, trial_end, trial_status,
+                       password_reset_token, password_reset_token_expires_at, language_preference
                 FROM users WHERE email = :email
             """)
             result = await db.execute(query_text, {"email": email})
@@ -492,9 +499,9 @@ async def _issue_tokens_for_user(
             "gdpr_consent_version": "1.0"
         }
         
-        # Try to add profile_picture - SQLAlchemy will ignore it if column doesn't exist
-        # We'll catch the error during commit if the column doesn't exist
-        if profile_picture:
+        # Try to add profile_picture only if the column exists in the User model
+        # Check if User model has profile_picture attribute before adding it
+        if profile_picture and hasattr(User, 'profile_picture'):
             user_data["profile_picture"] = profile_picture
         
         user = User(**user_data)
@@ -514,6 +521,7 @@ async def _issue_tokens_for_user(
             # Catch various database exceptions that indicate missing column
             is_column_error = (
                 "profile_picture" in error_str or 
+                "phone" in error_str or
                 "column" in error_str or 
                 "does not exist" in error_str or
                 "no such column" in error_str or
@@ -522,10 +530,11 @@ async def _issue_tokens_for_user(
                 "invalid column name" in error_str
             )
             
-            if is_column_error and "profile_picture" in user_data:
-                print(f"⚠️ Profile picture column doesn't exist, creating user without it")
-                # Remove profile_picture and try again
+            if is_column_error and ("profile_picture" in user_data or "phone" in error_str):
+                print(f"⚠️ Profile picture or phone column doesn't exist, creating user without it")
+                # Remove profile_picture and phone if they exist
                 user_data.pop("profile_picture", None)
+                user_data.pop("phone", None)
                 try:
                     await db.rollback()
                 except:
@@ -690,14 +699,53 @@ def _callback_success_html(access_token: str, refresh_token: str, redirect_path:
 </html>
 """
 
+def _callback_error_html(error_message: str, redirect_path: str = "/login") -> str:
+    """Small HTML page that redirects to frontend with error message in URL query params."""
+    # Ensure redirect_path is a full URL (not relative)
+    if not redirect_path.startswith("http://") and not redirect_path.startswith("https://"):
+        # If it's relative, we need to use the frontend base URL
+        frontend_url = settings.FRONTEND_BASE_URL or os.getenv("FRONTEND_BASE_URL", "http://localhost:5173")
+        redirect_path = f"{frontend_url}{redirect_path}"
+    
+    # Redirect to frontend with error message in query params
+    error_param = urllib.parse.urlencode({
+        'error': error_message
+    })
+    separator = '&' if '?' in redirect_path else '?'
+    redirect_url = f"{redirect_path}{separator}{error_param}"
+    
+    print(f"🔑 Error redirect URL: {redirect_url}")
+    
+    redirect_url_escaped = json.dumps(redirect_url)
+    error_message_escaped = json.dumps(error_message)
+    
+    return f"""
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset=\"utf-8\" />
+    <title>Authentication Error</title>
+    <meta http-equiv="refresh" content="0; url={redirect_url_escaped}">
+  </head>
+  <body>
+    <p>Redirecting to login page...</p>
+    <script>
+      console.log('Redirecting to login with error:', {error_message_escaped});
+      window.location.replace({redirect_url_escaped});
+    </script>
+  </body>
+</html>
+"""
+
 @router.get("/google")
-async def google_oauth_start(request: Request, user_type: str = "customer", selected_plan_code: str | None = None):
+async def google_oauth_start(request: Request, user_type: str = "customer", selected_plan_code: str | None = None, action: str = "register"):
     """
     Initiate Google OAuth by redirecting to Google's consent screen.
     
     Args:
         user_type: 'customer' or 'business_owner'
         selected_plan_code: Plan code if registering as business_owner
+        action: 'login' or 'register' - determines if we should check if user exists first
     """
     try:
         client_id = settings.GOOGLE_CLIENT_ID or os.getenv("GOOGLE_CLIENT_ID", "")
@@ -709,14 +757,15 @@ async def google_oauth_start(request: Request, user_type: str = "customer", sele
             raise HTTPException(status_code=500, detail=error_msg)
 
         redirect_uri = f"{_get_base_api_url()}/auth/google/callback"
-        print(f"🔑 Starting Google OAuth - redirect_uri: {redirect_uri}, user_type: {user_type}")
+        print(f"🔑 Starting Google OAuth - redirect_uri: {redirect_uri}, user_type: {user_type}, action: {action}")
         
-        # Encode state with user_type, plan info, AND redirect_uri to ensure exact match
+        # Encode state with user_type, plan info, action, AND redirect_uri to ensure exact match
         # This ensures the redirect_uri in token exchange matches what was sent in authorization
         import base64
         state_data = json.dumps({
             "user_type": user_type, 
             "selected_plan_code": selected_plan_code,
+            "action": action,  # 'login' or 'register'
             "redirect_uri": redirect_uri  # Store the exact redirect_uri used
         })
         state = base64.urlsafe_b64encode(state_data.encode()).decode()
@@ -757,9 +806,10 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
             print(f"❌ {error_msg}")
             raise HTTPException(status_code=400, detail=error_msg)
 
-        # Decode state to get user_type, plan, and redirect_uri
+        # Decode state to get user_type, plan, action, and redirect_uri
         user_type = "customer"
         selected_plan_code = None
+        action = "register"  # Default to register if not specified
         redirect_uri_from_state = None
         if state:
             try:
@@ -767,6 +817,7 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
                 state_data = json.loads(base64.urlsafe_b64decode(state.encode()).decode())
                 user_type = state_data.get("user_type", "customer")
                 selected_plan_code = state_data.get("selected_plan_code")
+                action = state_data.get("action", "register")  # 'login' or 'register'
                 redirect_uri_from_state = state_data.get("redirect_uri")  # Get stored redirect_uri
             except Exception as e:
                 print(f"⚠️ Failed to decode state: {e}")
@@ -880,6 +931,40 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
                 print(f"❌ {error_msg}")
                 raise HTTPException(status_code=500, detail=error_msg)
 
+        # If action is 'login', check if user exists first
+        if action == "login":
+            from core.database import AsyncSessionLocal
+            from sqlalchemy import select
+            async with AsyncSessionLocal() as db:
+                try:
+                    result = await db.execute(select(User).where(User.email == email))
+                    existing_user = result.scalar_one_or_none()
+                    if not existing_user:
+                        error_msg = f"No account found with email {email}. Please register first."
+                        print(f"❌ {error_msg}")
+                        raise HTTPException(status_code=404, detail=error_msg)
+                    print(f"✅ User exists for login - email: {email}")
+                except HTTPException:
+                    raise
+                except Exception as e:
+                    # If there's an error checking (e.g., column doesn't exist), try raw SQL
+                    try:
+                        from sqlalchemy import text
+                        query_text = text("SELECT id, email FROM users WHERE email = :email")
+                        result = await db.execute(query_text, {"email": email})
+                        row = result.first()
+                        if not row:
+                            error_msg = f"No account found with email {email}. Please register first."
+                            print(f"❌ {error_msg}")
+                            raise HTTPException(status_code=404, detail=error_msg)
+                        print(f"✅ User exists for login - email: {email}")
+                    except HTTPException:
+                        raise
+                    except Exception as check_error:
+                        # If we can't check, log and proceed (better to allow than block)
+                        print(f"⚠️ Could not verify user existence: {check_error}")
+                        pass
+
         # Issue our app tokens
         from core.database import AsyncSessionLocal
         try:
@@ -922,24 +1007,39 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
         html = _callback_success_html(app_access, app_refresh, redirect_path=redirect_path)
         return HTMLResponse(content=html, media_type="text/html")
     
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
+    except HTTPException as http_exc:
+        # Catch HTTP exceptions and display them properly
+        error_msg = http_exc.detail if isinstance(http_exc.detail, str) else str(http_exc.detail)
+        print(f"❌ OAuth error: {error_msg}")
+        
+        # Get frontend URL for error redirect
+        frontend_url = _get_frontend_base_url(request, use_referer=False)
+        login_path = f"{frontend_url}/login"
+        
+        html = _callback_error_html(error_msg, login_path)
+        return HTMLResponse(content=html, media_type="text/html", status_code=http_exc.status_code)
     except Exception as e:
         # Catch any other unexpected errors
         error_msg = f"Unexpected error in Google OAuth callback: {str(e)}"
         print(f"❌ {error_msg}")
         print(f"❌ Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=error_msg)
+        
+        # Get frontend URL for error redirect
+        frontend_url = _get_frontend_base_url(request, use_referer=False)
+        login_path = f"{frontend_url}/login"
+        
+        html = _callback_error_html(error_msg, login_path)
+        return HTMLResponse(content=html, media_type="text/html", status_code=500)
 
 @router.get("/facebook")
-async def facebook_oauth_start(request: Request, user_type: str = "customer", selected_plan_code: str | None = None):
+async def facebook_oauth_start(request: Request, user_type: str = "customer", selected_plan_code: str | None = None, action: str = "register"):
     """
     Initiate Facebook OAuth by redirecting to Facebook login dialog.
     
     Args:
         user_type: 'customer' or 'business_owner'
         selected_plan_code: Plan code if registering as business_owner
+        action: 'login' or 'register' - determines if we should check if user exists first
     """
     client_id = settings.FACEBOOK_CLIENT_ID or os.getenv("FACEBOOK_CLIENT_ID", "")
     client_secret = getattr(settings, "FACEBOOK_CLIENT_SECRET", "") or os.getenv("FACEBOOK_CLIENT_SECRET", "")
@@ -948,9 +1048,9 @@ async def facebook_oauth_start(request: Request, user_type: str = "customer", se
 
     redirect_uri = f"{_get_base_api_url()}/auth/facebook/callback"
     
-    # Encode state with user_type and plan info
+    # Encode state with user_type, plan info, and action
     import base64
-    state_data = json.dumps({"user_type": user_type, "selected_plan_code": selected_plan_code})
+    state_data = json.dumps({"user_type": user_type, "selected_plan_code": selected_plan_code, "action": action})
     state = base64.urlsafe_b64encode(state_data.encode()).decode()
     
     params = {
@@ -965,87 +1065,151 @@ async def facebook_oauth_start(request: Request, user_type: str = "customer", se
 
 @router.get("/facebook/callback")
 async def facebook_oauth_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
-    if error:
-        raise HTTPException(status_code=400, detail=f"Facebook OAuth error: {error}")
-    if not code:
-        raise HTTPException(status_code=400, detail="Missing authorization code")
-
-    # Decode state to get user_type and plan
-    user_type = "customer"
-    selected_plan_code = None
-    if state:
-        try:
-            import base64
-            state_data = json.loads(base64.urlsafe_b64decode(state.encode()).decode())
-            user_type = state_data.get("user_type", "customer")
-            selected_plan_code = state_data.get("selected_plan_code")
-        except Exception:
-            pass  # Use defaults if state decode fails
-
-    client_id = settings.FACEBOOK_CLIENT_ID or os.getenv("FACEBOOK_CLIENT_ID", "")
-    client_secret = getattr(settings, "FACEBOOK_CLIENT_SECRET", "") or os.getenv("FACEBOOK_CLIENT_SECRET", "")
-    redirect_uri = f"{_get_base_api_url()}/auth/facebook/callback"
-
-    # Exchange code for access token
-    token_url = "https://graph.facebook.com/v18.0/oauth/access_token"
-    params = {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "redirect_uri": redirect_uri,
-        "code": code,
-    }
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        token_resp = await client.get(token_url, params=params)
-        if token_resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Failed to obtain Facebook access token")
-        token_json = token_resp.json()
-        fb_access = token_json.get("access_token")
-        if not fb_access:
-            raise HTTPException(status_code=400, detail="Facebook token missing in response")
-
-        # Fetch user info: id, name, email, picture
-        userinfo_resp = await client.get(
-            "https://graph.facebook.com/v18.0/me",
-            params={"fields": "id,name,email,first_name,last_name,picture.type(large)"},
-            headers={"Authorization": f"Bearer {fb_access}"}
-        )
-        if userinfo_resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Failed to fetch Facebook user info")
-        ui = userinfo_resp.json()
-        email = ui.get("email")
-        fb_id = ui.get("id")
-        first_name = ui.get("first_name") or None
-        last_name = ui.get("last_name") or None
-        picture_data = ui.get("picture", {})
-        picture_url = picture_data.get("data", {}).get("url") if picture_data else None
-        if not email or not fb_id:
-            # Some FB apps don't return email; you may require email permission
-            raise HTTPException(status_code=400, detail="Facebook user info incomplete (email missing)")
-
-    # Issue our app tokens
-    from core.database import AsyncSessionLocal
-    async with AsyncSessionLocal() as db:
-        app_access, app_refresh, is_new_user = await _issue_tokens_for_user(
-            db, 
-            email=email, 
-            provider="facebook", 
-            provider_id=fb_id, 
-            first_name=first_name, 
-            last_name=last_name,
-            user_type=user_type,
-            selected_plan_code=selected_plan_code,
-            place_id=None,  # Place will be created after OAuth
-            profile_picture=picture_url  # Pass Facebook profile picture URL
-        )
-
-    frontend_url = _get_frontend_base_url(request)
-    # For new business owners without a place, redirect to create place first
-    redirect_path = f"{frontend_url}/"
-    if is_new_user and user_type == "business_owner":
-        redirect_path = f"{frontend_url}/owner/create-first-place"
+    """Handle Facebook OAuth callback with improved error handling"""
+    import traceback
     
-    html = _callback_success_html(app_access, app_refresh, redirect_path=redirect_path)
-    return HTMLResponse(content=html, media_type="text/html")
+    try:
+        if error:
+            raise HTTPException(status_code=400, detail=f"Facebook OAuth error: {error}")
+        if not code:
+            raise HTTPException(status_code=400, detail="Missing authorization code")
+
+        # Decode state to get user_type, plan, and action
+        user_type = "customer"
+        selected_plan_code = None
+        action = "register"  # Default to register if not specified
+        if state:
+            try:
+                import base64
+                state_data = json.loads(base64.urlsafe_b64decode(state.encode()).decode())
+                user_type = state_data.get("user_type", "customer")
+                selected_plan_code = state_data.get("selected_plan_code")
+                action = state_data.get("action", "register")  # 'login' or 'register'
+            except Exception:
+                pass  # Use defaults if state decode fails
+
+        client_id = settings.FACEBOOK_CLIENT_ID or os.getenv("FACEBOOK_CLIENT_ID", "")
+        client_secret = getattr(settings, "FACEBOOK_CLIENT_SECRET", "") or os.getenv("FACEBOOK_CLIENT_SECRET", "")
+        redirect_uri = f"{_get_base_api_url()}/auth/facebook/callback"
+
+        # Exchange code for access token
+        token_url = "https://graph.facebook.com/v18.0/oauth/access_token"
+        params = {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": redirect_uri,
+            "code": code,
+        }
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            token_resp = await client.get(token_url, params=params)
+            if token_resp.status_code != 200:
+                raise HTTPException(status_code=400, detail="Failed to obtain Facebook access token")
+            token_json = token_resp.json()
+            fb_access = token_json.get("access_token")
+            if not fb_access:
+                raise HTTPException(status_code=400, detail="Facebook token missing in response")
+
+            # Fetch user info: id, name, email, picture
+            userinfo_resp = await client.get(
+                "https://graph.facebook.com/v18.0/me",
+                params={"fields": "id,name,email,first_name,last_name,picture.type(large)"},
+                headers={"Authorization": f"Bearer {fb_access}"}
+            )
+            if userinfo_resp.status_code != 200:
+                raise HTTPException(status_code=400, detail="Failed to fetch Facebook user info")
+            ui = userinfo_resp.json()
+            email = ui.get("email")
+            fb_id = ui.get("id")
+            first_name = ui.get("first_name") or None
+            last_name = ui.get("last_name") or None
+            picture_data = ui.get("picture", {})
+            picture_url = picture_data.get("data", {}).get("url") if picture_data else None
+            if not email or not fb_id:
+                # Some FB apps don't return email; you may require email permission
+                raise HTTPException(status_code=400, detail="Facebook user info incomplete (email missing)")
+
+        # If action is 'login', check if user exists first
+        if action == "login":
+            from core.database import AsyncSessionLocal
+            from sqlalchemy import select
+            async with AsyncSessionLocal() as db:
+                try:
+                    result = await db.execute(select(User).where(User.email == email))
+                    existing_user = result.scalar_one_or_none()
+                    if not existing_user:
+                        error_msg = f"No account found with email {email}. Please register first."
+                        print(f"❌ {error_msg}")
+                        raise HTTPException(status_code=404, detail=error_msg)
+                    print(f"✅ User exists for login - email: {email}")
+                except HTTPException:
+                    raise
+                except Exception as e:
+                    # If there's an error checking (e.g., column doesn't exist), try raw SQL
+                    try:
+                        from sqlalchemy import text
+                        query_text = text("SELECT id, email FROM users WHERE email = :email")
+                        result = await db.execute(query_text, {"email": email})
+                        row = result.first()
+                        if not row:
+                            error_msg = f"No account found with email {email}. Please register first."
+                            print(f"❌ {error_msg}")
+                            raise HTTPException(status_code=404, detail=error_msg)
+                        print(f"✅ User exists for login - email: {email}")
+                    except HTTPException:
+                        raise
+                    except Exception as check_error:
+                        # If we can't check, log and proceed (better to allow than block)
+                        print(f"⚠️ Could not verify user existence: {check_error}")
+                        pass
+
+        # Issue our app tokens
+        from core.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            app_access, app_refresh, is_new_user = await _issue_tokens_for_user(
+                db, 
+                email=email, 
+                provider="facebook", 
+                provider_id=fb_id, 
+                first_name=first_name, 
+                last_name=last_name,
+                user_type=user_type,
+                selected_plan_code=selected_plan_code,
+                place_id=None,  # Place will be created after OAuth
+                profile_picture=picture_url  # Pass Facebook profile picture URL
+            )
+
+        frontend_url = _get_frontend_base_url(request, use_referer=False)
+        # For new business owners without a place, redirect to create place first
+        redirect_path = f"{frontend_url}/"
+        if is_new_user and user_type == "business_owner":
+            redirect_path = f"{frontend_url}/owner/create-first-place"
+        
+        html = _callback_success_html(app_access, app_refresh, redirect_path=redirect_path)
+        return HTMLResponse(content=html, media_type="text/html")
+    
+    except HTTPException as http_exc:
+        # Catch HTTP exceptions and display them properly
+        error_msg = http_exc.detail if isinstance(http_exc.detail, str) else str(http_exc.detail)
+        print(f"❌ Facebook OAuth error: {error_msg}")
+        
+        # Get frontend URL for error redirect
+        frontend_url = _get_frontend_base_url(request, use_referer=False)
+        login_path = f"{frontend_url}/login"
+        
+        html = _callback_error_html(error_msg, login_path)
+        return HTMLResponse(content=html, media_type="text/html", status_code=http_exc.status_code)
+    except Exception as e:
+        # Catch any other unexpected errors
+        error_msg = f"Unexpected error in Facebook OAuth callback: {str(e)}"
+        print(f"❌ {error_msg}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        
+        # Get frontend URL for error redirect
+        frontend_url = _get_frontend_base_url(request, use_referer=False)
+        login_path = f"{frontend_url}/login"
+        
+        html = _callback_error_html(error_msg, login_path)
+        return HTMLResponse(content=html, media_type="text/html", status_code=500)
 
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
 async def forgot_password(request_data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
@@ -1167,4 +1331,69 @@ async def update_language_preference(
     return UpdateLanguagePreferenceResponse(
         message="Language preference updated successfully.",
         language=request_data.language
+    )
+
+@router.patch("/me", response_model=UpdateProfileResponse)
+async def update_profile(
+    request_data: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update user's profile information"""
+    # Update fields if provided
+    if request_data.first_name is not None:
+        current_user.first_name = request_data.first_name
+    if request_data.last_name is not None:
+        current_user.last_name = request_data.last_name
+    if request_data.phone is not None:
+        current_user.phone = request_data.phone
+    
+    # Update name field if first_name or last_name changed
+    if request_data.first_name is not None or request_data.last_name is not None:
+        if current_user.first_name and current_user.last_name:
+            current_user.name = f"{current_user.first_name} {current_user.last_name}"
+        elif current_user.first_name:
+            current_user.name = current_user.first_name
+        elif current_user.last_name:
+            current_user.name = current_user.last_name
+    
+    await db.commit()
+    await db.refresh(current_user)
+    
+    # Safely get profile_picture and other optional fields
+    profile_picture = None
+    oauth_provider = None
+    oauth_id = None
+    phone = None
+    try:
+        profile_picture = getattr(current_user, "profile_picture", None)
+        oauth_provider = getattr(current_user, "oauth_provider", None)
+        oauth_id = getattr(current_user, "oauth_id", None)
+        phone = getattr(current_user, "phone", None)
+    except AttributeError:
+        pass
+    
+    user_response = UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        first_name=current_user.first_name,
+        last_name=current_user.last_name,
+        user_type=current_user.user_type,
+        is_active=current_user.is_active,
+        is_owner=current_user.is_owner,
+        is_admin=current_user.is_admin,
+        gdpr_data_processing_consent=current_user.gdpr_data_processing_consent,
+        gdpr_marketing_consent=current_user.gdpr_marketing_consent,
+        trial_start=current_user.trial_start.isoformat() if current_user.trial_start else None,
+        trial_end=current_user.trial_end.isoformat() if current_user.trial_end else None,
+        trial_status=current_user.trial_status,
+        profile_picture=profile_picture,
+        oauth_provider=oauth_provider,
+        oauth_id=oauth_id,
+        phone=phone,
+    )
+    
+    return UpdateProfileResponse(
+        message="Profile updated successfully.",
+        user=user_response
     )

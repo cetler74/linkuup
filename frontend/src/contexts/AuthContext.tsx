@@ -15,6 +15,7 @@ interface User {
   profile_picture?: string;
   oauth_provider?: string;
   oauth_id?: string;
+  phone?: string;
 }
 
 interface LoginRequest {
@@ -37,8 +38,8 @@ interface AuthContextType {
   login: (credentials: LoginRequest) => Promise<string>;
   register: (userData: RegisterRequest) => Promise<string>;
   logout: () => void;
-  loginWithGoogle: (userType?: 'customer' | 'business_owner', planCode?: string) => void;
-  loginWithFacebook: (userType?: 'customer' | 'business_owner', planCode?: string) => void;
+  loginWithGoogle: (userType?: 'customer' | 'business_owner', planCode?: string, action?: 'login' | 'register') => void;
+  loginWithFacebook: (userType?: 'customer' | 'business_owner', planCode?: string, action?: 'login' | 'register') => void;
   loading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -95,6 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             profile_picture: (userData as any).profile_picture,
             oauth_provider: (userData as any).oauth_provider,
             oauth_id: (userData as any).oauth_id,
+            phone: (userData as any).phone,
           };
           setUser(identifiedUser);
           
@@ -149,6 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         profile_picture: (userData as any).profile_picture,
         oauth_provider: (userData as any).oauth_provider,
         oauth_id: (userData as any).oauth_id,
+        phone: (userData as any).phone,
       };
       setUser(newUser);
       
@@ -206,6 +209,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         profile_picture: (response.user as any).profile_picture,
         oauth_provider: (response.user as any).oauth_provider,
         oauth_id: (response.user as any).oauth_id,
+        phone: (response.user as any).phone,
       };
       setUser(newUser);
       
@@ -252,7 +256,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
-  const loginWithGoogle = (userType: 'customer' | 'business_owner' | any = 'customer', planCode?: string) => {
+  const loginWithGoogle = (userType: 'customer' | 'business_owner' | any = 'customer', planCode?: string, action: 'login' | 'register' = 'register') => {
     // Redirect to Google OAuth endpoint - need absolute URL for window.location.href
     let apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
     // If relative URL, make it absolute using current origin
@@ -266,14 +270,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       validUserType = userType;
     }
     
-    const params = new URLSearchParams({ user_type: validUserType });
+    const params = new URLSearchParams({ user_type: validUserType, action: action });
     if (planCode && typeof planCode === 'string') {
       params.append('selected_plan_code', planCode);
     }
     window.location.href = `${apiBase}/auth/google?${params.toString()}`;
   };
 
-  const loginWithFacebook = (userType: 'customer' | 'business_owner' | any = 'customer', planCode?: string) => {
+  const loginWithFacebook = (userType: 'customer' | 'business_owner' | any = 'customer', planCode?: string, action: 'login' | 'register' = 'register') => {
     // Redirect to Facebook OAuth endpoint - need absolute URL for window.location.href
     let apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
     // If relative URL, make it absolute using current origin
@@ -287,7 +291,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       validUserType = userType;
     }
     
-    const params = new URLSearchParams({ user_type: validUserType });
+    const params = new URLSearchParams({ user_type: validUserType, action: action });
     if (planCode && typeof planCode === 'string') {
       params.append('selected_plan_code', planCode);
     }

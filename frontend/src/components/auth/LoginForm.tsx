@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
@@ -15,6 +15,7 @@ interface LoginFormProps {
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [formData, setFormData] = useState<LoginRequest>({
     email: '',
     password: '',
@@ -25,6 +26,18 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
   const { login, loginWithGoogle, loginWithFacebook } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  // Check for error message in URL query parameters (from OAuth callback)
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+      // Remove error from URL to clean it up
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('error');
+      setSearchParams(newSearchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,8 +165,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
 
           {/* OAuth Buttons */}
           <OAuthButtons 
-            onGoogleLogin={loginWithGoogle}
-            onFacebookLogin={loginWithFacebook}
+            onGoogleLogin={() => loginWithGoogle('customer', undefined, 'login')}
+            onFacebookLogin={() => loginWithFacebook('customer', undefined, 'login')}
             loading={loading}
           />
 

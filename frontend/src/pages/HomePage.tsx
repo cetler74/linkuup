@@ -26,9 +26,14 @@ const HomePage: React.FC = () => {
 
   // Video array for mobile phone mockup
   const videos = [
-    '/videos/Tattoo_generate_202510311100_o3hke.mp4',
-    '/videos/Stylish_high_end_202510311101_8woeh.mp4',
-    '/videos/The_barber_will_202510311021_u472n.mp4',
+    '/videos/dog.mp4',
+    '/videos/PT2.mp4',
+    '/videos/nails.mp4',
+    '/videos/massage.mp4',
+    '/videos/Tutor.mp4',
+    '/videos/hair.mp4',
+    '/videos/barber2.mp4',
+    '/videos/Barber1.mp4',
   ];
 
   // Fetch real salons from database
@@ -352,8 +357,9 @@ const HomePage: React.FC = () => {
                           playsInline
                           className="rounded-lg object-cover shadow-lg"
                           style={{ 
-                            width: '80%',
-                            aspectRatio: '3/2'
+                            width: '60%',
+                            aspectRatio: '9/16',
+                            maxHeight: '400px'
                           }}
                           onEnded={() => {
                             setCurrentVideoIndex((prev) => (prev + 1) % videos.length);

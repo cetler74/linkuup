@@ -201,19 +201,10 @@ const CustomersManagement: React.FC = () => {
 
   return (
     <>
-      <div className="flex h-screen bg-[#F5F5F5]">
-        {/* Mobile Menu Button */}
-        <button
-          className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          <svg className="w-6 h-6 text-[#333333]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+      <div className="flex flex-col lg:flex-row h-screen bg-[#F5F5F5] w-full max-w-[412px] mx-auto lg:max-w-none">
 
         {/* Sidebar */}
-        <aside className={`w-1/3 max-w-sm flex flex-col border-r border-[#E0E0E0] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] lg:block ${
+        <aside className={`w-full lg:w-1/3 lg:max-w-sm flex flex-col border-r border-[#E0E0E0] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] lg:block ${
           sidebarOpen ? 'block' : 'hidden'
         }`}>
           {/* Search */}
@@ -290,12 +281,12 @@ const CustomersManagement: React.FC = () => {
         </aside>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden w-full lg:w-auto">
           {/* Header */}
-          <div className="bg-white border-b border-[#E0E0E0] px-6 py-4 shadow-[0px_2px_8px_rgba(0,0,0,0.1)]">
+          <div className="bg-white border-b border-[#E0E0E0] px-3 lg:px-6 py-3 lg:py-4 shadow-[0px_2px_8px_rgba(0,0,0,0.1)]">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>Customers Management</h1>
+                <h1 className="text-lg lg:text-2xl font-bold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>Customers Management</h1>
                 <p className="mt-1 text-sm text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                   {selectedPlace ? `Manage customers for ${selectedPlace.name}` : 'Select a place to manage customers'}
                 </p>
@@ -374,13 +365,13 @@ const CustomersManagement: React.FC = () => {
           </div>
 
           {/* Customers Content */}
-          <div className="flex-1 overflow-y-auto p-6 bg-[#F5F5F5]">
+          <div className="flex-1 overflow-y-auto p-3 lg:p-6 bg-[#F5F5F5]">
             {selectedPlace ? (
               <>
                 {/* Quick Stats */}
                 {customers.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4 mb-4 lg:mb-6">
+                    <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-2 lg:p-4">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
                           <UserIcon className="h-8 w-8 text-[#1E90FF]" />
@@ -440,7 +431,7 @@ const CustomersManagement: React.FC = () => {
                         </div>
                       )}
                 
-                <div className="bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] overflow-hidden sm:rounded-lg border border-[#E0E0E0]">
+                <div className="bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] overflow-hidden sm:rounded-lg border border-[#E0E0E0] w-full">
                   {uniqueCustomers.length === 0 ? (
                     <div className="text-center py-12">
                       <UserIcon className="mx-auto h-12 w-12 text-[#9E9E9E]" />
@@ -458,18 +449,18 @@ const CustomersManagement: React.FC = () => {
                     <ul className="divide-y divide-[#E0E0E0]">
                       {uniqueCustomers.map((customer, index) => (
                         <li key={`customer-${customer.user_email}-${customer.place_id}-${index}`} className="bg-white hover:bg-[#F5F5F5] transition-colors">
-                          <div className="px-6 py-6">
+                          <div className="px-3 lg:px-6 py-4 lg:py-6">
                             {/* Main Customer Information */}
                             <div className="flex items-start justify-between">
-                              <div className="flex items-start space-x-4">
+                                <div className="flex items-start space-x-2 lg:space-x-4">
                                 <div className="flex-shrink-0">
-                                  <div className="h-12 w-12 rounded-full flex items-center justify-center shadow-lg bg-[#1E90FF]">
-                                    <UserIcon className="h-7 w-7 text-white" />
+                                  <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-full flex items-center justify-center shadow-lg bg-[#1E90FF]">
+                                    <UserIcon className="h-5 w-5 lg:h-7 lg:w-7 text-white" />
                                   </div>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center space-x-3 mb-2">
-                                    <h3 className="text-lg font-semibold text-[#333333] truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>{customer.user_name}</h3>
+                                  <div className="flex items-center space-x-2 lg:space-x-3 mb-2">
+                                    <h3 className="text-base lg:text-lg font-semibold text-[#333333] truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>{customer.user_name}</h3>
                                     <div className="flex items-center space-x-2">
                                       {rewardsEnabled && customer.tier && (
                                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getTierColor(customer.tier)}`}>
@@ -480,7 +471,7 @@ const CustomersManagement: React.FC = () => {
                   </div>
 
                                   {/* Contact Information */}
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 mb-3 lg:mb-4">
                                     <div className="space-y-2">
                                       <div className="flex items-center space-x-2">
                                         <EnvelopeIcon className="h-4 w-4 text-[#9E9E9E]" />
@@ -535,10 +526,10 @@ const CustomersManagement: React.FC = () => {
                         </div>
                         
                               {/* Action Buttons */}
-                              <div className="flex items-center space-x-2">
+                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-4 lg:mt-0 lg:space-x-2">
                                 <button
                                   onClick={() => toggleCustomerExpansion(customer.user_id)}
-                                  className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-[#333333] hover:text-[#1E90FF] hover:bg-[#F5F5F5] rounded-lg transition-colors border border-[#E0E0E0]"
+                                  className="flex items-center justify-center space-x-1 px-3 py-2 text-xs lg:text-sm font-medium text-[#333333] hover:text-[#1E90FF] hover:bg-[#F5F5F5] rounded-lg transition-colors border border-[#E0E0E0]"
                                   title="Toggle Details"
                                   style={{ fontFamily: 'Open Sans, sans-serif' }}
                                 >
@@ -556,7 +547,7 @@ const CustomersManagement: React.FC = () => {
                                 </button>
                                 <button
                                   onClick={() => openMessageModal(customer)}
-                                  className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-white bg-[#FF5A5F] hover:bg-[#E54B50] rounded-lg transition-colors"
+                                  className="flex items-center justify-center space-x-1 px-3 py-2 text-xs lg:text-sm font-medium text-white bg-[#FF5A5F] hover:bg-[#E54B50] rounded-lg transition-colors"
                                   title="Send Message"
                                   style={{ fontFamily: 'Open Sans, sans-serif' }}
                                 >
@@ -565,7 +556,7 @@ const CustomersManagement: React.FC = () => {
                                 </button>
                                 <button
                                   onClick={() => navigate(`/owner/customers/${customer.user_id}?place=${selectedPlace?.id}`)}
-                                  className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-white bg-[#1E90FF] hover:bg-[#1877D2] rounded-lg transition-colors"
+                                  className="flex items-center justify-center space-x-1 px-3 py-2 text-xs lg:text-sm font-medium text-white bg-[#1E90FF] hover:bg-[#1877D2] rounded-lg transition-colors"
                                   title="View Details"
                                   style={{ fontFamily: 'Open Sans, sans-serif' }}
                                 >
@@ -577,11 +568,11 @@ const CustomersManagement: React.FC = () => {
                             
                             {/* Expanded Detailed Information */}
                             {expandedCustomers.has(customer.user_id) && (
-                              <div className="mt-6 pt-6 border-t border-[#E0E0E0]">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              <div className="mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-[#E0E0E0]">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-6">
                                   
                                   {/* Customer Details Card */}
-                                  <div className="bg-white rounded-lg p-6 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
+                                  <div className="bg-white rounded-lg p-3 lg:p-6 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
                                     <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                                       <UserIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                                       Customer Details
@@ -607,7 +598,7 @@ const CustomersManagement: React.FC = () => {
                                   </div>
                                   
                                   {/* Booking Statistics Card */}
-                                  <div className="bg-white rounded-lg p-6 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
+                                  <div className="bg-white rounded-lg p-3 lg:p-6 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
                                     <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                                       <CalendarIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                                       Booking Statistics
@@ -656,7 +647,7 @@ const CustomersManagement: React.FC = () => {
                                   </div>
                                   
                                   {/* Subscription & Opt-in Information Card */}
-                                  <div className="bg-white rounded-lg p-6 lg:col-span-2 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
+                                  <div className="bg-white rounded-lg p-3 lg:p-6 lg:col-span-2 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
                                     <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                                       <ShieldCheckIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                                       Subscriptions & Opt-ins
@@ -779,7 +770,7 @@ const CustomersManagement: React.FC = () => {
                                   
                                   {/* Rewards Card */}
                                   {rewardsEnabled && (
-                                    <div className="bg-white rounded-lg p-6 lg:col-span-2 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
+                                    <div className="bg-white rounded-lg p-3 lg:p-6 lg:col-span-2 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
                                       <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                                         <GiftIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                                         Rewards & Loyalty

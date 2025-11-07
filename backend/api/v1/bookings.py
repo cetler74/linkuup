@@ -2,7 +2,7 @@
 Public bookings API - backwards compatibility endpoint
 Redirects to the proper RESTful endpoint at /places/{place_id}/bookings
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional, List
@@ -68,6 +68,7 @@ class BookingResponse(BaseModel):
 @router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
 async def create_booking(
     booking_data: BookingCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new booking (public endpoint - no auth required)
@@ -214,6 +215,29 @@ async def create_booking(
     db.add(booking)
     await db.commit()
     await db.refresh(booking)
+    
+    # Create notification for owner about new booking (asynchronous - don't fail booking if this fails)
+    if place.owner_id:
+        try:
+            from services.notification_background import create_notification_async
+            
+            # Get service ID for notification
+            service_id = booking.service_id if booking.service_id else None
+            
+            # Add background task to create notification asynchronously
+            background_tasks.add_task(
+                create_notification_async,
+                booking_id=booking.id,
+                owner_id=place.owner_id,
+                place_id=place.id,
+                service_id=service_id
+            )
+        except Exception as e:
+            # Log error but don't fail the booking
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"❌ Error scheduling notification task for booking {booking.id}: {str(e)}")
+            print(f"⚠️ Failed to schedule notification task: {str(e)}")
     
     return BookingResponse(
         id=booking.id,

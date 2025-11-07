@@ -16,6 +16,13 @@ import { managerAPI, authAPI } from '../../utils/api';
 import { ownerApi } from '../../utils/ownerApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -769,15 +776,6 @@ const PlacesManagement: React.FC = () => {
           border: 2px solid #E0E0E0;
         }
       `}</style>
-      {/* Mobile Menu Button */}
-      <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-form border border-medium-gray"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        <svg className="w-6 h-6 text-charcoal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
 
       {/* Sidebar */}
       <aside className={`w-1/3 max-w-sm flex flex-col border-r border-medium-gray bg-white lg:block ${
@@ -1197,27 +1195,31 @@ const PlacesManagement: React.FC = () => {
                       <label className="block text-sm font-medium text-charcoal mb-1 font-body">
                         Sector *
                       </label>
-                      <select
-                        required
+                      <Select
                         value={formData.sector}
-                        onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
-                        className="input-field"
+                        onValueChange={(value) => setFormData({ ...formData, sector: value })}
+                        required
                       >
-                        <option value="">{t('search.selectService')}</option>
-                        <option value="allServices">{t('search.allServices')}</option>
-                        <option value="salon">{t('search.salon')}</option>
-                        <option value="barber">{t('search.barber')}</option>
-                        <option value="nails">{t('search.nails')}</option>
-                        <option value="spaSauna">{t('search.spaSauna')}</option>
-                        <option value="medicalSpa">{t('search.medicalSpa')}</option>
-                        <option value="massage">{t('search.massage')}</option>
-                        <option value="fitnessRehab">{t('search.fitnessRehab')}</option>
-                        <option value="physiotherapy">{t('search.physiotherapy')}</option>
-                        <option value="medicalOffices">{t('search.medicalOffices')}</option>
-                        <option value="tattooPiercing">{t('search.tattooPiercing')}</option>
-                        <option value="petGrooming">{t('search.petGrooming')}</option>
-                        <option value="tanningClinic">{t('search.tanningClinic')}</option>
-                      </select>
+                        <SelectTrigger className="input-field">
+                          <SelectValue placeholder={t('search.selectService')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="allServices">{t('search.allServices')}</SelectItem>
+                          <SelectItem value="salon">{t('search.salon')}</SelectItem>
+                          <SelectItem value="barber">{t('search.barber')}</SelectItem>
+                          <SelectItem value="nails">{t('search.nails')}</SelectItem>
+                          <SelectItem value="spaSauna">{t('search.spaSauna')}</SelectItem>
+                          <SelectItem value="medicalSpa">{t('search.medicalSpa')}</SelectItem>
+                          <SelectItem value="massage">{t('search.massage')}</SelectItem>
+                          <SelectItem value="fitnessRehab">{t('search.fitnessRehab')}</SelectItem>
+                          <SelectItem value="physiotherapy">{t('search.physiotherapy')}</SelectItem>
+                          <SelectItem value="medicalOffices">{t('search.medicalOffices')}</SelectItem>
+                          <SelectItem value="tattooPiercing">{t('search.tattooPiercing')}</SelectItem>
+                          <SelectItem value="petGrooming">{t('search.petGrooming')}</SelectItem>
+                          <SelectItem value="tanningClinic">{t('search.tanningClinic')}</SelectItem>
+                          <SelectItem value="others">{t('search.others')}</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>

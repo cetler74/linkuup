@@ -27,7 +27,8 @@ from api.v1.owner import (
     dashboard as owner_dashboard,
     customers as owner_customers,
     settings as owner_settings,
-    user_permissions as owner_user_permissions
+    user_permissions as owner_user_permissions,
+    notifications as owner_notifications
 )
 from api.v1.mobile import (
     places as mobile_places,
@@ -127,6 +128,7 @@ app.include_router(owner_dashboard.router, prefix=f"{settings.API_V1_STR}/owner/
 app.include_router(owner_customers.router, prefix=f"{settings.API_V1_STR}/owner", tags=["Owner - Customers"])
 app.include_router(owner_settings.router, prefix=f"{settings.API_V1_STR}/owner", tags=["Owner - Settings"])
 app.include_router(owner_user_permissions.router, prefix=f"{settings.API_V1_STR}/owner", tags=["Owner - User Permissions"])
+app.include_router(owner_notifications.router, prefix=f"{settings.API_V1_STR}/owner/notifications", tags=["Owner - Notifications"])
 
 # Mobile endpoints
 app.include_router(mobile_places.router, prefix=f"{settings.API_V1_STR}/mobile/places", tags=["Mobile - Places"])

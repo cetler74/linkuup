@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from typing import List, Optional
@@ -177,6 +177,7 @@ async def get_place_bookings(
 async def create_booking(
     place_id: int,
     booking_data: PlaceBookingCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_business_owner),
     db: AsyncSession = Depends(get_db)
 ):
@@ -476,6 +477,28 @@ async def create_booking(
             print(f"❌ Failed to send email notification: {str(e)}")
             print(f"❌ Traceback: {traceback.format_exc()}")
 
+        # Create notification for new booking (asynchronous - don't fail booking if this fails)
+        try:
+            from services.notification_background import create_notification_async
+            
+            # Get first service ID for notification
+            service_id = services[0]['service_id'] if services and len(services) > 0 else None
+            
+            # Add background task to create notification asynchronously
+            background_tasks.add_task(
+                create_notification_async,
+                booking_id=booking.id,
+                owner_id=current_user.id,
+                place_id=place.id,
+                service_id=service_id
+            )
+        except Exception as e:
+            # Log error but don't fail the booking
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"❌ Error scheduling notification task for booking {booking.id}: {str(e)}")
+            print(f"⚠️ Failed to schedule notification task: {str(e)}")
+
         # Convert services data to BookingServiceResponse format
         services_response = []
         for service in services:
@@ -613,6 +636,7 @@ async def get_booking(
 async def update_booking_status(
     booking_id: int,
     status_data: BookingStatusUpdate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_business_owner),
     db: AsyncSession = Depends(get_db)
 ):
@@ -674,6 +698,29 @@ async def update_booking_status(
                 email_service.send_booking_status_notification(email_data)
             except Exception as e:
                 print(f"Failed to send status change email notification: {str(e)}")
+        
+        # Create notification if status changed to cancelled (asynchronous)
+        if new_status == 'cancelled' and old_status != 'cancelled':
+            try:
+                from services.notification_background import create_cancellation_notification_async
+                
+                # Get service ID for notification
+                service_id = booking.service_id if booking.service_id else None
+                
+                # Add background task to create cancellation notification asynchronously
+                background_tasks.add_task(
+                    create_cancellation_notification_async,
+                    booking_id=booking.id,
+                    owner_id=current_user.id,
+                    place_id=place.id,
+                    service_id=service_id
+                )
+            except Exception as e:
+                # Log error but don't fail the status update
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"❌ Error scheduling cancellation notification task for booking {booking.id}: {str(e)}")
+                print(f"⚠️ Failed to schedule cancellation notification task: {str(e)}")
         
         # Award points if booking is completed and user is registered
         if (old_status != 'completed' and new_status == 'completed' and 
@@ -913,6 +960,7 @@ async def update_booking(
 # @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def cancel_booking(
     booking_id: int,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_business_owner),
     db: AsyncSession = Depends(get_db)
 ):
@@ -969,6 +1017,28 @@ async def cancel_booking(
             email_service.send_booking_status_notification(email_data)
         except Exception as e:
             print(f"Failed to send cancellation email notification: {str(e)}")
+    
+    # Create notification for cancellation (asynchronous)
+    try:
+        from services.notification_background import create_cancellation_notification_async
+        
+        # Get service ID for notification
+        service_id = booking.service_id if booking.service_id else None
+        
+        # Add background task to create cancellation notification asynchronously
+        background_tasks.add_task(
+            create_cancellation_notification_async,
+            booking_id=booking.id,
+            owner_id=current_user.id,
+            place_id=place.id,
+            service_id=service_id
+        )
+    except Exception as e:
+        # Log error but don't fail the cancellation
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"❌ Error scheduling cancellation notification task for booking {booking.id}: {str(e)}")
+        print(f"⚠️ Failed to schedule cancellation notification task: {str(e)}")
     
     return {"message": "Booking cancelled successfully"}
 

@@ -23,6 +23,7 @@ from .subscription import (
     SubscriptionEvent,
 )
 from .billing import BillingCustomer, Subscription as BillingSubscription, Invoice
+from .notification import Notification, NotificationTypeEnum
 
 # Export all models for easy importing
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     'Campaign', 'CampaignPlace', 'CampaignService',
     'CustomerReward', 'RewardTransaction', 'RewardSetting',
     'CustomerPlaceAssociation', 'PlaceFeatureSetting',
-    'Plan', 'Feature', 'PlanFeature', 'UserPlaceSubscription', 'SubscriptionEvent'
-    , 'BillingCustomer', 'BillingSubscription', 'Invoice'
+    'Plan', 'Feature', 'PlanFeature', 'UserPlaceSubscription', 'SubscriptionEvent',
+    'BillingCustomer', 'BillingSubscription', 'Invoice',
+    'Notification', 'NotificationTypeEnum'
 ]

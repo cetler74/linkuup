@@ -2,7 +2,7 @@
 Fixed places API that works with the existing database schema.
 Uses the 'places' table instead of 'businesses' table.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func
 from typing import List, Optional
@@ -1266,6 +1266,7 @@ class BookingResponse(BaseModel):
 async def create_booking(
     place_id: int,
     booking_data: BookingCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new booking for a place (public endpoint - no auth required)"""
@@ -1480,6 +1481,30 @@ async def create_booking(
         email_service.send_booking_request_notification(email_data)
     except Exception as e:
         print(f"Failed to send email notification: {str(e)}")
+    
+    # Create notification for owner about new booking (asynchronous - don't fail booking if this fails)
+    # This happens after booking and booking services are committed, so we're in a new transaction
+    if place.owner_id:
+        try:
+            from services.notification_background import create_notification_async
+            
+            # Get first service ID for notification
+            service_id = services[0]['service_id'] if services and len(services) > 0 else None
+            
+            # Add background task to create notification asynchronously
+            background_tasks.add_task(
+                create_notification_async,
+                booking_id=booking.id,
+                owner_id=place.owner_id,
+                place_id=place.id,
+                service_id=service_id
+            )
+        except Exception as e:
+            # Log error but don't fail the booking
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"❌ Error scheduling notification task for booking {booking.id}: {str(e)}")
+            print(f"⚠️ Failed to schedule notification task: {str(e)}")
     
     return BookingResponse(
         id=booking.id,

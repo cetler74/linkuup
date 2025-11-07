@@ -1,13 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import CustomLanguageSelector from './CustomLanguageSelector';
 import ProfileDropdown from './ProfileDropdown';
+import NotificationBell from '../owner/NotificationBell';
 
 const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(88);
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => window.removeEventListener('resize', updateHeaderHeight);
+  }, []);
   
   // Safely get auth context with fallback
   let authContext;
@@ -47,8 +63,8 @@ const Header: React.FC = () => {
   }
 
   return (
-    <header className="relative z-10 py-6 px-4 sm:px-6 lg:px-8">
-      <div className="container mx-auto flex justify-between items-center">
+    <header ref={headerRef} className="relative z-50 py-6 px-4 sm:px-6 lg:px-8 overflow-visible">
+      <div className="container mx-auto flex justify-between items-center relative overflow-visible">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-3 group">
           <h1 className="text-3xl font-bold text-charcoal font-display">LinkUup.</h1>
@@ -60,7 +76,7 @@ const Header: React.FC = () => {
             to="/search"
             className="text-xl text-charcoal hover:text-bright-blue transition-colors duration-200 font-medium"
           >
-            {t('nav.findSalons')}
+            {t('nav.findBusinesses')}
           </Link>
           <Link
             to="/about"
@@ -96,6 +112,10 @@ const Header: React.FC = () => {
         <div className="hidden md:flex items-center space-x-4">
           {isAuthenticated ? (
             <div className="flex items-center space-x-4">
+              {/* Show notification bell only for business owners */}
+              {(isBusinessOwner || (user && user.user_type === 'business_owner')) && (
+                <NotificationBell />
+              )}
               <ProfileDropdown />
             </div>
           ) : (
@@ -111,7 +131,7 @@ const Header: React.FC = () => {
         {/* Mobile menu button - Only visible on mobile */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden text-charcoal hover:text-bright-blue p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center bg-white/80 backdrop-blur-sm border border-medium-gray"
+          className="md:hidden text-charcoal hover:text-bright-blue p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center bg-white/80 backdrop-blur-sm border border-medium-gray relative z-[10000]"
           aria-label="Toggle menu"
         >
           {isMobileMenuOpen ? (
@@ -123,15 +143,21 @@ const Header: React.FC = () => {
       </div>
 
       {/* Mobile Navigation Menu - Dropdown similar to search filters */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white backdrop-blur-md border-t border-medium-gray shadow-lg">
+      {isMobileMenuOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="md:hidden fixed left-0 right-0 bg-white backdrop-blur-md border-t border-medium-gray shadow-lg z-[9999] overflow-y-auto"
+          style={{ 
+            top: `${headerHeight}px`,
+            maxHeight: `calc(100vh - ${headerHeight}px)`
+          }}
+        >
           <div className="container mx-auto py-4 px-4 space-y-2">
             <Link
               to="/search"
               className="block text-charcoal hover:bg-bright-blue/10 text-xl font-medium transition-all duration-200 py-3 px-4 rounded-lg min-h-[48px] flex items-center"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              {t('nav.findSalons')}
+              {t('nav.findBusinesses')}
             </Link>
             <Link
               to="/about"
@@ -176,7 +202,11 @@ const Header: React.FC = () => {
             
             {isAuthenticated ? (
               <div className="pt-4 pb-2 border-t border-medium-gray mt-2">
-                <div className="px-4">
+                <div className="px-4 flex items-center space-x-4">
+                  {/* Show notification bell only for business owners */}
+                  {(isBusinessOwner || (user && user.user_type === 'business_owner')) && (
+                    <NotificationBell />
+                  )}
                   <ProfileDropdown onLogout={() => setIsMobileMenuOpen(false)} />
                 </div>
               </div>
@@ -192,7 +222,8 @@ const Header: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );

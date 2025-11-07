@@ -662,6 +662,42 @@ export const ownerAPI = {
     const response = await api.get(`/owner/dashboard/recent-bookings?limit=${limit}`);
     return response.data;
   },
+
+  // Notification API endpoints
+  getNotifications: async (limit: number = 20, offset: number = 0, unreadOnly: boolean = false): Promise<Array<{
+    id: number;
+    type: string;
+    title: string;
+    message: string;
+    booking_id: number | null;
+    place_id: number | null;
+    is_read: boolean;
+    created_at: string;
+    read_at: string | null;
+  }>> => {
+    const response = await api.get(`/owner/notifications?limit=${limit}&offset=${offset}&unread_only=${unreadOnly}`);
+    return response.data;
+  },
+
+  getUnreadNotificationCount: async (): Promise<{ count: number }> => {
+    const response = await api.get('/owner/notifications/unread-count');
+    return response.data;
+  },
+
+  markNotificationAsRead: async (notificationId: number): Promise<{ message: string; id: number }> => {
+    const response = await api.put(`/owner/notifications/${notificationId}/read`);
+    return response.data;
+  },
+
+  markAllNotificationsAsRead: async (): Promise<{ message: string }> => {
+    const response = await api.put('/owner/notifications/read-all');
+    return response.data;
+  },
+
+  deleteNotification: async (notificationId: number): Promise<{ message: string; id: number }> => {
+    const response = await api.delete(`/owner/notifications/${notificationId}`);
+    return response.data;
+  },
 };
 
 export const healthAPI = {

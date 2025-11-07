@@ -121,19 +121,10 @@ const PlaceWorkingHours: React.FC = () => {
   );
 
   return (
-    <div className="flex h-screen bg-background-light">
-      {/* Mobile Menu Button */}
-      <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-form border border-medium-gray"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        <svg className="w-6 h-6 text-charcoal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+    <div className="flex flex-col lg:flex-row h-screen bg-background-light w-full max-w-[412px] mx-auto lg:max-w-none">
 
       {/* Sidebar */}
-      <aside className={`w-1/3 max-w-sm flex flex-col border-r border-medium-gray bg-white lg:block ${
+      <aside className={`w-full lg:w-1/3 lg:max-w-sm flex flex-col border-r border-medium-gray bg-white lg:block ${
         sidebarOpen ? 'block' : 'hidden'
       }`}>
         
@@ -198,19 +189,11 @@ const PlaceWorkingHours: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="w-full lg:w-2/3 flex-grow p-4 lg:p-6 bg-background-light overflow-y-auto">
+      <main className="w-full lg:w-2/3 flex-grow p-3 lg:p-6 bg-background-light overflow-y-auto">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-            <div className="flex items-center gap-4">
-              <button
-                className="lg:hidden p-2 text-charcoal/60 hover:text-charcoal"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <h1 className="text-charcoal text-2xl lg:text-3xl font-black leading-tight tracking-[-0.033em] font-display">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-4 lg:mb-6">
+            <div className="flex items-center gap-2 lg:gap-4">
+              <h1 className="text-charcoal text-lg lg:text-2xl xl:text-3xl font-black leading-tight tracking-[-0.033em] font-display">
                 Working Hours
               </h1>
             </div>
@@ -218,14 +201,14 @@ const PlaceWorkingHours: React.FC = () => {
 
           {/* Selected Place Details */}
           {selectedPlace ? (
-            <div className="space-y-6">
+            <div className="space-y-4 lg:space-y-6">
               {/* Place Info Card */}
               <div className="card">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold text-charcoal font-display">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 lg:mb-4">
+                  <h2 className="text-lg lg:text-2xl font-bold text-charcoal font-display">
                     {selectedPlace.name}
                   </h2>
-                  <div className="flex items-center text-sm text-charcoal/60 font-body">
+                  <div className="flex items-center text-xs lg:text-sm text-charcoal/60 font-body">
                     {selectedPlace.location_type === 'fixed' ? (
                       <>
                         <BuildingOfficeIcon className="h-4 w-4 mr-1" />
@@ -243,49 +226,51 @@ const PlaceWorkingHours: React.FC = () => {
 
               {/* Working Hours Editor */}
               <div className="card">
-                <div className="px-4 py-5 sm:p-6">
-                  <h3 className="text-lg font-medium text-charcoal mb-4 font-display">
+                <div className="px-3 py-4 lg:px-4 lg:py-5 sm:p-6">
+                  <h3 className="text-base lg:text-lg font-medium text-charcoal mb-3 lg:mb-4 font-display">
                     Weekly Schedule
                   </h3>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-3 lg:space-y-4">
                     {dayNames.map((day, index) => (
-                      <div key={day} className="flex items-center space-x-4 p-4 border border-medium-gray rounded-lg bg-white">
-                        <div className="w-24">
-                          <label className="block text-sm font-medium text-charcoal font-body">
+                      <div key={day} className="flex flex-col lg:flex-row items-start lg:items-center gap-3 lg:space-x-4 p-3 lg:p-4 border border-medium-gray rounded-lg bg-white">
+                        <div className="w-full lg:w-24">
+                          <label className="block text-xs lg:text-sm font-medium text-charcoal font-body">
                             {dayLabels[index]}
                           </label>
                         </div>
                         
-                        <div className="flex items-center">
+                        <div className="flex items-center w-full lg:w-auto">
                           <input
                             type="checkbox"
                             checked={workingHours[day]?.available || false}
                             onChange={() => handleDayToggle(day)}
                             className="h-4 w-4 text-bright-blue focus:ring-bright-blue border-medium-gray bg-white rounded"
                           />
-                          <label className="ml-2 text-sm text-charcoal font-body">Open</label>
+                          <label className="ml-2 text-xs lg:text-sm text-charcoal font-body">Open</label>
                         </div>
                         
                         {workingHours[day]?.available && (
-                          <div className="flex items-center space-x-4">
-                            <div>
-                              <label className="block text-xs text-charcoal/60 font-body">Start</label>
-                              <input
-                                type="time"
-                                value={workingHours[day]?.start || '09:00'}
-                                onChange={(e) => handleTimeChange(day, 'start', e.target.value)}
-                                className="input-field w-24"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs text-charcoal/60 font-body">End</label>
-                              <input
-                                type="time"
-                                value={workingHours[day]?.end || '17:00'}
-                                onChange={(e) => handleTimeChange(day, 'end', e.target.value)}
-                                className="input-field w-24"
-                              />
+                          <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 lg:space-x-4 w-full lg:w-auto">
+                            <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 w-full lg:w-auto">
+                              <div>
+                                <label className="block text-xs text-charcoal/60 font-body mb-1">Start</label>
+                                <input
+                                  type="time"
+                                  value={workingHours[day]?.start || '09:00'}
+                                  onChange={(e) => handleTimeChange(day, 'start', e.target.value)}
+                                  className="input-field w-full sm:w-24"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-charcoal/60 font-body mb-1">End</label>
+                                <input
+                                  type="time"
+                                  value={workingHours[day]?.end || '17:00'}
+                                  onChange={(e) => handleTimeChange(day, 'end', e.target.value)}
+                                  className="input-field w-full sm:w-24"
+                                />
+                              </div>
                             </div>
                             <div className="flex items-center space-x-2">
                               <input
@@ -302,7 +287,7 @@ const PlaceWorkingHours: React.FC = () => {
                                 }}
                                 className="h-4 w-4 text-bright-blue focus:ring-bright-blue border-medium-gray bg-white rounded"
                               />
-                              <label className="text-sm text-charcoal font-body">Lunch Break</label>
+                              <label className="text-xs lg:text-sm text-charcoal font-body">Lunch Break</label>
                             </div>
                             {workingHours[day]?.break_start && (
                               <div className="flex items-center space-x-2">
@@ -324,7 +309,7 @@ const PlaceWorkingHours: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleCopyToAll(day)}
-                              className="text-xs text-bright-blue hover:text-blue-600 font-body"
+                              className="text-xs text-bright-blue hover:text-blue-600 font-body whitespace-nowrap"
                             >
                               Copy to all
                             </button>
@@ -335,9 +320,9 @@ const PlaceWorkingHours: React.FC = () => {
                   </div>
 
                   {/* Quick Actions */}
-                  <div className="mt-6 pt-4 border-t border-medium-gray">
-                    <h4 className="text-sm font-medium text-charcoal mb-3 font-body">Quick Actions</h4>
-                    <div className="flex space-x-2">
+                  <div className="mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-medium-gray">
+                    <h4 className="text-xs lg:text-sm font-medium text-charcoal mb-2 lg:mb-3 font-body">Quick Actions</h4>
+                    <div className="flex flex-col sm:flex-row gap-2 lg:space-x-2">
                       <button
                         type="button"
                         onClick={() => {
@@ -347,7 +332,7 @@ const PlaceWorkingHours: React.FC = () => {
                           });
                           setWorkingHours(newHours);
                         }}
-                        className="px-3 py-1 text-xs bg-lime-green text-white rounded hover:bg-green-500 font-body"
+                        className="px-3 py-1.5 lg:py-1 text-xs bg-lime-green text-white rounded hover:bg-green-500 font-body"
                       >
                         Set All Days 9AM-5PM
                       </button>
@@ -360,7 +345,7 @@ const PlaceWorkingHours: React.FC = () => {
                           });
                           setWorkingHours(newHours);
                         }}
-                        className="px-3 py-1 text-xs bg-bright-blue text-white rounded hover:bg-blue-600 font-body"
+                        className="px-3 py-1.5 lg:py-1 text-xs bg-bright-blue text-white rounded hover:bg-blue-600 font-body"
                       >
                         Set Weekdays Only
                       </button>
@@ -373,7 +358,7 @@ const PlaceWorkingHours: React.FC = () => {
                           });
                           setWorkingHours(newHours);
                         }}
-                        className="px-3 py-1 text-xs bg-coral-red text-white rounded hover:bg-red-500 font-body"
+                        className="px-3 py-1.5 lg:py-1 text-xs bg-coral-red text-white rounded hover:bg-red-500 font-body"
                       >
                         Close All Days
                       </button>
@@ -381,12 +366,12 @@ const PlaceWorkingHours: React.FC = () => {
                   </div>
 
                   {/* Action Buttons at Bottom */}
-                  <div className="mt-6 pt-4 border-t border-medium-gray flex flex-wrap justify-end gap-3">
+                  <div className="mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-medium-gray flex flex-wrap justify-end gap-3">
                     <button
                       type="button"
                       onClick={handleSave}
                       disabled={!selectedPlace || isSaving}
-                      className="btn-primary"
+                      className="btn-primary w-full sm:w-auto text-sm lg:text-base"
                     >
                       <ClockIcon className="h-4 w-4 mr-2" />
                       {isSaving ? 'Saving...' : 'Save Hours'}
@@ -397,10 +382,10 @@ const PlaceWorkingHours: React.FC = () => {
             </div>
           ) : (
             <div className="card">
-              <div className="p-8 text-center">
-                <ClockIcon className="h-12 w-12 text-charcoal/40 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-charcoal mb-2 font-display">Select a Place</h3>
-                <p className="text-charcoal/60 font-body">Choose a place from the sidebar to set working hours</p>
+              <div className="p-4 lg:p-8 text-center">
+                <ClockIcon className="h-10 w-10 lg:h-12 lg:w-12 text-charcoal/40 mx-auto mb-3 lg:mb-4" />
+                <h3 className="text-base lg:text-lg font-medium text-charcoal mb-2 font-display">Select a Place</h3>
+                <p className="text-sm lg:text-base text-charcoal/60 font-body">Choose a place from the sidebar to set working hours</p>
               </div>
             </div>
           )}

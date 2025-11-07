@@ -152,6 +152,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(newUser);
       
+      // If user is a business owner, fetch notification count on login
+      if (newUser.user_type === 'business_owner') {
+        try {
+          const { ownerAPI } = await import('../utils/api');
+          await ownerAPI.getUnreadNotificationCount();
+          // Notification count is fetched - NotificationBell component will pick it up on refresh
+        } catch (error) {
+          console.warn('Failed to fetch notification count on login:', error);
+          // Don't fail login if notification fetch fails
+        }
+      }
+      
       // Identify user in Mixpanel
       mixpanel.identify(String(userData.id));
       mixpanel.people.set({

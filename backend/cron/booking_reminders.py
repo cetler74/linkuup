@@ -2,12 +2,15 @@
 """
 Automated booking reminder system.
 Sends reminders 24 hours before appointments.
+Creates daily reminder notifications for owners.
 """
 
 import os
 import sys
 import logging
-from datetime import datetime, timedelta
+import asyncio
+from datetime import datetime, timedelta, date
+from sqlalchemy import func
 from typing import List, Dict, Any
 
 # Add the backend directory to the Python path
@@ -225,6 +228,128 @@ def main():
         stats = service.process_reminders()
         
         logger.info(f"Reminder service completed successfully: {stats}")
+        
+        # Exit with success code
+        sys.exit(0)
+        
+    except Exception as e:
+        logger.error(f"Fatal error in reminder service: {str(e)}")
+        sys.exit(1)
+
+async def create_daily_reminder_notifications():
+    """
+    Create daily reminder notifications for owners about bookings scheduled for today.
+    This function should be called daily (e.g., via cron job) to create notifications
+    for all bookings happening today.
+    """
+    try:
+        from core.database import AsyncSessionLocal
+        from sqlalchemy import select, and_
+        from models.place_existing import Booking, Place, Service
+        from services.notification_service import NotificationService
+        
+        async with AsyncSessionLocal() as db:
+            # Get today's date
+            today = date.today()
+            
+            # Get all bookings for today that are not cancelled
+            bookings_result = await db.execute(
+                select(Booking).where(
+                    and_(
+                        Booking.booking_date == today,
+                        Booking.status.in_(["pending", "confirmed"])
+                    )
+                )
+            )
+            bookings = bookings_result.scalars().all()
+            
+            if not bookings:
+                logger.info(f"No bookings found for today ({today})")
+                return
+            
+            logger.info(f"Found {len(bookings)} bookings for today")
+            
+            notification_service = NotificationService(db)
+            notifications_created = 0
+            
+            # Process each booking
+            for booking in bookings:
+                try:
+                    # Get the place to find the owner
+                    place_result = await db.execute(
+                        select(Place).where(Place.id == booking.place_id)
+                    )
+                    place = place_result.scalar_one_or_none()
+                    
+                    if not place or not place.owner_id:
+                        logger.warning(f"Place {booking.place_id} not found or has no owner")
+                        continue
+                    
+                    # Get service name
+                    service_name = None
+                    if booking.service_id:
+                        service_result = await db.execute(
+                            select(Service).where(Service.id == booking.service_id)
+                        )
+                        service = service_result.scalar_one_or_none()
+                        if service:
+                            service_name = service
+                    
+                    # Check if notification already exists for this booking today
+                    from models.notification import Notification
+                    from sqlalchemy import cast, Date
+                    existing_notification_result = await db.execute(
+                        select(Notification).where(
+                            and_(
+                                Notification.owner_id == place.owner_id,
+                                Notification.booking_id == booking.id,
+                                Notification.type == 'daily_reminder',
+                                cast(Notification.created_at, Date) == today
+                            )
+                        )
+                    )
+                    existing_notification = existing_notification_result.scalar_one_or_none()
+                    
+                    if existing_notification:
+                        logger.debug(f"Daily reminder notification already exists for booking {booking.id}")
+                        continue
+                    
+                    # Create daily reminder notification
+                    await notification_service.create_daily_reminder_notification(
+                        owner_id=place.owner_id,
+                        booking=booking,
+                        place=place,
+                        service=service_name
+                    )
+                    notifications_created += 1
+                    logger.info(f"Created daily reminder notification for booking {booking.id} (owner {place.owner_id})")
+                    
+                except Exception as e:
+                    logger.error(f"Error creating notification for booking {booking.id}: {str(e)}")
+                    continue
+            
+            await db.commit()
+            logger.info(f"Created {notifications_created} daily reminder notifications")
+            
+    except Exception as e:
+        logger.error(f"Error in create_daily_reminder_notifications: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+
+def main():
+    """Main function to run the reminder service."""
+    logger.info("Starting booking reminder service...")
+    
+    try:
+        service = BookingReminderService()
+        stats = service.process_reminders()
+        
+        logger.info(f"Reminder service completed successfully: {stats}")
+        
+        # Also create daily reminder notifications for owners
+        logger.info("Creating daily reminder notifications for owners...")
+        asyncio.run(create_daily_reminder_notifications())
         
         # Exit with success code
         sys.exit(0)

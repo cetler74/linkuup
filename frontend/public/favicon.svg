@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Two-link chain icon - two elongated oval links interlocked diagonally with hollow outlined effect -->
+  
+  <defs>
+    <!-- Mask to hide portion of upper link that passes behind lower link -->
+    <mask id="upperMask">
+      <rect width="64" height="64" fill="white"/>
+      <ellipse cx="44" cy="44" rx="17" ry="11" fill="black"/>
+    </mask>
+    
+    <!-- Mask to hide portion of lower link that passes behind upper link -->
+    <mask id="lowerMask">
+      <rect width="64" height="64" fill="white"/>
+      <ellipse cx="20" cy="20" rx="17" ry="11" fill="black"/>
+    </mask>
+  </defs>
+  
+  <!-- Upper-left link (elongated oval) - outer line -->
+  <ellipse cx="20" cy="20" rx="14" ry="8" 
+           fill="none" 
+           stroke="#1E90FF" 
+           stroke-width="3.5" 
+           stroke-linecap="round"
+           mask="url(#upperMask)"/>
+  
+  <!-- Upper-left link (elongated oval) - inner line for hollow effect -->
+  <ellipse cx="20" cy="20" rx="11" ry="6" 
+           fill="none" 
+           stroke="#1E90FF" 
+           stroke-width="2" 
+           stroke-linecap="round"
+           mask="url(#upperMask)"/>
+  
+  <!-- Lower-right link (elongated oval) - outer line -->
+  <ellipse cx="44" cy="44" rx="14" ry="8" 
+           fill="none" 
+           stroke="#1E90FF" 
+           stroke-width="3.5" 
+           stroke-linecap="round"
+           mask="url(#lowerMask)"/>
+  
+  <!-- Lower-right link (elongated oval) - inner line for hollow effect -->
+  <ellipse cx="44" cy="44" rx="11" ry="6" 
+           fill="none" 
+           stroke="#1E90FF" 
+           stroke-width="2" 
+           stroke-linecap="round"
+           mask="url(#lowerMask)"/>
+</svg>

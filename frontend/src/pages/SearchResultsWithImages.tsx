@@ -341,6 +341,7 @@ const SearchResultsWithImages: React.FC = () => {
                       <SelectItem value="tattooPiercing">{t('search.tattooPiercing')}</SelectItem>
                       <SelectItem value="petGrooming">{t('search.petGrooming')}</SelectItem>
                       <SelectItem value="tanningClinic">{t('search.tanningClinic')}</SelectItem>
+                      <SelectItem value="others">{t('search.others')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

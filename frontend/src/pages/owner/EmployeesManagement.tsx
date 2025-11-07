@@ -520,19 +520,10 @@ const EmployeesManagement: React.FC = () => {
 
   return (
     <>
-      <div className="flex h-screen bg-[#F5F5F5]">
-      {/* Mobile Menu Button */}
-      <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        <svg className="w-6 h-6 text-[#333333]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+      <div className="flex flex-col lg:flex-row h-screen bg-[#F5F5F5] w-full max-w-[412px] mx-auto lg:max-w-none">
 
       {/* Sidebar */}
-      <aside className={`w-1/3 max-w-sm flex flex-col border-r border-[#E0E0E0] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] lg:block ${
+      <aside className={`w-full lg:w-1/3 lg:max-w-sm flex flex-col border-r border-[#E0E0E0] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] lg:block ${
         sidebarOpen ? 'block' : 'hidden'
       }`}>
         {/* Search */}
@@ -609,12 +600,12 @@ const EmployeesManagement: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden w-full lg:w-auto">
         {/* Header */}
-        <div className="bg-white border-b border-[#E0E0E0] px-6 py-4 shadow-[0px_2px_8px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center justify-between">
+        <div className="bg-white border-b border-[#E0E0E0] px-3 lg:px-6 py-3 lg:py-4 shadow-[0px_2px_8px_rgba(0,0,0,0.1)]">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>Employees Management</h1>
+              <h1 className="text-lg lg:text-2xl font-bold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>Employees Management</h1>
               <p className="mt-1 text-sm text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                 {selectedPlace ? `Manage employees for ${selectedPlace.name}` : 'Select a place to manage employees'}
               </p>
@@ -627,7 +618,7 @@ const EmployeesManagement: React.FC = () => {
                 setShowModal(true);
               }}
               disabled={!selectedPlace}
-              className="inline-flex items-center justify-center rounded-md border border-transparent bg-[#1E90FF] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-[#1E90FF] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center rounded-md border border-transparent bg-[#1E90FF] px-3 lg:px-4 py-2 text-xs lg:text-sm font-medium text-white shadow-sm hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-[#1E90FF] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
               style={{ fontFamily: 'Open Sans, sans-serif' }}
             >
               <PlusIcon className="h-4 w-4 mr-2" />
@@ -710,16 +701,16 @@ const EmployeesManagement: React.FC = () => {
         </div>
 
         {/* Employees Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#F5F5F5]">
+        <div className="flex-1 overflow-y-auto p-3 lg:p-6 bg-[#F5F5F5]">
           {selectedPlace ? (
             <>
               {/* Quick Stats */}
               {employees.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4 mb-4 lg:mb-6">
+                  <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-2 lg:p-4">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <UserIcon className="h-8 w-8 text-[#1E90FF]" />
+                        <UserIcon className="h-6 w-6 lg:h-8 lg:w-8 text-[#1E90FF]" />
                       </div>
                       <div className="ml-3">
                         <p className="text-sm font-medium text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Total Employees</p>
@@ -728,10 +719,10 @@ const EmployeesManagement: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-4">
+                  <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-2 lg:p-4">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-[#A3D55D] flex items-center justify-center">
+                        <div className="h-6 w-6 lg:h-8 lg:w-8 rounded-full bg-[#A3D55D] flex items-center justify-center">
                           <div className="h-2 w-2 rounded-full bg-white"></div>
                         </div>
                       </div>
@@ -744,10 +735,10 @@ const EmployeesManagement: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-4">
+                  <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-2 lg:p-4">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-[#FF5A5F] flex items-center justify-center">
+                        <div className="h-6 w-6 lg:h-8 lg:w-8 rounded-full bg-[#FF5A5F] flex items-center justify-center">
                           <div className="h-2 w-2 rounded-full bg-white"></div>
                         </div>
                       </div>
@@ -760,10 +751,10 @@ const EmployeesManagement: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-4">
+                  <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-2 lg:p-4">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <ClockIcon className="h-8 w-8 text-[#FFD43B]" />
+                        <ClockIcon className="h-6 w-6 lg:h-8 lg:w-8 text-[#FFD43B]" />
                       </div>
                       <div className="ml-3">
                         <p className="text-sm font-medium text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>With Hours Set</p>
@@ -776,7 +767,7 @@ const EmployeesManagement: React.FC = () => {
                 </div>
               )}
               
-              <div className="bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] overflow-hidden sm:rounded-lg border border-[#E0E0E0]">
+              <div className="bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] overflow-hidden sm:rounded-lg border border-[#E0E0E0] w-full">
           {filteredEmployees.length === 0 ? (
             <div className="text-center py-12">
               <UserIcon className="mx-auto h-12 w-12 text-[#9E9E9E]" />
@@ -794,14 +785,14 @@ const EmployeesManagement: React.FC = () => {
             <ul className="divide-y divide-[#E0E0E0]">
               {filteredEmployees.map((employee) => (
                 <li key={employee.id} className="bg-white hover:bg-[#F5F5F5] transition-colors">
-                  <div className="px-6 py-6">
+                  <div className="px-3 lg:px-6 py-4 lg:py-6">
                     {/* Main Employee Information */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4">
+                    <div className="flex flex-col lg:flex-row items-start justify-between gap-4">
+                      <div className="flex items-start space-x-2 lg:space-x-4 w-full lg:w-auto">
                         <div className="flex-shrink-0">
                           {employee.photo_url ? (
                             <div 
-                              className="h-12 w-12 rounded-full overflow-hidden shadow-lg border-2"
+                              className="h-10 w-10 lg:h-12 lg:w-12 rounded-full overflow-hidden shadow-lg border-2"
                               style={{ borderColor: employee.color_code || '#3B82F6' }}
                             >
                               <img
@@ -813,18 +804,18 @@ const EmployeesManagement: React.FC = () => {
                             </div>
                           ) : (
                             <div 
-                              className="h-12 w-12 rounded-full flex items-center justify-center shadow-lg"
+                              className="h-10 w-10 lg:h-12 lg:w-12 rounded-full flex items-center justify-center shadow-lg"
                               style={{ backgroundColor: employee.color_code || '#3B82F6' }}
                             >
-                              <span className="text-white font-semibold text-xl">
+                              <span className="text-white font-semibold text-lg lg:text-xl">
                                 {employee.name.charAt(0).toUpperCase()}
                               </span>
                             </div>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h3 className="text-lg font-semibold text-[#333333] truncate" style={{ fontFamily: 'Open Sans, sans-serif' }}>{employee.name}</h3>
+                          <div className="flex flex-wrap items-center gap-2 lg:space-x-3 mb-2">
+                            <h3 className="text-base lg:text-lg font-semibold text-[#333333] truncate" style={{ fontFamily: 'Open Sans, sans-serif' }}>{employee.name}</h3>
                             <div className="flex items-center space-x-2">
                               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                                 employee.is_active 
@@ -848,7 +839,7 @@ const EmployeesManagement: React.FC = () => {
                           </div>
                           
                           {/* Contact Information */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 mb-3 lg:mb-4">
                             <div className="space-y-2">
                               <div className="flex items-center space-x-2">
                                 <svg className="h-4 w-4 text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -886,10 +877,10 @@ const EmployeesManagement: React.FC = () => {
                       </div>
                       
                       {/* Action Buttons */}
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-4 lg:mt-0 lg:space-x-2 w-full lg:w-auto">
                         <button
                           onClick={() => toggleEmployeeExpansion(employee.id)}
-                          className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-[#9E9E9E] hover:text-[#1E90FF] hover:bg-[#F5F5F5] rounded-lg transition-colors"
+                          className="flex items-center justify-center space-x-1 px-3 py-2 text-xs lg:text-sm font-medium text-[#9E9E9E] hover:text-[#1E90FF] hover:bg-[#F5F5F5] rounded-lg transition-colors"
                           title="Toggle Details"
                           style={{ fontFamily: 'Open Sans, sans-serif' }}
                         >
@@ -907,7 +898,7 @@ const EmployeesManagement: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleManageHours(employee)}
-                          className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-yellow-400 hover:text-yellow-300 hover:bg-yellow-900/20 rounded-lg transition-colors"
+                          className="flex items-center justify-center space-x-1 px-3 py-2 text-xs lg:text-sm font-medium text-yellow-400 hover:text-yellow-300 hover:bg-yellow-900/20 rounded-lg transition-colors"
                           title="Manage Hours"
                         >
                           <ClockIcon className="h-4 w-4" />
@@ -915,7 +906,7 @@ const EmployeesManagement: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleEdit(employee)}
-                          className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-[#1E90FF] hover:text-[#1877D2] hover:bg-[#1E90FF] hover:bg-opacity-10 rounded-lg transition-colors"
+                          className="flex items-center justify-center space-x-1 px-3 py-2 text-xs lg:text-sm font-medium text-[#1E90FF] hover:text-[#1877D2] hover:bg-[#1E90FF] hover:bg-opacity-10 rounded-lg transition-colors"
                           title="Edit Employee"
                           style={{ fontFamily: 'Open Sans, sans-serif' }}
                         >
@@ -924,7 +915,7 @@ const EmployeesManagement: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleDelete(employee.id)}
-                          className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-[#FF5A5F] hover:text-[#FF5A5F] hover:bg-[#FF5A5F] hover:bg-opacity-10 rounded-lg transition-colors"
+                          className="flex items-center justify-center space-x-1 px-3 py-2 text-xs lg:text-sm font-medium text-[#FF5A5F] hover:text-[#FF5A5F] hover:bg-[#FF5A5F] hover:bg-opacity-10 rounded-lg transition-colors"
                           title="Delete Employee"
                           style={{ fontFamily: 'Open Sans, sans-serif' }}
                         >
@@ -936,11 +927,11 @@ const EmployeesManagement: React.FC = () => {
                     
                     {/* Expanded Detailed Information */}
                     {expandedEmployees.has(employee.id) && (
-                      <div className="mt-6 pt-6 border-t border-[#E0E0E0]">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-[#E0E0E0]">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-6">
                           
                           {/* Employee Details Card */}
-                          <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6">
+                          <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-3 lg:p-6">
                             <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                               <UserIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                               Employee Details
@@ -1003,7 +994,7 @@ const EmployeesManagement: React.FC = () => {
                           </div>
                           
                           {/* Services Card */}
-                          <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6">
+                          <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-3 lg:p-6">
                             <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                               <BuildingOfficeIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                               Assigned Services
@@ -1012,7 +1003,7 @@ const EmployeesManagement: React.FC = () => {
                           </div>
                           
                           {/* Working Hours Card */}
-                          <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6">
+                          <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-3 lg:p-6">
                             <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                               <ClockIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                               Working Hours
@@ -1048,7 +1039,7 @@ const EmployeesManagement: React.FC = () => {
                           </div>
                           
                           {/* Time-off Card */}
-                          <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6 lg:col-span-2">
+                          <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-3 lg:p-6 lg:col-span-2">
                             <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                               <CalendarIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                               Time-off & Leave

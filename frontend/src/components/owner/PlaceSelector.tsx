@@ -42,25 +42,30 @@ const PlaceSelector: React.FC<PlaceSelectorProps> = ({
         onValueChange={(value) => onPlaceChange(Number(value))}
         disabled={disabled}
       >
-        <SelectTrigger className="block w-full pl-10 pr-10 py-2 text-base border-gray-600 bg-gray-700 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed">
+        <SelectTrigger className="block w-full pl-10 pr-10" style={{ fontFamily: 'Open Sans, sans-serif' }}>
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             {selectedPlace?.location_type === 'mobile' ? (
-              <MapPinIcon className="h-5 w-5 text-gray-400" />
+              <MapPinIcon className="h-5 w-5 text-[#9E9E9E]" />
             ) : (
-              <BuildingOfficeIcon className="h-5 w-5 text-gray-400" />
+              <BuildingOfficeIcon className="h-5 w-5 text-[#9E9E9E]" />
             )}
           </div>
-          <SelectValue placeholder={placeholder} />
+          <span className="flex-1 text-left">
+            {selectedPlace 
+              ? `${selectedPlace.name} (${selectedPlace.location_type === 'fixed' ? 'Fixed' : 'Mobile'})${selectedPlace.location_type === 'fixed' && selectedPlace.city ? ` - ${selectedPlace.city}` : ''}${selectedPlace.location_type === 'mobile' && selectedPlace.service_areas && selectedPlace.service_areas.length > 0 ? ` - ${selectedPlace.service_areas.join(', ')}` : ''}`
+              : placeholder
+            }
+          </span>
         </SelectTrigger>
-        <SelectContent className="bg-gray-700 border-gray-600">
-          <SelectItem value="" className="text-white hover:bg-gray-600">
+        <SelectContent>
+          <SelectItem value="" style={{ fontFamily: 'Open Sans, sans-serif' }}>
             {placeholder}
           </SelectItem>
           {safePlaces.map((place) => (
             <SelectItem 
               key={place.id} 
               value={place.id.toString()}
-              className="text-white hover:bg-gray-600"
+              style={{ fontFamily: 'Open Sans, sans-serif' }}
             >
               {place.name} ({place.location_type === 'fixed' ? 'Fixed' : 'Mobile'})
               {place.location_type === 'fixed' && place.city && ` - ${place.city}`}

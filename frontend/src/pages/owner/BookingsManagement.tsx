@@ -112,6 +112,7 @@ const BookingsManagement: React.FC = () => {
   const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day'>('month');
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [calendarHeight, setCalendarHeight] = useState(700);
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_email: '',
@@ -139,6 +140,16 @@ const BookingsManagement: React.FC = () => {
   const updateBookingMutation = useUpdateBooking();
   const cancelBookingMutation = useCancelBooking();
   const acceptBookingMutation = useAcceptBooking();
+
+  // Set responsive calendar height
+  useEffect(() => {
+    const updateCalendarHeight = () => {
+      setCalendarHeight(window.innerWidth < 640 ? 500 : 700);
+    };
+    updateCalendarHeight();
+    window.addEventListener('resize', updateCalendarHeight);
+    return () => window.removeEventListener('resize', updateCalendarHeight);
+  }, []);
 
 
 
@@ -490,108 +501,110 @@ const BookingsManagement: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-light-gray">
-
-      {/* Sidebar */}
-      <aside className={`w-1/3 max-w-sm flex flex-col border-r border-medium-gray bg-white lg:block ${
-        sidebarOpen ? 'block' : 'hidden'
-      }`}>
-        
-        {/* Search */}
-        <div className="p-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-charcoal/60" />
-            </div>
-            <input
-              type="text"
-              className="input-field pl-10"
-              placeholder="Search for a place"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+    <div className="flex flex-col h-screen bg-light-gray overflow-hidden">
+      {/* Header */}
+      <div className="bg-transparent border-b border-medium-gray p-3 sm:p-4 lg:p-6 rounded-lg" style={{ borderRadius: '8px' }}>
+        <div className="max-w-7xl">
+          <div className="flex flex-wrap justify-start items-center gap-2 sm:gap-3 mb-4">
+            <h1 className="text-charcoal text-xl sm:text-2xl lg:text-3xl font-bold leading-tight font-display">
+              Bookings Management
+            </h1>
           </div>
-        </div>
 
-        {/* Places List */}
-        <div className="flex-grow overflow-y-auto">
-          <div className="flex flex-col">
-            {filteredPlaces.map((place) => (
-              <div
-                key={place.id}
-                className={`flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between cursor-pointer transition-colors ${
-                  selectedPlace?.id === place.id
-                    ? 'bg-bright-blue/10 border-l-4 border-bright-blue'
-                    : 'bg-white hover:bg-light-gray'
-                }`}
-                onClick={() => {
-                  setSelectedPlace(place);
-                  setSelectedPlaceId(place.id);
-                  setSidebarOpen(false); // Close sidebar on mobile when place is selected
-                }}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="text-charcoal/60 flex items-center justify-center rounded-lg bg-light-gray shrink-0 size-12">
-                    {place.location_type === 'fixed' ? (
-                      <BuildingOfficeIcon className="h-6 w-6" />
-                    ) : (
-                      <MapPinIcon className="h-6 w-6" />
-                    )}
-                  </div>
-                  <div className="flex flex-col justify-center">
-                    <p className="text-charcoal text-base font-medium leading-normal line-clamp-1 font-body">
-                      {place.name}
-                    </p>
-                    <p className="text-charcoal/60 text-sm font-normal leading-normal line-clamp-2 font-body">
-                      {place.location_type === 'fixed' ? 'Fixed Location' : 'Mobile/Service Area'}
-                    </p>
-                  </div>
-                </div>
-                <div className="shrink-0">
-                  <div className="text-charcoal/60 flex size-7 items-center justify-center">
-                    <PencilIcon className="h-4 w-4" />
-                  </div>
-                </div>
+          {/* Search */}
+          <div className="mb-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-2 sm:pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 text-charcoal/60" />
               </div>
-            ))}
+              <input
+                type="text"
+                className="input-field pl-8 sm:pl-10 text-sm sm:text-base"
+                placeholder="Search for a place"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Place Selector - Horizontal Tabs */}
+          <div className="bg-white rounded-lg shadow-form p-4" style={{ borderRadius: '8px' }}>
+            <label className="block text-sm font-medium text-charcoal mb-3 font-body px-1" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}>
+              Select Place
+            </label>
+            <div className="overflow-x-auto -mx-4 px-4">
+              <div className="flex gap-2 -mb-px border-b border-medium-gray">
+              {filteredPlaces.map((place) => {
+                const isSelected = selectedPlace?.id === place.id;
+                return (
+                  <button
+                    key={place.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPlace(place);
+                      setSelectedPlaceId(place.id);
+                    }}
+                    className={`
+                      flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all duration-200 font-body flex-shrink-0 rounded-lg
+                      ${isSelected 
+                        ? 'border-bright-blue text-bright-blue bg-bright-blue bg-opacity-10' 
+                        : 'border-transparent text-charcoal opacity-70 hover:opacity-100 hover:border-medium-gray hover:bg-light-gray'
+                      }
+                    `}
+                    style={{ 
+                      fontFamily: 'Open Sans, sans-serif', 
+                      fontWeight: isSelected ? 600 : 400,
+                      fontSize: '14px'
+                    }}
+                  >
+                    <div className={`flex items-center justify-center rounded-lg shrink-0 size-7 ${
+                      isSelected ? 'bg-bright-blue' : 'bg-light-gray'
+                    }`}>
+                      {place.location_type === 'mobile' ? (
+                        <MapPinIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                      ) : (
+                        <BuildingOfficeIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                      )}
+                    </div>
+                    <span className="text-sm whitespace-nowrap">
+                      {place.name} ({place.location_type === 'fixed' ? 'Fixed' : 'Mobile'})
+                    </span>
+                  </button>
+                );
+              })}
+              </div>
+            </div>
           </div>
         </div>
-      </aside>
+      </div>
 
       {/* Main Content */}
-      <main className="w-full lg:w-2/3 flex-grow p-4 lg:p-6 bg-light-gray overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-            <div className="flex items-center gap-4">
-              <button
-                className="lg:hidden p-2 text-charcoal/60 hover:text-charcoal"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <h1 className="text-charcoal text-2xl lg:text-3xl font-bold leading-tight font-display">
+      <main className="flex-grow overflow-y-auto p-3 sm:p-4 lg:p-6 bg-light-gray">
+        <div className="max-w-7xl">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-start sm:items-center gap-3 mb-4 sm:mb-6">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <h1 className="text-charcoal text-xl sm:text-2xl lg:text-3xl font-bold leading-tight font-display">
                 Bookings Management
               </h1>
             </div>
-            <div className="flex gap-2 ml-auto">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setShowRecurringModal(true)}
                 disabled={!selectedPlaceId}
-                className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base px-3 sm:px-4 py-2"
               >
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                Recurring Booking
+                <CalendarIcon className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Recurring Booking</span>
+                <span className="sm:hidden">Recurring</span>
               </button>
               <button
                 type="button"
                 onClick={() => setShowBookingModal(true)}
                 disabled={!selectedPlaceId}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base px-3 sm:px-4 py-2"
               >
-                <PlusIcon className="h-4 w-4 mr-2" />
+                <PlusIcon className="h-4 w-4 mr-1 sm:mr-2" />
                 New Booking
               </button>
             </div>
@@ -601,22 +614,22 @@ const BookingsManagement: React.FC = () => {
           {selectedPlace ? (
             <div className="space-y-6">
               {/* Place Info Card */}
-              <div className="card">
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-charcoal font-display">
+              <div className="card p-3 sm:p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-start sm:items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl sm:text-2xl font-bold text-charcoal font-display truncate">
                       {selectedPlace.name}
                     </h2>
-                    <p className="text-charcoal/60 font-body">
+                    <p className="text-sm sm:text-base text-charcoal/60 font-body truncate">
                       {selectedPlace.location_type === 'fixed' ? 'Fixed Location' : 'Mobile/Service Area'}
                       {selectedPlace.city && ` • ${selectedPlace.city}`}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <div className="flex space-x-2">
+                  <div className="flex gap-2 shrink-0">
+                    <div className="flex space-x-1 sm:space-x-2">
                       <button
                         onClick={() => setView('calendar')}
-                        className={`px-3 py-2 text-sm rounded font-body ${
+                        className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded font-body ${
                           view === 'calendar' 
                             ? 'bg-bright-blue text-charcoal' 
                             : 'bg-light-gray text-charcoal hover:bg-medium-gray'
@@ -626,7 +639,7 @@ const BookingsManagement: React.FC = () => {
                       </button>
                       <button
                         onClick={() => setView('list')}
-                        className={`px-3 py-2 text-sm rounded font-body ${
+                        className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded font-body ${
                           view === 'list' 
                             ? 'bg-bright-blue text-charcoal' 
                             : 'bg-light-gray text-charcoal hover:bg-medium-gray'
@@ -641,43 +654,47 @@ const BookingsManagement: React.FC = () => {
 
               {/* Calendar or List View */}
               {view === 'calendar' ? (
-                <FullCalendarComponent
-                  bookings={calendarBookings}
-                  onEventDrop={handleEventDrop}
-                  onEventResize={handleEventResize}
-                  onSelectEvent={handleSelectEvent}
-                  onSelectSlot={handleSelectSlot}
-                  onBookingStatusChange={handleBookingStatusChange}
-                  employees={employees}
-                  services={services}
-                  defaultView={calendarView}
-                  height={700}
-                />
+                <div className="overflow-x-auto -mx-3 sm:mx-0">
+                  <div className="w-full" style={{ minHeight: '500px' }}>
+                    <FullCalendarComponent
+                      bookings={calendarBookings}
+                      onEventDrop={handleEventDrop}
+                      onEventResize={handleEventResize}
+                      onSelectEvent={handleSelectEvent}
+                      onSelectSlot={handleSelectSlot}
+                      onBookingStatusChange={handleBookingStatusChange}
+                      employees={employees}
+                      services={services}
+                      defaultView={calendarView}
+                      height={calendarHeight}
+                    />
+                  </div>
+                </div>
               ) : (
-                <div className="card">
-                  <div className="px-4 py-3 bg-light-gray border-b border-medium-gray">
-                    <h3 className="text-lg font-medium text-charcoal font-body font-display">All Bookings</h3>
+                <div className="card p-0">
+                  <div className="px-3 sm:px-4 py-2 sm:py-3 bg-light-gray border-b border-medium-gray">
+                    <h3 className="text-base sm:text-lg font-medium text-charcoal font-body font-display">All Bookings</h3>
                   </div>
                   <ul className="divide-y divide-medium-gray">
                     {bookings.map((booking) => (
                       <li key={booking.id}>
-                        <div className="px-4 py-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-4">
+                        <div className="px-3 sm:px-4 py-3 sm:py-4">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-start gap-3">
+                            <div className="flex items-start space-x-2 sm:space-x-4 flex-1 min-w-0">
                               <div className="flex-shrink-0">
                                 <div 
-                                  className="h-12 w-12 rounded-full flex items-center justify-center text-charcoal"
+                                  className="h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center text-charcoal"
                                   style={{ 
                                     backgroundColor: booking.color_code || '#3B82F6' 
                                   }}
                                 >
-                                  <CalendarIcon className="h-6 w-6" />
+                                  <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                                 </div>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-3 mb-2">
-                                  <h4 className="text-lg font-medium text-charcoal font-body font-body">{booking.customer_name}</h4>
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-body ${
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:space-x-3 mb-2">
+                                  <h4 className="text-base sm:text-lg font-medium text-charcoal font-body truncate">{booking.customer_name}</h4>
+                                  <span className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium font-body shrink-0 ${
                                     booking.status === 'confirmed' ? 'bg-lime-green text-charcoal' :
                                     booking.status === 'pending' ? 'bg-soft-yellow text-charcoal' :
                                     booking.status === 'cancelled' ? 'bg-coral-red text-charcoal' :
@@ -687,37 +704,39 @@ const BookingsManagement: React.FC = () => {
                                   </span>
                                 </div>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-charcoal/70 font-body">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm text-charcoal/70 font-body">
                                   <div className="space-y-1">
-                                    <div className="flex items-center space-x-2">
-                                      <UserIcon className="h-4 w-4" />
-                                      <span className="font-medium">Customer:</span>
-                                      <span>{booking.customer_name}</span>
+                                    <div className="flex items-start space-x-2">
+                                      <UserIcon className="h-3 w-3 sm:h-4 sm:w-4 mt-0.5 shrink-0" />
+                                      <div className="min-w-0">
+                                        <span className="font-medium">Customer: </span>
+                                        <span className="break-words">{booking.customer_name}</span>
+                                      </div>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                      <span className="font-medium">Email:</span>
-                                      <span>{booking.customer_email}</span>
+                                    <div className="flex items-start space-x-2">
+                                      <span className="font-medium shrink-0">Email: </span>
+                                      <span className="break-all">{booking.customer_email}</span>
                                     </div>
                                     {booking.customer_phone && (
-                                      <div className="flex items-center space-x-2">
-                                        <span className="font-medium">Phone:</span>
-                                        <span>{booking.customer_phone}</span>
+                                      <div className="flex items-start space-x-2">
+                                        <span className="font-medium shrink-0">Phone: </span>
+                                        <span className="break-all">{booking.customer_phone}</span>
                                       </div>
                                     )}
                                   </div>
                                   
                                   <div className="space-y-1">
-                                    <div className="flex items-center space-x-2">
-                                      <span className="font-medium">Services:</span>
+                                    <div className="flex flex-col sm:flex-row sm:items-start space-y-1 sm:space-y-0 sm:space-x-2">
+                                      <span className="font-medium shrink-0">Services:</span>
                                       <div className="flex flex-wrap gap-1">
                                         {booking.services && booking.services.length > 0 ? (
                                           booking.services.map((service: any, index: number) => (
-                                            <span key={index} className="text-bright-blue text-sm bg-bright-blue bg-opacity-10 px-2 py-1 rounded">
+                                            <span key={index} className="text-bright-blue text-xs sm:text-sm bg-bright-blue bg-opacity-10 px-2 py-1 rounded">
                                               {service.service_name} (€{service.service_price})
                                             </span>
                                           ))
                                         ) : (
-                                          <span className="text-bright-blue">{booking.service_name || 'N/A'}</span>
+                                          <span className="text-bright-blue text-xs sm:text-sm">{booking.service_name || 'N/A'}</span>
                                         )}
                                       </div>
                                     </div>
@@ -790,25 +809,25 @@ const BookingsManagement: React.FC = () => {
                               </div>
                             </div>
                             
-                            <div className="flex items-center space-x-2">
+                            <div className="flex flex-wrap items-center gap-2 sm:space-x-2 sm:shrink-0">
                               <button
                                 onClick={() => handleEditBooking(booking)}
-                                className="inline-flex items-center px-3 py-1.5 border border-bright-blue text-xs font-medium rounded text-bright-blue bg-bright-blue bg-opacity-10 hover:bg-bright-blue hover:text-charcoal focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bright-blue font-body"
+                                className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 border border-bright-blue text-xs font-medium rounded text-bright-blue bg-bright-blue bg-opacity-10 hover:bg-bright-blue hover:text-charcoal focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bright-blue font-body"
                               >
-                                <PencilIcon className="h-4 w-4 mr-1" />
+                                <PencilIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                 Edit
                               </button>
                               {booking.status === 'pending' && (
                                 <>
                                   <button
                                     onClick={() => handleAcceptBooking(booking.id)}
-                                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-charcoal bg-lime-green hover:bg-lime-green hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lime-green font-body"
+                                    className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 border border-transparent text-xs font-medium rounded text-charcoal bg-lime-green hover:bg-lime-green hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lime-green font-body"
                                   >
                                     Accept
                                   </button>
                                   <button
                                     onClick={() => handleDeclineBooking(booking.id)}
-                                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-charcoal bg-coral-red hover:bg-coral-red hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-coral-red font-body"
+                                    className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 border border-transparent text-xs font-medium rounded text-charcoal bg-coral-red hover:bg-coral-red hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-coral-red font-body"
                                   >
                                     Decline
                                   </button>
@@ -817,7 +836,7 @@ const BookingsManagement: React.FC = () => {
                               {booking.status !== 'cancelled' && booking.status !== 'completed' && (
                                 <button
                                   onClick={() => handleCancelBooking(booking.id)}
-                                  className="inline-flex items-center px-3 py-1.5 border border-medium-gray text-xs font-medium rounded text-charcoal bg-light-gray hover:bg-medium-gray focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-medium-gray font-body"
+                                  className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 border border-medium-gray text-xs font-medium rounded text-charcoal bg-light-gray hover:bg-medium-gray focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-medium-gray font-body"
                                 >
                                   Cancel
                                 </button>
@@ -833,8 +852,8 @@ const BookingsManagement: React.FC = () => {
             </div>
           ) : (
             <div className="card">
-              <div className="text-center py-12">
-                <BuildingOfficeIcon className="mx-auto h-12 w-12 text-charcoal/40" />
+              <div className="text-left py-12">
+                <BuildingOfficeIcon className="h-12 w-12 text-charcoal/40" />
                 <h3 className="mt-2 text-sm font-medium text-charcoal font-display">No place selected</h3>
                 <p className="mt-1 text-sm text-charcoal/60 font-body">
                   Select a place from the sidebar to manage its bookings, or create a new booking.
@@ -848,15 +867,15 @@ const BookingsManagement: React.FC = () => {
       {/* Booking Modal */}
       {showBookingModal && (
         <div className="fixed inset-0 bg-[#333333] bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border border-[#E0E0E0] w-full max-w-md shadow-[0px_2px_8px_rgba(0,0,0,0.1)] rounded-lg bg-white">
+          <div className="relative top-4 sm:top-10 md:top-20 mx-auto p-4 sm:p-5 border border-[#E0E0E0] w-full max-w-md shadow-[0px_2px_8px_rgba(0,0,0,0.1)] rounded-lg bg-white m-3 sm:m-4">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-[#333333] mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 Create New Booking
               </h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <Label htmlFor="customer_name" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Customer Name *</Label>
+                    <Label htmlFor="customer_name" className="block text-xs sm:text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Customer Name *</Label>
                     <Input
                       id="customer_name"
                       type="text"
@@ -864,11 +883,12 @@ const BookingsManagement: React.FC = () => {
                       value={formData.customer_name}
                       onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
                       placeholder="Enter customer name"
+                      className="text-sm sm:text-base"
                       style={{ fontFamily: 'Open Sans, sans-serif' }}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="customer_email" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Customer Email *</Label>
+                    <Label htmlFor="customer_email" className="block text-xs sm:text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Customer Email *</Label>
                     <Input
                       id="customer_email"
                       type="email"
@@ -876,26 +896,28 @@ const BookingsManagement: React.FC = () => {
                       value={formData.customer_email}
                       onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
                       placeholder="Enter email address"
+                      className="text-sm sm:text-base"
                       style={{ fontFamily: 'Open Sans, sans-serif' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="customer_phone" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Customer Phone</Label>
+                  <Label htmlFor="customer_phone" className="block text-xs sm:text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Customer Phone</Label>
                   <Input
                     id="customer_phone"
                     type="tel"
                     value={formData.customer_phone}
                     onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
                     placeholder="Enter phone number"
+                    className="text-sm sm:text-base"
                     style={{ fontFamily: 'Open Sans, sans-serif' }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#333333] mb-2" style={{ fontFamily: 'Open Sans, sans-serif' }}>Services *</label>
-                  <div className="max-h-48 overflow-y-auto border border-[#E0E0E0] rounded-lg p-2 bg-[#F5F5F5]">
+                  <label className="block text-xs sm:text-sm font-medium text-[#333333] mb-2" style={{ fontFamily: 'Open Sans, sans-serif' }}>Services *</label>
+                  <div className="max-h-40 sm:max-h-48 overflow-y-auto border border-[#E0E0E0] rounded-lg p-2 bg-[#F5F5F5]">
                     {services.length === 0 ? (
                       <p className="text-[#9E9E9E] text-sm" style={{ fontFamily: 'Open Sans, sans-serif' }}>No services available for this place</p>
                     ) : (
@@ -936,7 +958,7 @@ const BookingsManagement: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="employee" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Employee</Label>
+                  <Label htmlFor="employee" className="block text-xs sm:text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Employee</Label>
                   <EmployeeSelector
                     employees={employees}
                     selectedEmployeeId={formData.employee_id ? parseInt(formData.employee_id) : undefined}
@@ -945,31 +967,33 @@ const BookingsManagement: React.FC = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div>
-                    <Label htmlFor="booking_date" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Date *</Label>
+                    <Label htmlFor="booking_date" className="block text-xs sm:text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Date *</Label>
                     <Input
                       id="booking_date"
                       type="date"
                       required
                       value={formData.booking_date}
                       onChange={(e) => setFormData({ ...formData, booking_date: e.target.value })}
+                      className="text-sm sm:text-base"
                       style={{ fontFamily: 'Open Sans, sans-serif' }}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="booking_time" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Time *</Label>
+                    <Label htmlFor="booking_time" className="block text-xs sm:text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Time *</Label>
                     <Input
                       id="booking_time"
                       type="time"
                       required
                       value={formData.booking_time}
                       onChange={(e) => setFormData({ ...formData, booking_time: e.target.value })}
+                      className="w-full sm:w-32 text-sm sm:text-base"
                       style={{ fontFamily: 'Open Sans, sans-serif' }}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="duration" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Duration (min)</Label>
+                    <Label htmlFor="duration" className="block text-xs sm:text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Duration (min)</Label>
                     <Input
                       id="duration"
                       type="number"
@@ -977,13 +1001,14 @@ const BookingsManagement: React.FC = () => {
                       step="15"
                       value={formData.duration}
                       onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
+                      className="text-sm sm:text-base"
                       style={{ fontFamily: 'Open Sans, sans-serif' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="status" className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Status</Label>
+                  <Label htmlFor="status" className="block text-xs sm:text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Status</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) => setFormData({ ...formData, status: value })}
@@ -1000,11 +1025,11 @@ const BookingsManagement: React.FC = () => {
                   </Select>
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3 pt-3 sm:pt-4">
                   <button
                     type="button"
                     onClick={handleModalClose}
-                    className="px-4 py-2 text-sm font-medium text-[#333333] bg-white border border-[#E0E0E0] rounded-lg shadow-sm hover:bg-[#F5F5F5] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E90FF]"
+                    className="w-full sm:w-auto px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-[#333333] bg-white border border-[#E0E0E0] rounded-lg shadow-sm hover:bg-[#F5F5F5] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E90FF]"
                     style={{ fontFamily: 'Open Sans, sans-serif' }}
                   >
                     Cancel
@@ -1012,7 +1037,7 @@ const BookingsManagement: React.FC = () => {
                   <button
                     type="submit"
                     disabled={createBookingMutation.isPending || formData.service_ids.length === 0}
-                    className="px-4 py-2 text-sm font-medium text-white bg-[#1E90FF] border border-transparent rounded-lg shadow-sm hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E90FF] disabled:opacity-50"
+                    className="w-full sm:w-auto px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-[#1E90FF] border border-transparent rounded-lg shadow-sm hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E90FF] disabled:opacity-50"
                     style={{ fontFamily: 'Open Sans, sans-serif' }}
                   >
                     Create Booking
@@ -1027,48 +1052,48 @@ const BookingsManagement: React.FC = () => {
       {/* Edit Booking Modal */}
       {showEditModal && editingBooking && (
         <div className="fixed inset-0 bg-charcoal bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border border-medium-gray w-full max-w-md shadow-elevated rounded-md bg-white">
+          <div className="relative top-4 sm:top-10 md:top-20 mx-auto p-4 sm:p-5 border border-medium-gray w-full max-w-md shadow-elevated rounded-md bg-white m-3 sm:m-4">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-charcoal font-display mb-4">
                 Edit Booking
               </h3>
-              <form onSubmit={handleUpdateBooking} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleUpdateBooking} className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-charcoal font-body">Customer Name *</label>
+                    <label className="block text-xs sm:text-sm font-medium text-charcoal font-body">Customer Name *</label>
                     <input
                       type="text"
                       required
                       value={formData.customer_name}
                       onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                      className="input-field"
+                      className="input-field text-sm sm:text-base"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-charcoal font-body">Customer Email *</label>
+                    <label className="block text-xs sm:text-sm font-medium text-charcoal font-body">Customer Email *</label>
                     <input
                       type="email"
                       required
                       value={formData.customer_email}
                       onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
-                      className="input-field"
+                      className="input-field text-sm sm:text-base"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal font-body">Customer Phone</label>
+                  <label className="block text-xs sm:text-sm font-medium text-charcoal font-body">Customer Phone</label>
                   <input
                     type="tel"
                     value={formData.customer_phone}
                     onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
-                    className="input-field"
+                    className="input-field text-sm sm:text-base"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal font-body mb-2">Services *</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="block text-xs sm:text-sm font-medium text-charcoal font-body mb-2">Services *</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                     {services.map((service: any) => (
                       <div
                         key={service.id}
@@ -1116,7 +1141,7 @@ const BookingsManagement: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal font-body">Employee</label>
+                  <label className="block text-xs sm:text-sm font-medium text-charcoal font-body">Employee</label>
                   <EmployeeSelector
                     employees={employees}
                     selectedEmployeeId={formData.employee_id ? parseInt(formData.employee_id) : undefined}
@@ -1125,42 +1150,42 @@ const BookingsManagement: React.FC = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-charcoal font-body">Date *</label>
+                    <label className="block text-xs sm:text-sm font-medium text-charcoal font-body">Date *</label>
                     <input
                       type="date"
                       required
                       value={formData.booking_date}
                       onChange={(e) => setFormData({ ...formData, booking_date: e.target.value })}
-                      className="input-field"
+                      className="input-field text-sm sm:text-base"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-charcoal font-body">Time *</label>
+                    <label className="block text-xs sm:text-sm font-medium text-charcoal font-body">Time *</label>
                     <input
                       type="time"
                       required
                       value={formData.booking_time}
                       onChange={(e) => setFormData({ ...formData, booking_time: e.target.value })}
-                      className="input-field"
+                      className="input-field w-full sm:w-32 text-sm sm:text-base"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-charcoal font-body">Duration (min)</label>
+                    <label className="block text-xs sm:text-sm font-medium text-charcoal font-body">Duration (min)</label>
                     <input
                       type="number"
                       min="15"
                       step="15"
                       value={formData.duration}
                       onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
-                      className="input-field"
+                      className="input-field text-sm sm:text-base"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal font-body">Status</label>
+                  <label className="block text-xs sm:text-sm font-medium text-charcoal font-body">Status</label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) => setFormData({ ...formData, status: value })}
@@ -1177,7 +1202,7 @@ const BookingsManagement: React.FC = () => {
                   </Select>
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3 pt-3 sm:pt-4">
                   <button
                     type="button"
                     onClick={() => {
@@ -1185,14 +1210,14 @@ const BookingsManagement: React.FC = () => {
                       setEditingBooking(null);
                       resetForm();
                     }}
-                    className="px-4 py-2 text-sm font-medium text-charcoal font-body/70 bg-light-gray border border-medium-gray rounded-md shadow-sm hover:bg-medium-gray focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="w-full sm:w-auto px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-charcoal font-body/70 bg-light-gray border border-medium-gray rounded-md shadow-sm hover:bg-medium-gray focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={updateBookingMutation.isPending || formData.service_ids.length === 0}
-                    className="btn-primary disabled:opacity-50"
+                    className="w-full sm:w-auto btn-primary disabled:opacity-50 text-xs sm:text-sm px-3 sm:px-4 py-2"
                   >
                     Update Booking
                   </button>
@@ -1224,20 +1249,20 @@ const BookingsManagement: React.FC = () => {
           onClick={handleBookingDetailsModalClose}
         >
           <div 
-            className="relative top-10 mx-auto p-5 border border-medium-gray w-full max-w-2xl shadow-elevated rounded-md bg-white"
+            className="relative top-4 sm:top-10 mx-auto p-4 sm:p-5 border border-medium-gray w-full max-w-2xl shadow-elevated rounded-md bg-white m-3 sm:m-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold text-charcoal font-display">
+            <div className="mb-4 sm:mb-6">
+              <h3 className="text-lg sm:text-xl font-semibold text-charcoal font-display">
                 Booking Details
               </h3>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Customer Information */}
-              <div className="bg-light-gray p-4 rounded-lg">
-                <h4 className="text-lg font-medium text-charcoal font-display mb-3">Customer Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-light-gray p-3 sm:p-4 rounded-lg">
+                <h4 className="text-base sm:text-lg font-medium text-charcoal font-display mb-2 sm:mb-3">Customer Information</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-sm font-medium text-charcoal font-body">Name</label>
                     <p className="text-charcoal font-body">{selectedBooking.resource?.customerName || selectedBooking.title}</p>
@@ -1250,9 +1275,9 @@ const BookingsManagement: React.FC = () => {
               </div>
 
               {/* Booking Information */}
-              <div className="bg-light-gray p-4 rounded-lg">
-                <h4 className="text-lg font-medium text-charcoal font-display mb-3">Booking Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-light-gray p-3 sm:p-4 rounded-lg">
+                <h4 className="text-base sm:text-lg font-medium text-charcoal font-display mb-2 sm:mb-3">Booking Information</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-sm font-medium text-charcoal font-body">Date</label>
                     <p className="text-charcoal font-body">{selectedBooking.start.toLocaleDateString()}</p>
@@ -1289,9 +1314,9 @@ const BookingsManagement: React.FC = () => {
 
               {/* Service Information */}
               {selectedBooking.resource?.serviceName && (
-                <div className="bg-light-gray p-4 rounded-lg">
-                  <h4 className="text-lg font-medium text-charcoal font-display mb-3">Service Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-light-gray p-3 sm:p-4 rounded-lg">
+                  <h4 className="text-base sm:text-lg font-medium text-charcoal font-display mb-2 sm:mb-3">Service Information</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-charcoal font-body">Service</label>
                       <p className="text-charcoal font-body">{selectedBooking.resource.serviceName}</p>
@@ -1306,8 +1331,8 @@ const BookingsManagement: React.FC = () => {
 
               {/* Campaign Information */}
               {selectedBooking.resource?.campaignName && (
-                <div className="bg-light-gray p-4 rounded-lg">
-                  <h4 className="text-lg font-medium text-charcoal font-display mb-3">Campaign Information</h4>
+                <div className="bg-light-gray p-3 sm:p-4 rounded-lg">
+                  <h4 className="text-base sm:text-lg font-medium text-charcoal font-display mb-2 sm:mb-3">Campaign Information</h4>
                   <div className="space-y-2">
                     <div>
                       <label className="block text-sm font-medium text-charcoal font-body">Campaign</label>
@@ -1333,9 +1358,9 @@ const BookingsManagement: React.FC = () => {
               )}
 
               {/* All Action Buttons */}
-              <div className="bg-light-gray p-4 rounded-lg">
-                <h4 className="text-lg font-medium text-charcoal font-display mb-4">Actions</h4>
-                <div className="flex flex-wrap gap-3">
+              <div className="bg-light-gray p-3 sm:p-4 rounded-lg">
+                <h4 className="text-base sm:text-lg font-medium text-charcoal font-display mb-3 sm:mb-4">Actions</h4>
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
                   {/* Edit Booking Button */}
                   <button
                     onClick={() => {
@@ -1355,7 +1380,7 @@ const BookingsManagement: React.FC = () => {
                       setShowBookingDetailsModal(false);
                       setShowEditModal(true);
                     }}
-                    className="px-4 py-2 bg-bright-blue text-white rounded-lg hover:bg-blue-600 transition-colors font-body"
+                    className="w-full sm:w-auto px-3 sm:px-4 py-2 text-xs sm:text-sm bg-bright-blue text-white rounded-lg hover:bg-blue-600 transition-colors font-body"
                   >
                     Edit Booking
                   </button>
@@ -1364,7 +1389,7 @@ const BookingsManagement: React.FC = () => {
                   {selectedBooking.resource?.status !== 'confirmed' && (
                     <button
                       onClick={() => handleBookingStatusChange(selectedBooking.id, 'confirmed')}
-                      className="px-4 py-2 bg-lime-green text-white rounded-lg hover:bg-green-600 transition-colors font-body"
+                      className="w-full sm:w-auto px-3 sm:px-4 py-2 text-xs sm:text-sm bg-lime-green text-white rounded-lg hover:bg-green-600 transition-colors font-body"
                     >
                       Confirm Booking
                     </button>
@@ -1372,7 +1397,7 @@ const BookingsManagement: React.FC = () => {
                   {selectedBooking.resource?.status !== 'completed' && (
                     <button
                       onClick={() => handleBookingStatusChange(selectedBooking.id, 'completed')}
-                      className="px-4 py-2 bg-medium-gray text-white rounded-lg hover:bg-gray-600 transition-colors font-body"
+                      className="w-full sm:w-auto px-3 sm:px-4 py-2 text-xs sm:text-sm bg-medium-gray text-white rounded-lg hover:bg-gray-600 transition-colors font-body"
                     >
                       Mark Completed
                     </button>
@@ -1380,7 +1405,7 @@ const BookingsManagement: React.FC = () => {
                   {selectedBooking.resource?.status !== 'cancelled' && (
                     <button
                       onClick={() => handleBookingStatusChange(selectedBooking.id, 'cancelled')}
-                      className="px-4 py-2 bg-coral-red text-white rounded-lg hover:bg-red-600 transition-colors font-body"
+                      className="w-full sm:w-auto px-3 sm:px-4 py-2 text-xs sm:text-sm bg-coral-red text-white rounded-lg hover:bg-red-600 transition-colors font-body"
                     >
                       Cancel Booking
                     </button>
@@ -1389,7 +1414,7 @@ const BookingsManagement: React.FC = () => {
                   {/* Close Button */}
                   <button
                     onClick={handleBookingDetailsModalClose}
-                    className="px-4 py-2 bg-medium-gray text-charcoal rounded-lg hover:bg-gray-400 transition-colors font-body"
+                    className="w-full sm:w-auto px-3 sm:px-4 py-2 text-xs sm:text-sm bg-medium-gray text-charcoal rounded-lg hover:bg-gray-400 transition-colors font-body"
                   >
                     Close
                   </button>

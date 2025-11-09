@@ -279,7 +279,7 @@ const RecurringBookingForm: React.FC<RecurringBookingFormProps> = ({
                   value={formData.booking_time}
                   onChange={(e) => setFormData({ ...formData, booking_time: e.target.value })}
                   style={{ fontFamily: 'Open Sans, sans-serif' }}
-                  className={errors.booking_time ? 'border-red-300' : ''}
+                  className={`w-full sm:w-32 ${errors.booking_time ? 'border-red-300' : ''}`}
                 />
                 {errors.booking_time && (
                   <p className="mt-1 text-sm text-red-500" style={{ fontFamily: 'Open Sans, sans-serif' }}>{errors.booking_time}</p>

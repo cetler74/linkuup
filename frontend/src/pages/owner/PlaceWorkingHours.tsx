@@ -121,84 +121,83 @@ const PlaceWorkingHours: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-background-light w-full max-w-[412px] mx-auto lg:max-w-none">
-
-      {/* Sidebar */}
-      <aside className={`w-full lg:w-1/3 lg:max-w-sm flex flex-col border-r border-medium-gray bg-white lg:block ${
-        sidebarOpen ? 'block' : 'hidden'
-      }`}>
-        
-        {/* Search */}
-        <div className="p-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-charcoal/60" />
-            </div>
-            <input
-              type="text"
-              className="input-field pl-10"
-              placeholder="Search for a place"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+    <div className="flex flex-col h-screen bg-background-light overflow-hidden">
+      {/* Header */}
+      <div className="bg-transparent border-b border-medium-gray p-3 sm:p-4 lg:p-6 rounded-lg" style={{ borderRadius: '8px' }}>
+        <div className="max-w-7xl">
+          <div className="flex flex-wrap justify-start items-center gap-2 sm:gap-3 mb-4">
+            <h1 className="text-charcoal text-xl sm:text-2xl lg:text-3xl font-bold leading-tight font-display">
+              Working Hours
+            </h1>
           </div>
-        </div>
 
-        {/* Places List */}
-        <div className="flex-grow overflow-y-auto">
-          <div className="flex flex-col">
-            {filteredPlaces.map((place) => (
-              <div
-                key={place.id}
-                className={`flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between cursor-pointer transition-colors ${
-                  selectedPlace?.id === place.id
-                    ? 'bg-bright-blue/10 border-l-4 border-bright-blue'
-                    : 'bg-white hover:bg-light-gray'
-                }`}
-                onClick={() => {
-                  setSelectedPlace(place);
-                  setSidebarOpen(false); // Close sidebar on mobile when place is selected
-                }}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="text-bright-blue flex items-center justify-center rounded-lg bg-bright-blue/10 shrink-0 size-12">
-                    {place.location_type === 'fixed' ? (
-                      <BuildingOfficeIcon className="h-6 w-6" />
-                    ) : (
-                      <MapPinIcon className="h-6 w-6" />
-                    )}
-                  </div>
-                  <div className="flex flex-col justify-center">
-                    <p className="text-charcoal text-base font-medium leading-normal line-clamp-1 font-body">
-                      {place.name}
-                    </p>
-                    <p className="text-charcoal/60 text-sm font-normal leading-normal line-clamp-2 font-body">
-                      {place.location_type === 'fixed' ? 'Fixed Location' : 'Mobile/Service Area'}
-                    </p>
-                  </div>
-                </div>
-                <div className="shrink-0">
-                  <div className="text-bright-blue flex size-7 items-center justify-center">
-                    <ClockIcon className="h-4 w-4" />
-                  </div>
-                </div>
+          {/* Search */}
+          <div className="mb-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-2 sm:pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 text-charcoal/60" />
               </div>
-            ))}
+              <input
+                type="text"
+                className="input-field pl-8 sm:pl-10 text-sm sm:text-base"
+                placeholder="Search for a place"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Place Selector - Horizontal Tabs */}
+          <div className="bg-white rounded-lg shadow-form p-4" style={{ borderRadius: '8px' }}>
+            <label className="block text-sm font-medium text-charcoal mb-3 font-body px-1" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}>
+              Select Place
+            </label>
+            <div className="overflow-x-auto -mx-4 px-4">
+              <div className="flex gap-2 -mb-px border-b border-medium-gray">
+              {filteredPlaces.map((place) => {
+                const isSelected = selectedPlace?.id === place.id;
+                return (
+                  <button
+                    key={place.id}
+                    type="button"
+                    onClick={() => setSelectedPlace(place)}
+                    className={`
+                      flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all duration-200 font-body flex-shrink-0 rounded-lg
+                      ${isSelected 
+                        ? 'border-bright-blue text-bright-blue bg-bright-blue bg-opacity-10' 
+                        : 'border-transparent text-charcoal opacity-70 hover:opacity-100 hover:border-medium-gray hover:bg-light-gray'
+                      }
+                    `}
+                    style={{ 
+                      fontFamily: 'Open Sans, sans-serif', 
+                      fontWeight: isSelected ? 600 : 400,
+                      fontSize: '14px'
+                    }}
+                  >
+                    <div className={`flex items-center justify-center rounded-lg shrink-0 size-7 ${
+                      isSelected ? 'bg-bright-blue' : 'bg-light-gray'
+                    }`}>
+                      {place.location_type === 'mobile' ? (
+                        <MapPinIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                      ) : (
+                        <BuildingOfficeIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                      )}
+                    </div>
+                    <span className="text-sm whitespace-nowrap">
+                      {place.name} ({place.location_type === 'fixed' ? 'Fixed' : 'Mobile'})
+                    </span>
+                  </button>
+                );
+              })}
+              </div>
+            </div>
           </div>
         </div>
-      </aside>
+      </div>
 
       {/* Main Content */}
-      <main className="w-full lg:w-2/3 flex-grow p-3 lg:p-6 bg-background-light overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap justify-between items-center gap-3 mb-4 lg:mb-6">
-            <div className="flex items-center gap-2 lg:gap-4">
-              <h1 className="text-charcoal text-lg lg:text-2xl xl:text-3xl font-black leading-tight tracking-[-0.033em] font-display">
-                Working Hours
-              </h1>
-            </div>
-          </div>
-
+      <main className="flex-grow overflow-y-auto p-3 sm:p-4 lg:p-6 bg-background-light">
+        <div className="max-w-7xl">
           {/* Selected Place Details */}
           {selectedPlace ? (
             <div className="space-y-4 lg:space-y-6">
@@ -259,7 +258,7 @@ const PlaceWorkingHours: React.FC = () => {
                                   type="time"
                                   value={workingHours[day]?.start || '09:00'}
                                   onChange={(e) => handleTimeChange(day, 'start', e.target.value)}
-                                  className="input-field w-full sm:w-24"
+                                  className="input-field w-full sm:w-32"
                                 />
                               </div>
                               <div>
@@ -268,7 +267,7 @@ const PlaceWorkingHours: React.FC = () => {
                                   type="time"
                                   value={workingHours[day]?.end || '17:00'}
                                   onChange={(e) => handleTimeChange(day, 'end', e.target.value)}
-                                  className="input-field w-full sm:w-24"
+                                  className="input-field w-full sm:w-32"
                                 />
                               </div>
                             </div>
@@ -295,14 +294,14 @@ const PlaceWorkingHours: React.FC = () => {
                                   type="time"
                                   value={workingHours[day]?.break_start || '12:00'}
                                   onChange={(e) => handleTimeChange(day, 'break_start', e.target.value)}
-                                  className="input-field w-20"
+                                  className="input-field w-32"
                                 />
                                 <span className="text-charcoal/60">-</span>
                                 <input
                                   type="time"
                                   value={workingHours[day]?.break_end || '13:00'}
                                   onChange={(e) => handleTimeChange(day, 'break_end', e.target.value)}
-                                  className="input-field w-20"
+                                  className="input-field w-32"
                                 />
                               </div>
                             )}
@@ -366,7 +365,7 @@ const PlaceWorkingHours: React.FC = () => {
                   </div>
 
                   {/* Action Buttons at Bottom */}
-                  <div className="mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-medium-gray flex flex-wrap justify-end gap-3">
+                  <div className="mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-medium-gray flex flex-wrap justify-start gap-3">
                     <button
                       type="button"
                       onClick={handleSave}
@@ -382,8 +381,8 @@ const PlaceWorkingHours: React.FC = () => {
             </div>
           ) : (
             <div className="card">
-              <div className="p-4 lg:p-8 text-center">
-                <ClockIcon className="h-10 w-10 lg:h-12 lg:w-12 text-charcoal/40 mx-auto mb-3 lg:mb-4" />
+              <div className="p-4 lg:p-8 text-left">
+                <ClockIcon className="h-10 w-10 lg:h-12 lg:w-12 text-charcoal/40 mb-3 lg:mb-4" />
                 <h3 className="text-base lg:text-lg font-medium text-charcoal mb-2 font-display">Select a Place</h3>
                 <p className="text-sm lg:text-base text-charcoal/60 font-body">Choose a place from the sidebar to set working hours</p>
               </div>

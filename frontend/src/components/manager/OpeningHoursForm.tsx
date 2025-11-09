@@ -155,14 +155,14 @@ const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({ salon, onClose, onS
                       type="time"
                       value={openingHours[day.id]?.start_time || '09:00'}
                       onChange={(e) => handleDayChange(day.id, 'start_time', e.target.value)}
-                      className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900"
+                      className="px-3 py-1 w-32 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900"
                     />
                     <span className="text-gray-500">to</span>
                     <input
                       type="time"
                       value={openingHours[day.id]?.end_time || '18:00'}
                       onChange={(e) => handleDayChange(day.id, 'end_time', e.target.value)}
-                      className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900"
+                      className="px-3 py-1 w-32 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900"
                     />
                   </div>
                 ) : (

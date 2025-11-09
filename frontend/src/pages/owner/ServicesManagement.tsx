@@ -316,136 +316,90 @@ const ServicesManagement: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-[#F5F5F5]">
-
-      {/* Sidebar */}
-      <aside className={`w-1/3 max-w-sm flex flex-col border-r border-[#E0E0E0] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] lg:block ${
-        sidebarOpen ? 'block' : 'hidden'
-      }`}>
-        {/* Search */}
-        <div className="p-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-[#9E9E9E]" />
-            </div>
-            <input
-              type="text"
-              className="w-full pl-10 pr-3 py-2 border border-[#E0E0E0] rounded-lg bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-[#1E90FF] focus:border-[#1E90FF]"
-              placeholder={t('owner.places.searchPlaceholder')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ fontFamily: 'Open Sans, sans-serif' }}
-            />
+    <div className="flex flex-col h-screen bg-[#F5F5F5] overflow-hidden">
+      {/* Header */}
+      <div className="bg-transparent border-b border-medium-gray p-3 sm:p-4 lg:p-6 rounded-lg" style={{ borderRadius: '8px' }}>
+        <div className="max-w-7xl">
+          <div className="flex flex-wrap justify-start items-center gap-2 sm:gap-3 mb-4">
+            <h1 className="text-charcoal text-xl sm:text-2xl lg:text-3xl font-bold leading-tight font-display">
+              {t('owner.services.title')}
+            </h1>
           </div>
-        </div>
 
-        {/* Places List */}
-        <div className="flex-grow overflow-y-auto">
-          <div className="flex flex-col">
-            {filteredPlaces.map((place) => (
-              <div
-                key={place.id}
-                className={`flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between cursor-pointer transition-colors ${
-                  selectedPlace?.id === place.id
-                    ? 'bg-[#1E90FF] bg-opacity-10 border-l-4 border-[#1E90FF]'
-                    : 'bg-white hover:bg-[#F5F5F5]'
-                }`}
-                onClick={() => {
-                  setSelectedPlace(place);
-                  setSelectedPlaceId(place.id);
-                  setSidebarOpen(false); // Close sidebar on mobile when place is selected
-                }}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`flex items-center justify-center rounded-lg shrink-0 size-12 ${
-                    selectedPlace?.id === place.id ? 'bg-[#1E90FF]' : 'bg-[#F5F5F5]'
-                  }`}>
-                    {place.location_type === 'fixed' ? (
-                      <BuildingOfficeIcon className={`h-6 w-6 ${
-                        selectedPlace?.id === place.id ? 'text-white' : 'text-[#1E90FF]'
-                      }`} />
-                    ) : (
-                      <MapPinIcon className={`h-6 w-6 ${
-                        selectedPlace?.id === place.id ? 'text-white' : 'text-[#1E90FF]'
-                      }`} />
-                    )}
-                  </div>
-                  <div className="flex flex-col justify-center">
-                    <p className={`text-base font-medium leading-normal line-clamp-1 ${
-                      selectedPlace?.id === place.id ? 'text-[#1E90FF]' : 'text-[#333333]'
-                    }`} style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                      {place.name}
-                    </p>
-                    <p className={`text-sm font-normal leading-normal line-clamp-2 ${
-                      selectedPlace?.id === place.id ? 'text-[#1E90FF]' : 'text-[#9E9E9E]'
-                    }`} style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                      {place.location_type === 'fixed' ? t('owner.places.fixedLocation') : t('owner.places.mobileServiceArea')}
-                    </p>
-                  </div>
-                </div>
-                <div className="shrink-0">
-                  <div className={`flex size-7 items-center justify-center ${
-                    selectedPlace?.id === place.id ? 'text-[#1E90FF]' : 'text-[#9E9E9E]'
-                  }`}>
-                    <PencilIcon className="h-4 w-4" />
-                  </div>
-                </div>
+          {/* Search */}
+          <div className="mb-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-2 sm:pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 text-charcoal/60" />
               </div>
-            ))}
+              <input
+                type="text"
+                className="input-field pl-8 sm:pl-10 text-sm sm:text-base"
+                placeholder={t('owner.places.searchPlaceholder')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Place Selector - Horizontal Tabs */}
+          <div className="bg-white rounded-lg shadow-form p-4" style={{ borderRadius: '8px' }}>
+            <label className="block text-sm font-medium text-charcoal mb-3 font-body px-1" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}>
+              {t('owner.places.selectPlace')}
+            </label>
+            <div className="overflow-x-auto -mx-4 px-4">
+              <div className="flex gap-2 -mb-px border-b border-medium-gray">
+              {filteredPlaces.map((place) => {
+                const isSelected = selectedPlace?.id === place.id;
+                return (
+                  <button
+                    key={place.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPlace(place);
+                      setSelectedPlaceId(place.id);
+                    }}
+                    className={`
+                      flex items-center gap-2 px-3 py-2.5 max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[48px] border-b-2 transition-all duration-200 font-body flex-shrink-0 rounded-lg max-[412px]:rounded-full
+                      ${isSelected 
+                        ? 'border-bright-blue text-bright-blue bg-bright-blue bg-opacity-10' 
+                        : 'border-transparent text-charcoal opacity-70 hover:opacity-100 hover:border-medium-gray hover:bg-light-gray'
+                      }
+                    `}
+                    style={{ 
+                      fontFamily: 'Open Sans, sans-serif', 
+                      fontWeight: isSelected ? 600 : 400,
+                      fontSize: '14px'
+                    }}
+                  >
+                    <div className={`flex items-center justify-center rounded-lg shrink-0 size-7 ${
+                      isSelected ? 'bg-bright-blue' : 'bg-light-gray'
+                    }`}>
+                      {place.location_type === 'mobile' ? (
+                        <MapPinIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                      ) : (
+                        <BuildingOfficeIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                      )}
+                    </div>
+                    <span className="text-sm whitespace-nowrap">
+                      {place.name} ({place.location_type === 'fixed' ? t('owner.places.fixed') : t('owner.places.mobile')})
+                    </span>
+                  </button>
+                );
+              })}
+              </div>
+            </div>
           </div>
         </div>
-
-      </aside>
+      </div>
 
       {/* Main Content */}
-      <main className="w-full lg:w-2/3 flex-grow p-4 lg:p-6 bg-[#F5F5F5] overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-            <div className="flex items-center gap-4">
-              <button
-                className="lg:hidden p-2 text-[#9E9E9E] hover:text-[#1E90FF]"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <h1 className="text-[#333333] text-2xl lg:text-3xl font-bold leading-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                {t('owner.services.title')}
-              </h1>
-            </div>
-          </div>
+      <main className="flex-grow overflow-y-auto p-3 max-[412px]:p-2 sm:p-4 lg:p-6 bg-[#F5F5F5]">
+        <div className="max-w-7xl">
 
           {/* Selected Place Services */}
           {selectedPlace ? (
             <div className="space-y-6">
-              {/* Place Info Card */}
-              <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                      {selectedPlace.name}
-                    </h2>
-                    <p className="text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                      {selectedPlace.location_type === 'fixed' ? t('owner.places.fixedLocation') : t('owner.places.mobileServiceArea')}
-                      {selectedPlace.city && ` • ${selectedPlace.city}`}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-4 py-2 border border-[#E0E0E0] text-[#333333] rounded-lg hover:bg-[#F5F5F5] transition-colors"
-                      onClick={() => {
-                        setSelectedPlace(null);
-                        setSelectedPlaceId(null);
-                      }}
-                      style={{ fontFamily: 'Open Sans, sans-serif' }}
-                    >
-                      <span>{t('owner.common.close')}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               {/* Services List */}
               <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6">
                 <div className="flex justify-between items-center mb-4">
@@ -453,7 +407,7 @@ const ServicesManagement: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleAddNewService}
-                    className="bg-[#1E90FF] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#1877D2] transition-colors"
+                    className="bg-[#1E90FF] text-white px-4 max-[412px]:px-4 py-2 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full rounded-lg font-medium hover:bg-[#1877D2] transition-colors"
                     style={{ fontFamily: 'Open Sans, sans-serif' }}
                   >
                     <PlusIcon className="h-4 w-4 mr-2 inline" />
@@ -523,7 +477,7 @@ const ServicesManagement: React.FC = () => {
                             </button>
                             <button
                               onClick={() => handleDelete(service.id)}
-                              className="text-[#FF5A5F] hover:text-[#FF5A5F] hover:bg-[#FF5A5F] hover:bg-opacity-10 rounded p-1"
+                              className="text-[#FF5A5F] hover:text-[#FF5A5F] hover:bg-[#FF5A5F] hover:bg-opacity-10 rounded max-[412px]:rounded-full p-1 max-[412px]:px-3 max-[412px]:py-2 max-[412px]:min-h-[44px]"
                             >
                               <TrashIcon className="h-4 w-4" />
                             </button>
@@ -553,7 +507,7 @@ const ServicesManagement: React.FC = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-[#333333] bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border border-[#E0E0E0] w-96 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] rounded-lg bg-white">
+          <div className="relative top-20 max-[412px]:top-0 mx-auto p-5 max-[412px]:p-3 border border-[#E0E0E0] w-96 max-[412px]:w-full max-[412px]:h-full max-[412px]:rounded-none shadow-[0px_2px_8px_rgba(0,0,0,0.1)] rounded-lg bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-[#333333] mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 {editingService ? t('owner.services.editService') : t('owner.services.addService')}
@@ -620,12 +574,12 @@ const ServicesManagement: React.FC = () => {
                   </label>
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
+                <div className="flex justify-end space-x-3 max-[412px]:space-x-2 pt-4 max-[412px]:pt-3">
                   <button
                     type="button"
                     onClick={handleModalClose}
                     disabled={submitting}
-                    className={`px-4 py-2 border border-[#E0E0E0] text-[#333333] rounded-lg hover:bg-[#F5F5F5] transition-colors ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`px-4 py-2 max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full border border-[#E0E0E0] text-[#333333] rounded-lg hover:bg-[#F5F5F5] transition-colors ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                     style={{ fontFamily: 'Open Sans, sans-serif' }}
                   >
                     {t('owner.common.cancel')}
@@ -633,7 +587,7 @@ const ServicesManagement: React.FC = () => {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className={`bg-[#1E90FF] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#1877D2] transition-colors ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`bg-[#1E90FF] text-white px-4 py-2 max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full rounded-lg font-medium hover:bg-[#1877D2] transition-colors ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                     style={{ fontFamily: 'Open Sans, sans-serif' }}
                   >
                     {submitting ? t('owner.services.creating') : (editingService ? t('owner.common.update') : t('owner.common.create'))}

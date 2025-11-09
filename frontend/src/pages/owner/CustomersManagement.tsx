@@ -201,92 +201,88 @@ const CustomersManagement: React.FC = () => {
 
   return (
     <>
-      <div className="flex flex-col lg:flex-row h-screen bg-[#F5F5F5] w-full max-w-[412px] mx-auto lg:max-w-none">
+      <div className="flex flex-col h-screen bg-[#F5F5F5] overflow-hidden">
+        {/* Header */}
+        <div className="bg-transparent border-b border-medium-gray p-3 sm:p-4 lg:p-6 rounded-lg" style={{ borderRadius: '8px' }}>
+          <div className="max-w-7xl">
+            <div className="flex flex-wrap justify-start items-center gap-2 sm:gap-3 mb-4">
+              <h1 className="text-charcoal text-xl sm:text-2xl lg:text-3xl font-bold leading-tight font-display">
+                Customers Management
+              </h1>
+            </div>
 
-        {/* Sidebar */}
-        <aside className={`w-full lg:w-1/3 lg:max-w-sm flex flex-col border-r border-[#E0E0E0] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] lg:block ${
-          sidebarOpen ? 'block' : 'hidden'
-        }`}>
-          {/* Search */}
-          <div className="p-4">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-[#9E9E9E]" />
-              </div>
-              <input
-                type="text"
-                className="w-full pl-10 pr-3 py-2 border border-[#E0E0E0] rounded-lg bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-[#1E90FF] focus:border-[#1E90FF]"
-                placeholder="Search for a place"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ fontFamily: 'Open Sans, sans-serif' }}
-              />
-            </div>
-          </div>
-          
-          {/* Places List */}
-          <div className="flex-grow overflow-y-auto">
-            <div className="flex flex-col">
-              {filteredPlaces.map((place) => (
-                <div
-                  key={place.id}
-                  className={`flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between cursor-pointer transition-colors ${
-                    selectedPlace?.id === place.id
-                      ? 'bg-[#1E90FF] bg-opacity-10 border-l-4 border-[#1E90FF]'
-                      : 'bg-white hover:bg-[#F5F5F5]'
-                  }`}
-                  onClick={() => {
-                    setSelectedPlace(place);
-                    setSidebarOpen(false); // Close sidebar on mobile when place is selected
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`flex items-center justify-center rounded-lg shrink-0 size-12 ${
-                      selectedPlace?.id === place.id ? 'bg-[#1E90FF]' : 'bg-[#F5F5F5]'
-                    }`}>
-                      {place.location_type === 'fixed' ? (
-                        <BuildingOfficeIcon className={`h-6 w-6 ${
-                          selectedPlace?.id === place.id ? 'text-white' : 'text-[#1E90FF]'
-                        }`} />
-                      ) : (
-                        <MapPinIcon className={`h-6 w-6 ${
-                          selectedPlace?.id === place.id ? 'text-white' : 'text-[#1E90FF]'
-                        }`} />
-                      )}
-                    </div>
-                    <div className="flex flex-col justify-center">
-                      <p className={`text-base font-medium leading-normal line-clamp-1 ${
-                        selectedPlace?.id === place.id ? 'text-[#1E90FF]' : 'text-[#333333]'
-                      }`} style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                        {place.name}
-                      </p>
-                      <p className={`text-sm font-normal leading-normal line-clamp-2 ${
-                        selectedPlace?.id === place.id ? 'text-[#1E90FF]' : 'text-[#9E9E9E]'
-                      }`} style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                        {place.location_type === 'fixed' ? 'Fixed Location' : 'Mobile/Service Area'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="shrink-0">
-                    <div className={`flex size-7 items-center justify-center ${
-                      selectedPlace?.id === place.id ? 'text-[#1E90FF]' : 'text-[#9E9E9E]'
-                    }`}>
-                      <UserIcon className="h-4 w-4" />
-                    </div>
-                  </div>
+            {/* Search */}
+            <div className="mb-4">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-2 sm:pl-3 flex items-center pointer-events-none">
+                  <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 text-charcoal/60" />
                 </div>
-              ))}
+                <input
+                  type="text"
+                  className="input-field pl-8 sm:pl-10 text-sm sm:text-base"
+                  placeholder="Search for a place"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Place Selector - Horizontal Tabs */}
+            <div className="bg-white rounded-lg shadow-form p-4" style={{ borderRadius: '8px' }}>
+              <label className="block text-sm font-medium text-charcoal mb-3 font-body px-1" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}>
+                Select Place
+              </label>
+              <div className="overflow-x-auto -mx-4 px-4">
+                <div className="flex gap-2 -mb-px border-b border-medium-gray">
+                {filteredPlaces.map((place) => {
+                  const isSelected = selectedPlace?.id === place.id;
+                  return (
+                    <button
+                      key={place.id}
+                      type="button"
+                      onClick={() => setSelectedPlace(place)}
+                      className={`
+                        flex items-center gap-2 px-3 py-2.5 max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[48px] border-b-2 transition-all duration-200 font-body flex-shrink-0 rounded-lg max-[412px]:rounded-full
+                        ${isSelected 
+                          ? 'border-bright-blue text-bright-blue bg-bright-blue bg-opacity-10' 
+                          : 'border-transparent text-charcoal opacity-70 hover:opacity-100 hover:border-medium-gray hover:bg-light-gray'
+                        }
+                      `}
+                      style={{ 
+                        fontFamily: 'Open Sans, sans-serif', 
+                        fontWeight: isSelected ? 600 : 400,
+                        fontSize: '14px'
+                      }}
+                    >
+                      <div className={`flex items-center justify-center rounded-lg shrink-0 size-7 ${
+                        isSelected ? 'bg-bright-blue' : 'bg-light-gray'
+                      }`}>
+                        {place.location_type === 'mobile' ? (
+                          <MapPinIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                        ) : (
+                          <BuildingOfficeIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                        )}
+                      </div>
+                      <span className="text-sm whitespace-nowrap">
+                        {place.name} ({place.location_type === 'fixed' ? 'Fixed' : 'Mobile'})
+                      </span>
+                    </button>
+                  );
+                })}
+                </div>
+              </div>
             </div>
           </div>
-        </aside>
+        </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden w-full lg:w-auto">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="bg-white border-b border-[#E0E0E0] px-3 lg:px-6 py-3 lg:py-4 shadow-[0px_2px_8px_rgba(0,0,0,0.1)]">
+          <div className="p-3 sm:p-4 lg:p-6">
+            <div className="max-w-7xl w-full">
+            <div className="bg-white border-b border-[#E0E0E0] px-3 lg:px-6 py-3 lg:py-4 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] rounded-lg w-full max-w-full lg:w-[1280px]">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-lg lg:text-2xl font-bold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>Customers Management</h1>
                 <p className="mt-1 text-sm text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                   {selectedPlace ? `Manage customers for ${selectedPlace.name}` : 'Select a place to manage customers'}
                 </p>
@@ -308,7 +304,7 @@ const CustomersManagement: React.FC = () => {
                           setTierFilter('');
                           setBookingStatusFilter('');
                         }}
-                        className="text-sm text-[#1E90FF] hover:text-[#1877D2] underline"
+                        className="text-sm max-[412px]:text-base max-[412px]:px-3 max-[412px]:py-2 max-[412px]:min-h-[44px] max-[412px]:rounded-full text-[#1E90FF] hover:text-[#1877D2] underline max-[412px]:no-underline max-[412px]:bg-[#1E90FF] max-[412px]:text-white max-[412px]:hover:bg-[#1877D2]"
                         style={{ fontFamily: 'Open Sans, sans-serif' }}
                       >
                         Clear filters
@@ -362,15 +358,18 @@ const CustomersManagement: React.FC = () => {
                 </div>
               </div>
             )}
+            </div>
+            </div>
           </div>
 
           {/* Customers Content */}
-          <div className="flex-1 overflow-y-auto p-3 lg:p-6 bg-[#F5F5F5]">
+          <div className="flex-1 overflow-y-auto p-3 max-[412px]:p-2 sm:p-4 lg:p-6 bg-[#F5F5F5]">
             {selectedPlace ? (
               <>
+                <div className="max-w-7xl w-full">
                 {/* Quick Stats */}
                 {customers.length > 0 && (
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4 mb-4 lg:mb-6">
+                  <div className="grid grid-cols-2 max-[412px]:grid-cols-1 lg:grid-cols-4 gap-2 lg:gap-4 mb-4 lg:mb-6 w-full max-w-full lg:w-[1280px]">
                     <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-2 lg:p-4">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
@@ -431,7 +430,7 @@ const CustomersManagement: React.FC = () => {
                         </div>
                       )}
                 
-                <div className="bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] overflow-hidden sm:rounded-lg border border-[#E0E0E0] w-full">
+                <div className="bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.1)] overflow-hidden sm:rounded-lg border border-[#E0E0E0] w-full max-w-full lg:max-w-[1280px]">
                   {uniqueCustomers.length === 0 ? (
                     <div className="text-center py-12">
                       <UserIcon className="mx-auto h-12 w-12 text-[#9E9E9E]" />
@@ -471,7 +470,7 @@ const CustomersManagement: React.FC = () => {
                   </div>
 
                                   {/* Contact Information */}
-                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 mb-3 lg:mb-4">
+                                  <div className="grid grid-cols-1 max-[412px]:grid-cols-1 lg:grid-cols-2 gap-3 max-[412px]:gap-2 lg:gap-4 mb-3 lg:mb-4">
                                     <div className="space-y-2">
                                       <div className="flex items-center space-x-2">
                                         <EnvelopeIcon className="h-4 w-4 text-[#9E9E9E]" />
@@ -529,7 +528,7 @@ const CustomersManagement: React.FC = () => {
                               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-4 lg:mt-0 lg:space-x-2">
                                 <button
                                   onClick={() => toggleCustomerExpansion(customer.user_id)}
-                                  className="flex items-center justify-center space-x-1 px-3 py-2 text-xs lg:text-sm font-medium text-[#333333] hover:text-[#1E90FF] hover:bg-[#F5F5F5] rounded-lg transition-colors border border-[#E0E0E0]"
+                                  className="flex items-center justify-center space-x-1 px-3 py-2 max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full text-xs lg:text-sm font-medium text-[#333333] hover:text-[#1E90FF] hover:bg-[#F5F5F5] rounded-lg transition-colors border border-[#E0E0E0]"
                                   title="Toggle Details"
                                   style={{ fontFamily: 'Open Sans, sans-serif' }}
                                 >
@@ -547,7 +546,7 @@ const CustomersManagement: React.FC = () => {
                                 </button>
                                 <button
                                   onClick={() => openMessageModal(customer)}
-                                  className="flex items-center justify-center space-x-1 px-3 py-2 text-xs lg:text-sm font-medium text-white bg-[#FF5A5F] hover:bg-[#E54B50] rounded-lg transition-colors"
+                                  className="flex items-center justify-center space-x-1 px-3 py-2 max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full text-xs lg:text-sm font-medium text-white bg-[#FF5A5F] hover:bg-[#E54B50] rounded-lg transition-colors"
                                   title="Send Message"
                                   style={{ fontFamily: 'Open Sans, sans-serif' }}
                                 >
@@ -556,7 +555,7 @@ const CustomersManagement: React.FC = () => {
                                 </button>
                                 <button
                                   onClick={() => navigate(`/owner/customers/${customer.user_id}?place=${selectedPlace?.id}`)}
-                                  className="flex items-center justify-center space-x-1 px-3 py-2 text-xs lg:text-sm font-medium text-white bg-[#1E90FF] hover:bg-[#1877D2] rounded-lg transition-colors"
+                                  className="flex items-center justify-center space-x-1 px-3 py-2 max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full text-xs lg:text-sm font-medium text-white bg-[#1E90FF] hover:bg-[#1877D2] rounded-lg transition-colors"
                                   title="View Details"
                                   style={{ fontFamily: 'Open Sans, sans-serif' }}
                                 >
@@ -568,11 +567,11 @@ const CustomersManagement: React.FC = () => {
                             
                             {/* Expanded Detailed Information */}
                             {expandedCustomers.has(customer.user_id) && (
-                              <div className="mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-[#E0E0E0]">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-6">
+                              <div className="mt-4 max-[412px]:mt-3 lg:mt-6 pt-4 max-[412px]:pt-3 lg:pt-6 border-t border-[#E0E0E0]">
+                                <div className="grid grid-cols-1 max-[412px]:grid-cols-1 lg:grid-cols-2 gap-3 max-[412px]:gap-2 lg:gap-6">
                                   
                                   {/* Customer Details Card */}
-                                  <div className="bg-white rounded-lg p-3 lg:p-6 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
+                                  <div className="bg-white rounded-lg p-3 max-[412px]:p-2 lg:p-6 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
                                     <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                                       <UserIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                                       Customer Details
@@ -598,7 +597,7 @@ const CustomersManagement: React.FC = () => {
                                   </div>
                                   
                                   {/* Booking Statistics Card */}
-                                  <div className="bg-white rounded-lg p-3 lg:p-6 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
+                                  <div className="bg-white rounded-lg p-3 max-[412px]:p-2 lg:p-6 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
                                     <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                                       <CalendarIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                                       Booking Statistics
@@ -647,7 +646,7 @@ const CustomersManagement: React.FC = () => {
                                   </div>
                                   
                                   {/* Subscription & Opt-in Information Card */}
-                                  <div className="bg-white rounded-lg p-3 lg:p-6 lg:col-span-2 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
+                                  <div className="bg-white rounded-lg p-3 max-[412px]:p-2 lg:p-6 lg:col-span-2 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
                                     <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                                       <ShieldCheckIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                                       Subscriptions & Opt-ins
@@ -770,7 +769,7 @@ const CustomersManagement: React.FC = () => {
                                   
                                   {/* Rewards Card */}
                                   {rewardsEnabled && (
-                                    <div className="bg-white rounded-lg p-3 lg:p-6 lg:col-span-2 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
+                                    <div className="bg-white rounded-lg p-3 max-[412px]:p-2 lg:p-6 lg:col-span-2 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] border border-[#E0E0E0]">
                                       <h4 className="text-lg font-semibold text-[#333333] mb-4 flex items-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
                                         <GiftIcon className="h-5 w-5 mr-2 text-[#1E90FF]" />
                                         Rewards & Loyalty
@@ -799,6 +798,7 @@ const CustomersManagement: React.FC = () => {
                       ))}
                     </ul>
                   )}
+                </div>
                 </div>
               </>
             ) : (

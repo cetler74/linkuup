@@ -63,8 +63,8 @@ const RewardsManagement: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#F5F5F5] p-8 max-[412px]:p-2">
+      <div className="max-w-7xl w-full max-w-full lg:max-w-[1280px]">
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <GiftIcon className="h-8 w-8 text-[#1E90FF] mr-3" />
@@ -83,7 +83,7 @@ const RewardsManagement: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 max-[412px]:grid-cols-1 lg:grid-cols-2 gap-6 max-[412px]:gap-2 mb-8">
           {/* Current Configuration */}
           <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6">
             <div className="flex items-center mb-4">
@@ -91,19 +91,19 @@ const RewardsManagement: React.FC = () => {
               <h2 className="text-xl font-semibold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>Current Configuration</h2>
             </div>
             <div className="space-y-4">
-              <div className="flex justify-between">
+              <div className="flex items-center gap-4">
                 <span className="text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Calculation Method:</span>
                 <span className="text-[#333333] capitalize" style={{ fontFamily: 'Open Sans, sans-serif' }}>{config.calculation_method.replace('_', ' ')}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex items-center gap-4">
                 <span className="text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Points per Booking:</span>
                 <span className="text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>{config.points_per_booking}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex items-center gap-4">
                 <span className="text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Points per Euro:</span>
                 <span className="text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>{config.points_per_currency_unit}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex items-center gap-4">
                 <span className="text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Status:</span>
                 <span className={`px-2 py-1 rounded text-sm ${
                   config.is_active ? 'bg-[#A3D55D] bg-opacity-20 text-[#A3D55D]' : 'bg-[#FF5A5F] bg-opacity-20 text-[#FF5A5F]'
@@ -118,15 +118,15 @@ const RewardsManagement: React.FC = () => {
           <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6">
             <h2 className="text-xl font-semibold text-[#333333] mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>Redemption Rules</h2>
             <div className="space-y-4">
-              <div className="flex justify-between">
+              <div className="flex items-center gap-4">
                 <span className="text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Min Points:</span>
                 <span className="text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>{config.redemption_rules.min_points_redemption}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex items-center gap-4">
                 <span className="text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Max Points:</span>
                 <span className="text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>{config.redemption_rules.max_points_redemption}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex items-center gap-4">
                 <span className="text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>Points to Currency:</span>
                 <span className="text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>1:{config.redemption_rules.points_to_currency_ratio}</span>
               </div>
@@ -135,13 +135,13 @@ const RewardsManagement: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow-[0px_2px_8px_rgba(0,0,0,0.1)] p-6">
-          <div className="text-center py-8">
-            <GiftIcon className="h-16 w-16 text-[#1E90FF] mx-auto mb-4" />
+          <div className="text-left py-8">
+            <GiftIcon className="h-16 w-16 text-[#1E90FF] mb-4" />
             <h2 className="text-xl font-semibold text-[#333333] mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>Rewards System</h2>
             <p className="text-[#9E9E9E] mb-6" style={{ fontFamily: 'Open Sans, sans-serif' }}>
               Set up customer loyalty programs, points systems, and reward redemption rules.
             </p>
-            <div className="space-y-4 text-left max-w-md mx-auto mb-6">
+            <div className="space-y-4 text-left max-w-md mb-6">
               <div className="flex items-center text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                 <CheckIcon className="w-5 h-5 text-[#A3D55D] mr-3" />
                 Points per booking
@@ -161,7 +161,7 @@ const RewardsManagement: React.FC = () => {
             </div>
             <button 
               onClick={() => setShowConfigModal(true)}
-              className="bg-[#1E90FF] hover:bg-[#1877D2] text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              className="bg-[#1E90FF] hover:bg-[#1877D2] text-white px-6 max-[412px]:px-4 py-2 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full rounded-lg font-medium transition-colors"
               style={{ fontFamily: 'Open Sans, sans-serif' }}
             >
               Configure Rewards

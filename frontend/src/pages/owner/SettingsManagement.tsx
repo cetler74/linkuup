@@ -242,10 +242,14 @@ const SettingsManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-light-gray flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bright-blue mx-auto mb-4"></div>
-          <p className="text-charcoal/70">Loading settings...</p>
+      <div className="min-h-screen bg-light-gray">
+        <div className="p-3 sm:p-4 lg:p-6">
+          <div className="max-w-7xl">
+            <div className="text-left">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bright-blue mb-4"></div>
+              <p className="text-charcoal/70">Loading settings...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -253,9 +257,10 @@ const SettingsManagement: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-light-gray">
-      <div className="p-6">
-        {/* Place Selector */}
-        <div className="mb-8">
+      <div className="p-3 sm:p-4 lg:p-6">
+        <div className="max-w-7xl">
+          {/* Place Selector */}
+          <div className="mb-8">
           <label className="block text-sm font-medium text-charcoal mb-2">
             Select Place
           </label>
@@ -302,7 +307,7 @@ const SettingsManagement: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => copyToClipboard(`linkuup.portugalexpatdirectory.com/${selectedPlace.slug || selectedPlace.id}`)}
-                      className="px-4 py-2 bg-bright-blue text-white rounded-lg hover:bg-bright-blue/90 transition-colors font-medium"
+                      className="px-4 max-[412px]:px-4 py-2 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full bg-bright-blue text-white rounded-lg hover:bg-bright-blue/90 transition-colors font-medium"
                     >
                       {copied ? 'Copied!' : 'Copy URL'}
                     </button>
@@ -444,7 +449,7 @@ const SettingsManagement: React.FC = () => {
               <button
                 onClick={saveFeatureSettings}
                 disabled={saving}
-                className="btn-primary w-full"
+                className="btn-primary w-full max-[412px]:rounded-full max-[412px]:min-h-[44px] max-[412px]:px-4 max-[412px]:py-3"
               >
                 {saving ? 'Saving...' : 'Save Feature Settings'}
               </button>
@@ -529,15 +534,15 @@ const SettingsManagement: React.FC = () => {
                   <button
                     onClick={saveRewardSettings}
                     disabled={saving}
-                    className="btn-secondary w-full"
+                    className="btn-secondary w-full max-[412px]:rounded-full max-[412px]:min-h-[44px] max-[412px]:px-4 max-[412px]:py-3"
                   >
                     {saving ? 'Saving...' : 'Save Reward Settings'}
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <GiftIcon className="h-16 w-16 text-charcoal/40 mx-auto mb-4" />
+              <div className="text-left py-8">
+                <GiftIcon className="h-16 w-16 text-charcoal/40 mb-4" />
                 <p className="text-charcoal/70">Enable rewards feature to configure settings</p>
                 <p className="text-sm text-charcoal/60 mt-1">
                   Turn on the rewards toggle in Feature Settings first
@@ -545,6 +550,7 @@ const SettingsManagement: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>

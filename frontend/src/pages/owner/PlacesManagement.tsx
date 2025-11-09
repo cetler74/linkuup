@@ -49,6 +49,7 @@ interface Place {
   service_areas?: string[];
   coverage_radius?: number; // in kilometers
   booking_enabled: boolean;
+  messaging_enabled?: boolean;
   is_active: boolean;
   created_at: string;
   updated_at?: string;
@@ -87,8 +88,17 @@ const PlacesManagement: React.FC = () => {
   const [editingPlace, setEditingPlace] = useState<Place | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [featureSettings, setFeatureSettings] = useState<{
+    bookings_enabled: boolean;
+    rewards_enabled: boolean;
+    time_off_enabled: boolean;
+    campaigns_enabled: boolean;
+    messaging_enabled: boolean;
+    notifications_enabled: boolean;
+  } | null>(null);
+  const [loadingFeatures, setLoadingFeatures] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -105,6 +115,7 @@ const PlacesManagement: React.FC = () => {
     service_areas: [] as string[],
     coverage_radius: 10, // default 10km radius
     booking_enabled: true,
+    messaging_enabled: true,
     latitude: undefined as number | undefined,
     longitude: undefined as number | undefined,
     workingHours: editingPlace?.working_hours || {},
@@ -123,13 +134,13 @@ const PlacesManagement: React.FC = () => {
       .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
   };
 
-  // Auto-generate slug when name changes (only if slug is empty)
+  // Auto-generate slug when name changes (only if slug is empty and hasn't been manually edited)
   useEffect(() => {
-    if (formData.name && !formData.slug) {
+    if (formData.name && !formData.slug && !slugManuallyEdited) {
       const autoSlug = generateSlug(formData.name);
       setFormData(prev => ({ ...prev, slug: autoSlug }));
     }
-  }, [formData.name]);
+  }, [formData.name, slugManuallyEdited]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
@@ -176,6 +187,15 @@ const PlacesManagement: React.FC = () => {
       setFilteredPlaces(filtered);
     }
   }, [searchTerm, places]);
+
+  // Fetch feature settings when a place is selected
+  useEffect(() => {
+    if (selectedPlace?.id) {
+      fetchFeatureSettings(selectedPlace.id);
+    } else {
+      setFeatureSettings(null);
+    }
+  }, [selectedPlace]);
 
   const testAuthentication = async () => {
     try {
@@ -313,6 +333,60 @@ const PlacesManagement: React.FC = () => {
     }
     
     return await response.json();
+  };
+
+  const fetchFeatureSettings = async (placeId: number) => {
+    setLoadingFeatures(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${apiBase}/owner/places/${placeId}/settings`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const settingsData = await response.json();
+        if (settingsData?.feature_settings) {
+          setFeatureSettings(settingsData.feature_settings);
+        } else {
+          // Default values if no settings exist
+          setFeatureSettings({
+            bookings_enabled: true,
+            rewards_enabled: false,
+            time_off_enabled: true,
+            campaigns_enabled: true,
+            messaging_enabled: true,
+            notifications_enabled: true
+          });
+        }
+      } else {
+        // Default values if fetch fails
+        setFeatureSettings({
+          bookings_enabled: true,
+          rewards_enabled: false,
+          time_off_enabled: true,
+          campaigns_enabled: true,
+          messaging_enabled: true,
+          notifications_enabled: true
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching feature settings:', error);
+      // Default values on error
+      setFeatureSettings({
+        bookings_enabled: true,
+        rewards_enabled: false,
+        time_off_enabled: true,
+        campaigns_enabled: true,
+        messaging_enabled: true,
+        notifications_enabled: true
+      });
+    } finally {
+      setLoadingFeatures(false);
+    }
   };
 
   const uploadFile = async (file: File): Promise<string> => {
@@ -526,6 +600,68 @@ const PlacesManagement: React.FC = () => {
         }
       }
       
+      // Save messaging_enabled via feature settings endpoint
+      try {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+        const token = localStorage.getItem('auth_token');
+        
+        // First, get current feature settings to preserve other settings
+        let currentSettings = {
+          bookings_enabled: formData.booking_enabled,
+          rewards_enabled: false,
+          time_off_enabled: false,
+          campaigns_enabled: false,
+          messaging_enabled: formData.messaging_enabled,
+          notifications_enabled: true
+        };
+        
+        try {
+          const settingsResponse = await fetch(`${apiBase}/owner/places/${salonId}/settings`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (settingsResponse.ok) {
+            const settingsData = await settingsResponse.json();
+            if (settingsData?.feature_settings) {
+              // Preserve existing settings and only update messaging_enabled
+              currentSettings = {
+                bookings_enabled: settingsData.feature_settings.bookings_enabled ?? formData.booking_enabled,
+                rewards_enabled: settingsData.feature_settings.rewards_enabled ?? false,
+                time_off_enabled: settingsData.feature_settings.time_off_enabled ?? false,
+                campaigns_enabled: settingsData.feature_settings.campaigns_enabled ?? false,
+                messaging_enabled: formData.messaging_enabled,
+                notifications_enabled: settingsData.feature_settings.notifications_enabled ?? true
+              };
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching current feature settings:', error);
+          // Use defaults if fetch fails
+        }
+        
+        // Update feature settings
+        const featureResponse = await fetch(`${apiBase}/owner/places/${salonId}/settings/features`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(currentSettings)
+        });
+        
+        if (!featureResponse.ok) {
+          console.error('Failed to update feature settings:', await featureResponse.text());
+          // Don't fail the whole operation if feature settings update fails
+        } else {
+          console.log('✅ Feature settings updated successfully');
+        }
+      } catch (error) {
+        console.error('Error updating feature settings:', error);
+        // Don't fail the whole operation if feature settings update fails
+      }
+      
       await fetchPlaces();
       setShowModal(false);
       setEditingPlace(null);
@@ -540,9 +676,32 @@ const PlacesManagement: React.FC = () => {
     }
   };
 
-  const handleEdit = (place: Place) => {
+  const handleEdit = async (place: Place) => {
     setEditingPlace(place);
     setSelectedPlace(place);
+    
+    // Fetch feature settings to get messaging_enabled
+    let messagingEnabled = true; // Default to true
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${apiBase}/owner/places/${place.id}/settings`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const settingsData = await response.json();
+        if (settingsData?.feature_settings?.messaging_enabled !== undefined) {
+          messagingEnabled = settingsData.feature_settings.messaging_enabled;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching feature settings:', error);
+      // Use default value if fetch fails
+    }
+    
     setFormData({
       name: place.name,
       slug: place.slug || '',
@@ -559,10 +718,13 @@ const PlacesManagement: React.FC = () => {
       service_areas: place.service_areas || [],
       coverage_radius: place.coverage_radius || 10,
       booking_enabled: place.booking_enabled,
+      messaging_enabled: messagingEnabled,
       latitude: place.latitude,
       longitude: place.longitude,
       workingHours: place.working_hours || {}
     });
+    // If place has a slug, mark it as manually edited so it won't be auto-generated
+    setSlugManuallyEdited(!!place.slug);
     // Clear uploaded files when editing (images are already associated with the place)
     setUploadedFiles([]);
     setUploadProgress({});
@@ -570,7 +732,7 @@ const PlacesManagement: React.FC = () => {
   };
 
   const handleDelete = async (placeId: number) => {
-    if (window.confirm('Are you sure you want to delete this place?')) {
+    if (window.confirm(t('owner.places.deleteConfirm'))) {
       try {
         // Use the proper API client instead of direct fetch
         await ownerApi.deletePlace(placeId);
@@ -614,10 +776,13 @@ const PlacesManagement: React.FC = () => {
       service_areas: [],
       coverage_radius: 10,
       booking_enabled: true,
+      messaging_enabled: true,
       latitude: undefined,
       longitude: undefined,
       workingHours: {}
     });
+    // Reset slug manually edited flag when resetting form
+    setSlugManuallyEdited(false);
     setUploadedFiles([]);
     setUploadProgress({});
   };
@@ -685,9 +850,8 @@ const PlacesManagement: React.FC = () => {
     coverageRadius?: number;
     locationType?: 'fixed' | 'mobile';
     onLocationChange?: (lat: number, lng: number) => void;
-    onRadiusChange?: (radius: number) => void;
     isEditable?: boolean;
-  }> = ({ latitude, longitude, coverageRadius = 10, locationType = 'fixed', onLocationChange, onRadiusChange, isEditable = true }) => {
+  }> = ({ latitude, longitude, coverageRadius = 10, locationType = 'fixed', onLocationChange, isEditable = true }) => {
     const [position, setPosition] = useState<[number, number] | null>(
       (latitude !== null && latitude !== undefined && longitude !== null && longitude !== undefined) ? [latitude, longitude] : null
     );
@@ -756,7 +920,7 @@ const PlacesManagement: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-light-gray">
+    <div className="flex flex-col h-screen bg-light-gray overflow-hidden">
       <style>{`
         .slider::-webkit-slider-thumb {
           appearance: none;
@@ -777,125 +941,136 @@ const PlacesManagement: React.FC = () => {
         }
       `}</style>
 
-      {/* Sidebar */}
-      <aside className={`w-1/3 max-w-sm flex flex-col border-r border-medium-gray bg-white lg:block ${
-        sidebarOpen ? 'block' : 'hidden'
-      }`}>
-        
-        {/* Search */}
-        <div className="p-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-charcoal/60" />
-            </div>
-            <input
-              type="text"
-              className="input-field pl-10"
-              placeholder="Search for a place"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+      {/* Header */}
+      <div className="bg-transparent border-b border-medium-gray p-3 sm:p-4 lg:p-6 rounded-lg" style={{ borderRadius: '8px' }}>
+        <div className="max-w-7xl">
+          <div className="flex flex-wrap justify-start items-center gap-2 sm:gap-3 mb-4">
+            <h1 className="text-charcoal text-xl sm:text-2xl lg:text-3xl font-bold leading-tight font-display">
+              {t('owner.places.title')}
+            </h1>
+            <button
+              className="btn-primary text-xs sm:text-sm max-[412px]:text-base max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full flex items-center"
+              onClick={() => {
+                resetForm();
+                setEditingPlace(null);
+                setSelectedPlace(null);
+                setShowModal(true);
+              }}
+            >
+              <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+              <span className="truncate">{t('owner.places.addNewPlace')}</span>
+            </button>
           </div>
-        </div>
 
-        {/* Places List */}
-        <div className="flex-grow overflow-y-auto">
-          <div className="flex flex-col">
-            {filteredPlaces.map((place) => (
-              <div
-                key={place.id}
-                className={`flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between cursor-pointer transition-colors ${
-                  selectedPlace?.id === place.id
-                    ? 'bg-bright-blue/10 border-l-4 border-bright-blue'
-                    : 'bg-white hover:bg-light-gray'
-                }`}
-                onClick={() => {
-                  setSelectedPlace(place);
-                  setSidebarOpen(false); // Close sidebar on mobile when place is selected
-                }}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="text-charcoal/60 flex items-center justify-center rounded-lg bg-light-gray shrink-0 size-12">
-                    {place.location_type === 'fixed' ? (
-                      <BuildingOfficeIcon className="h-6 w-6" />
-                    ) : (
-                      <MapPinIcon className="h-6 w-6" />
-                    )}
-                  </div>
-                  <div className="flex flex-col justify-center">
-                    <p className="text-charcoal text-base font-medium leading-normal line-clamp-1 font-body">
-                      {place.name}
-                    </p>
-                    <p className="text-charcoal/60 text-sm font-normal leading-normal line-clamp-2 font-body">
-                      {place.location_type === 'fixed' ? 'Fixed Location' : 'Mobile/Service Area'}
-                    </p>
-                  </div>
-                </div>
-                <div className="shrink-0">
-                  <div className="text-charcoal/60 flex size-7 items-center justify-center">
-                    <PencilIcon className="h-4 w-4" />
-                  </div>
-                </div>
+          {/* Search */}
+          <div className="mb-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-2 sm:pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 text-charcoal/60" />
               </div>
-            ))}
+              <input
+                type="text"
+                className="input-field pl-8 sm:pl-10 text-sm sm:text-base"
+                placeholder={t('owner.places.searchPlaceholder')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Place Selector - Horizontal Tabs */}
+          <div className="bg-white rounded-lg shadow-form p-4" style={{ borderRadius: '8px' }}>
+            <label className="block text-sm font-medium text-charcoal mb-3 font-body px-1" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}>
+              {t('owner.places.selectPlace')}
+            </label>
+            <div className="overflow-x-auto -mx-4 px-4">
+              <div className="flex gap-2 -mb-px border-b border-medium-gray">
+              {filteredPlaces.map((place) => {
+                const isSelected = selectedPlace?.id === place.id;
+                return (
+                  <button
+                    key={place.id}
+                    type="button"
+                    onClick={() => setSelectedPlace(place)}
+                    className={`
+                      flex items-center gap-2 px-3 py-2.5 max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[48px] border-b-2 transition-all duration-200 font-body flex-shrink-0 rounded-lg max-[412px]:rounded-full
+                      ${isSelected 
+                        ? 'border-bright-blue text-bright-blue bg-bright-blue bg-opacity-10' 
+                        : 'border-transparent text-charcoal opacity-70 hover:opacity-100 hover:border-medium-gray hover:bg-light-gray'
+                      }
+                    `}
+                    style={{ 
+                      fontFamily: 'Open Sans, sans-serif', 
+                      fontWeight: isSelected ? 600 : 400,
+                      fontSize: '14px'
+                    }}
+                  >
+                    <div className={`flex items-center justify-center rounded-lg shrink-0 size-7 ${
+                      isSelected ? 'bg-bright-blue' : 'bg-light-gray'
+                    }`}>
+                      {place.location_type === 'mobile' ? (
+                        <MapPinIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                      ) : (
+                        <BuildingOfficeIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                      )}
+                    </div>
+                    <span className="text-sm whitespace-nowrap">
+                      {place.name} ({place.location_type === 'fixed' ? t('owner.places.fixed') : t('owner.places.mobile')})
+                    </span>
+                  </button>
+                );
+              })}
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Add New Place Button */}
-        <div className="p-4 border-t border-medium-gray">
-          <button
-            className="btn-primary w-full"
-            onClick={() => {
-              resetForm();
-              setEditingPlace(null);
-              setSelectedPlace(null);
-              setShowModal(true);
-            }}
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            <span className="truncate">Add New Place</span>
-          </button>
-        </div>
-      </aside>
+      </div>
 
       {/* Main Content */}
-      <main className="w-full lg:w-2/3 flex-grow p-4 lg:p-6 bg-light-gray overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-            <div className="flex items-center gap-4">
-              <button
-                className="lg:hidden p-2 text-charcoal/60 hover:text-charcoal"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <h1 className="text-charcoal text-2xl lg:text-3xl font-bold leading-tight font-display">
-                Places Management
-              </h1>
-            </div>
-          </div>
+      <main className="flex-grow overflow-y-auto p-3 max-[412px]:p-2 sm:p-4 lg:p-6 bg-light-gray w-full max-w-full lg:w-[1280px]">
+        <div>
 
           {/* Selected Place Details */}
           {selectedPlace ? (
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="max-w-7xl">
               {/* Main Info Card */}
-              <div className="xl:col-span-2">
-                <div className="card">
-                  <div className="mb-4">
-                    <h2 className="text-2xl font-bold text-charcoal font-display">
-                      {selectedPlace.name}
-                    </h2>
-                  </div>
+              <div className="card max-w-full lg:max-w-[1280px] w-full">
+                <div className="mb-3 sm:mb-4">
+                  <h2 className="text-xl sm:text-2xl font-bold text-charcoal font-display">
+                    {selectedPlace.name}
+                  </h2>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Images Card - At the top */}
+                {selectedPlace.images && selectedPlace.images.length > 0 && (
+                  <div className="mb-4 sm:mb-6">
+                    <h3 className="text-base sm:text-lg font-semibold text-charcoal mb-3 sm:mb-4 font-display">{t('owner.places.images')}</h3>
+                    <div className="grid grid-cols-1 gap-2 sm:gap-3">
+                      {selectedPlace.images.map((image) => (
+                        <div key={image.id} className="relative group">
+                          <img
+                            src={image.image_url}
+                            alt={image.image_alt || selectedPlace.name}
+                            className="w-full h-24 sm:h-32 object-cover rounded-lg border border-medium-gray"
+                          />
+                          {image.is_primary && (
+                            <div className="absolute top-2 left-2 bg-bright-blue text-white text-xs px-2 py-1 rounded font-body">
+                              {t('owner.places.primary')}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Place Name
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.placeName')}
                       </label>
                       <input
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                         type="text"
                         value={selectedPlace.name}
                         readOnly
@@ -903,11 +1078,11 @@ const PlacesManagement: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Sector
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.sector')}
                       </label>
                       <input
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                         type="text"
                         value={selectedPlace.sector}
                         readOnly
@@ -915,11 +1090,11 @@ const PlacesManagement: React.FC = () => {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Location Type
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.locationType')}
                       </label>
-                      <div className="flex gap-4">
-                        <label className={`flex items-center gap-2 p-3 rounded-lg border w-full cursor-pointer ${
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                        <label className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg border w-full cursor-pointer ${
                           selectedPlace.location_type === 'fixed'
                             ? 'border-bright-blue bg-bright-blue/10'
                             : 'border-medium-gray'
@@ -929,11 +1104,11 @@ const PlacesManagement: React.FC = () => {
                             name="location-type"
                             checked={selectedPlace.location_type === 'fixed'}
                             readOnly
-                            className="form-radio text-bright-blue focus:ring-bright-blue"
+                            className="form-radio text-bright-blue focus:ring-bright-blue h-4 w-4 sm:h-5 sm:w-5"
                           />
-                          <span className="text-charcoal font-body">Fixed Location</span>
+                          <span className="text-xs sm:text-sm text-charcoal font-body">{t('owner.places.fixedLocation')}</span>
                         </label>
-                        <label className={`flex items-center gap-2 p-3 rounded-lg border w-full cursor-pointer ${
+                        <label className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg border w-full cursor-pointer ${
                           selectedPlace.location_type === 'mobile'
                             ? 'border-bright-blue bg-bright-blue/10'
                             : 'border-medium-gray'
@@ -943,19 +1118,19 @@ const PlacesManagement: React.FC = () => {
                             name="location-type"
                             checked={selectedPlace.location_type === 'mobile'}
                             readOnly
-                            className="form-radio text-bright-blue focus:ring-bright-blue"
+                            className="form-radio text-bright-blue focus:ring-bright-blue h-4 w-4 sm:h-5 sm:w-5"
                           />
-                          <span className="text-charcoal font-body">Mobile/Service Area</span>
+                          <span className="text-xs sm:text-sm text-charcoal font-body">{t('owner.places.mobileServiceArea')}</span>
                         </label>
                       </div>
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Address
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.address')}
                       </label>
                       <input
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                         type="text"
                         value={selectedPlace.address || ''}
                         readOnly
@@ -963,11 +1138,11 @@ const PlacesManagement: React.FC = () => {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Description
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.description')}
                       </label>
                       <textarea
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                         rows={3}
                         value={selectedPlace.description || ''}
                         readOnly
@@ -975,11 +1150,11 @@ const PlacesManagement: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Phone
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.phone')}
                       </label>
                       <input
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                         type="text"
                         value={selectedPlace.phone || ''}
                         readOnly
@@ -987,11 +1162,11 @@ const PlacesManagement: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Email
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.email')}
                       </label>
                       <input
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                         type="text"
                         value={selectedPlace.email || ''}
                         readOnly
@@ -999,11 +1174,11 @@ const PlacesManagement: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Website
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.website')}
                       </label>
                       <input
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                         type="text"
                         value={selectedPlace.website || ''}
                         readOnly
@@ -1011,11 +1186,11 @@ const PlacesManagement: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Instagram
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.instagram')}
                       </label>
                       <input
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                         type="text"
                         value={selectedPlace.instagram || ''}
                         readOnly
@@ -1023,12 +1198,12 @@ const PlacesManagement: React.FC = () => {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Business URL
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.businessUrl')}
                       </label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                         <input
-                          className="input-field flex-1"
+                          className="input-field flex-1 text-xs sm:text-sm"
                           type="text"
                           value={`https://linkuup.portugalexpatdirectory.com/${selectedPlace.slug || selectedPlace.id}`}
                           readOnly
@@ -1036,94 +1211,155 @@ const PlacesManagement: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => copyToClipboard(`https://linkuup.portugalexpatdirectory.com/${selectedPlace.slug || selectedPlace.id}`)}
-                          className="px-4 py-2 bg-bright-blue text-white rounded-lg hover:bg-bright-blue/90 transition-colors font-medium flex items-center gap-2"
-                          title="Copy URL"
+                          className="px-3 sm:px-4 max-[412px]:px-4 py-2 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full bg-bright-blue text-white rounded-lg hover:bg-bright-blue/90 transition-colors font-medium flex items-center justify-center gap-2 text-xs sm:text-sm"
+                          title={t('owner.places.copy')}
                         >
-                          <ClipboardDocumentIcon className="h-5 w-5" />
-                          {copied ? 'Copied!' : 'Copy'}
+                          <ClipboardDocumentIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                          {copied ? t('owner.places.copied') : t('owner.places.copy')}
                         </button>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-6 flex flex-wrap justify-end gap-3">
-                    <button
-                      className="btn-secondary"
-                      onClick={() => handleDelete(selectedPlace.id)}
-                    >
-                      <TrashIcon className="h-5 w-5 mr-2" />
-                      <span>Delete Place</span>
-                    </button>
-                    <button
-                      className="btn-primary"
-                      onClick={() => handleEdit(selectedPlace)}
-                    >
-                      <PencilIcon className="h-5 w-5 mr-2" />
-                      <span>Edit Place</span>
-                    </button>
-                    <button
-                      className="btn-outline"
-                      onClick={() => setSelectedPlace(null)}
-                    >
-                      <XMarkIcon className="h-5 w-5 mr-2" />
-                      <span>Close</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Map and Images Sidebar */}
-              <div className="space-y-6">
-                {/* Map Card */}
-                <div className="card">
-                  <h3 className="text-lg font-semibold text-charcoal mb-4 font-display">Location</h3>
-                  <div className="w-full h-64 bg-light-gray rounded-lg overflow-hidden">
-                    <LocationMap
-                      latitude={selectedPlace.latitude}
-                      longitude={selectedPlace.longitude}
-                      coverageRadius={selectedPlace.coverage_radius}
-                      locationType={selectedPlace.location_type}
-                      isEditable={false}
-                    />
-                  </div>
-                  {selectedPlace.latitude && selectedPlace.longitude && (
-                    <div className="mt-2 text-sm text-charcoal/60 font-body">
-                      Coordinates: {selectedPlace.latitude.toFixed(6)}, {selectedPlace.longitude.toFixed(6)}
+                  {/* Location Card */}
+                  {!showModal && (
+                    <div className="mt-4 sm:mt-6">
+                      <h3 className="text-base sm:text-lg font-semibold text-charcoal mb-3 sm:mb-4 font-display">{t('owner.places.location')}</h3>
+                      <div className="w-full h-48 sm:h-64 bg-light-gray rounded-lg overflow-hidden">
+                        <LocationMap
+                          latitude={selectedPlace.latitude}
+                          longitude={selectedPlace.longitude}
+                          coverageRadius={selectedPlace.coverage_radius}
+                          locationType={selectedPlace.location_type}
+                          isEditable={false}
+                        />
+                      </div>
+                      {selectedPlace.latitude && selectedPlace.longitude && (
+                        <div className="mt-2 text-xs sm:text-sm text-charcoal/60 font-body">
+                          {t('owner.places.coordinates')}: {selectedPlace.latitude.toFixed(6)}, {selectedPlace.longitude.toFixed(6)}
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
 
-                {/* Images Card */}
-                {selectedPlace.images && selectedPlace.images.length > 0 && (
-                  <div className="card">
-                    <h3 className="text-lg font-semibold text-charcoal mb-4 font-display">Images</h3>
-                    <div className="grid grid-cols-1 gap-3">
-                      {selectedPlace.images.map((image) => (
-                        <div key={image.id} className="relative group">
-                          <img
-                            src={image.image_url}
-                            alt={image.image_alt || selectedPlace.name}
-                            className="w-full h-32 object-cover rounded-lg border border-medium-gray"
-                          />
-                          {image.is_primary && (
-                            <div className="absolute top-2 left-2 bg-bright-blue text-white text-xs px-2 py-1 rounded font-body">
-                              Primary
-                            </div>
-                          )}
+                  {/* Configurable Options Card */}
+                  {!showModal && selectedPlace && (
+                    <div className="mt-4 sm:mt-6">
+                      <h3 className="text-base sm:text-lg font-semibold text-charcoal mb-3 sm:mb-4 font-display">
+                        {t('owner.places.configurableOptions')}
+                      </h3>
+                      {loadingFeatures ? (
+                        <div className="text-center py-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-bright-blue mx-auto"></div>
+                          <p className="text-xs sm:text-sm text-charcoal/60 mt-2 font-body">{t('owner.places.loadingSettings')}</p>
                         </div>
-                      ))}
+                      ) : featureSettings ? (
+                        <div className="space-y-3 sm:space-y-4">
+                          <div className="flex items-center justify-between p-3 rounded-lg border border-medium-gray">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${featureSettings.bookings_enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <span className="text-xs sm:text-sm font-medium text-charcoal font-body">{t('owner.places.onlineBooking')}</span>
+                            </div>
+                            <span className={`text-xs sm:text-sm font-medium ${featureSettings.bookings_enabled ? 'text-green-600' : 'text-gray-500'} font-body`}>
+                              {featureSettings.bookings_enabled ? t('owner.places.enabled') : t('owner.places.disabled')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-lg border border-medium-gray">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${featureSettings.messaging_enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <span className="text-xs sm:text-sm font-medium text-charcoal font-body">{t('owner.places.messageOwner')}</span>
+                            </div>
+                            <span className={`text-xs sm:text-sm font-medium ${featureSettings.messaging_enabled ? 'text-green-600' : 'text-gray-500'} font-body`}>
+                              {featureSettings.messaging_enabled ? t('owner.places.enabled') : t('owner.places.disabled')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-lg border border-medium-gray">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${featureSettings.rewards_enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <span className="text-xs sm:text-sm font-medium text-charcoal font-body">{t('owner.places.rewardsProgram')}</span>
+                            </div>
+                            <span className={`text-xs sm:text-sm font-medium ${featureSettings.rewards_enabled ? 'text-green-600' : 'text-gray-500'} font-body`}>
+                              {featureSettings.rewards_enabled ? t('owner.places.enabled') : t('owner.places.disabled')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-lg border border-medium-gray">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${featureSettings.time_off_enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <span className="text-xs sm:text-sm font-medium text-charcoal font-body">{t('owner.places.timeOffManagement')}</span>
+                            </div>
+                            <span className={`text-xs sm:text-sm font-medium ${featureSettings.time_off_enabled ? 'text-green-600' : 'text-gray-500'} font-body`}>
+                              {featureSettings.time_off_enabled ? t('owner.places.enabled') : t('owner.places.disabled')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-lg border border-medium-gray">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${featureSettings.campaigns_enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <span className="text-xs sm:text-sm font-medium text-charcoal font-body">{t('owner.places.marketingCampaigns')}</span>
+                            </div>
+                            <span className={`text-xs sm:text-sm font-medium ${featureSettings.campaigns_enabled ? 'text-green-600' : 'text-gray-500'} font-body`}>
+                              {featureSettings.campaigns_enabled ? t('owner.places.enabled') : t('owner.places.disabled')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-lg border border-medium-gray">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${featureSettings.notifications_enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <span className="text-xs sm:text-sm font-medium text-charcoal font-body">{t('owner.places.notifications')}</span>
+                            </div>
+                            <span className={`text-xs sm:text-sm font-medium ${featureSettings.notifications_enabled ? 'text-green-600' : 'text-gray-500'} font-body`}>
+                              {featureSettings.notifications_enabled ? t('owner.places.enabled') : t('owner.places.disabled')}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-xs sm:text-sm text-charcoal/60 font-body">{t('owner.places.noSettingsAvailable')}</p>
+                        </div>
+                      )}
+                      <div className="mt-4 pt-4 border-t border-medium-gray">
+                        <p className="text-xs text-charcoal/60 font-body">
+                          {t('owner.places.modifySettingsHint')}
+                        </p>
+                      </div>
                     </div>
+                  )}
+
+                  <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row flex-wrap justify-end gap-2 sm:gap-3">
+                    <button
+                      className="btn-secondary text-xs sm:text-sm max-[412px]:text-base max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full w-full sm:w-auto flex items-center"
+                      onClick={() => handleDelete(selectedPlace.id)}
+                    >
+                      <TrashIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                      <span>{t('owner.places.deletePlace')}</span>
+                    </button>
+                    <button
+                      className="btn-primary text-xs sm:text-sm max-[412px]:text-base max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full w-full sm:w-auto flex items-center"
+                      onClick={() => handleEdit(selectedPlace)}
+                    >
+                      <PencilIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                      <span>{t('owner.places.editPlaceAction')}</span>
+                    </button>
+                    <button
+                      className="btn-outline text-xs sm:text-sm max-[412px]:text-base max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full w-full sm:w-auto flex items-center"
+                      onClick={() => setSelectedPlace(null)}
+                    >
+                      <XMarkIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                      <span>{t('owner.places.close')}</span>
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
-            </div>
           ) : (
-            <div className="card">
+            <div className="card w-full max-w-full lg:w-[1280px]">
               <div className="text-center py-12">
                 <BuildingOfficeIcon className="mx-auto h-12 w-12 text-charcoal/40" />
-                <h3 className="mt-2 text-sm font-medium text-charcoal font-display">No place selected</h3>
+                <h3 className="mt-2 text-sm font-medium text-charcoal font-display">{t('owner.places.noPlaceSelected')}</h3>
                 <p className="mt-1 text-sm text-charcoal/60 font-body">
-                  Select a place from the sidebar to view details, or create a new place.
+                  {t('owner.places.selectPlaceDescription')}
                 </p>
               </div>
             </div>
@@ -1134,11 +1370,11 @@ const PlacesManagement: React.FC = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-2 mx-auto p-4 border border-medium-gray w-11/12 max-w-7xl shadow-elevated rounded-lg bg-white">
+          <div className="relative top-0 max-[412px]:top-0 mx-auto p-3 max-[412px]:p-2 sm:p-4 border border-medium-gray w-full sm:w-11/12 max-w-7xl max-[412px]:max-w-full max-[412px]:h-full max-[412px]:rounded-none shadow-elevated rounded-lg bg-white min-h-screen sm:min-h-0">
             <div className="mt-2">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-charcoal font-display">
-                  {editingPlace ? `Edit Place: ${editingPlace.name}` : 'Add New Place'}
+              <div className="flex justify-between items-center mb-3 sm:mb-4">
+                <h3 className="text-lg sm:text-xl font-semibold text-charcoal font-display">
+                  {editingPlace ? t('owner.places.editPlaceTitle', { name: editingPlace.name }) : t('owner.places.addNewPlaceTitle')}
                 </h3>
                 <button
                   type="button"
@@ -1147,60 +1383,60 @@ const PlacesManagement: React.FC = () => {
                     setEditingPlace(null);
                     resetForm();
                   }}
-                  className="text-charcoal/60 hover:text-charcoal"
+                  className="text-charcoal/60 hover:text-charcoal p-1"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
                   {/* Left Column - Basic Info */}
-                  <div className="xl:col-span-1 space-y-4">
+                  <div className="xl:col-span-1 space-y-3 sm:space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Place Name *
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.placeName')} *
                       </label>
                       <input
                         type="text"
                         required
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Business URL Slug
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.businessUrlSuffix')}
                       </label>
                       <input
                         type="text"
                         value={formData.slug}
                         onChange={(e) => {
                           const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                          setSlugManuallyEdited(true); // Mark as manually edited
                           setFormData({ ...formData, slug: value });
                         }}
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                         placeholder="auto-generated-slug"
                         pattern="[a-z0-9\-]+"
                       />
                       <p className="text-xs text-charcoal/60 mt-1">
-                        Auto-generated from name. You can customize it.
+                        {t('owner.places.autoGeneratedHint')}
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Sector *
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.sector')} *
                       </label>
                       <Select
                         value={formData.sector}
                         onValueChange={(value) => setFormData({ ...formData, sector: value })}
-                        required
                       >
-                        <SelectTrigger className="input-field">
+                        <SelectTrigger className="input-field text-sm sm:text-base">
                           <SelectValue placeholder={t('search.selectService')} />
                         </SelectTrigger>
                         <SelectContent>
@@ -1223,11 +1459,11 @@ const PlacesManagement: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Location Type
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.locationType')}
                       </label>
-                      <div className="flex gap-4">
-                        <label className={`flex items-center gap-2 p-3 rounded-lg border w-full cursor-pointer ${
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                        <label className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg border w-full cursor-pointer ${
                           formData.location_type === 'fixed'
                             ? 'border-bright-blue bg-bright-blue/10'
                             : 'border-medium-gray'
@@ -1237,11 +1473,11 @@ const PlacesManagement: React.FC = () => {
                             name="location-type"
                             checked={formData.location_type === 'fixed'}
                             onChange={() => setFormData({ ...formData, location_type: 'fixed' })}
-                            className="form-radio text-bright-blue focus:ring-bright-blue"
+                            className="form-radio text-bright-blue focus:ring-bright-blue h-4 w-4 sm:h-5 sm:w-5"
                           />
-                          <span className="text-charcoal font-body">Fixed Location</span>
+                          <span className="text-xs sm:text-sm text-charcoal font-body">{t('owner.places.fixedLocation')}</span>
                         </label>
-                        <label className={`flex items-center gap-2 p-3 rounded-lg border w-full cursor-pointer ${
+                        <label className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg border w-full cursor-pointer ${
                           formData.location_type === 'mobile'
                             ? 'border-bright-blue bg-bright-blue/10'
                             : 'border-medium-gray'
@@ -1251,95 +1487,95 @@ const PlacesManagement: React.FC = () => {
                             name="location-type"
                             checked={formData.location_type === 'mobile'}
                             onChange={() => setFormData({ ...formData, location_type: 'mobile' })}
-                            className="form-radio text-bright-blue focus:ring-bright-blue"
+                            className="form-radio text-bright-blue focus:ring-bright-blue h-4 w-4 sm:h-5 sm:w-5"
                           />
-                          <span className="text-charcoal font-body">Mobile/Service Area</span>
+                          <span className="text-xs sm:text-sm text-charcoal font-body">{t('owner.places.mobileServiceArea')}</span>
                         </label>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Address
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.address')}
                       </label>
                       <input
                         type="text"
                         value={formData.address}
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        className="input-field"
+                        className="input-field text-sm sm:text-base"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Description
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.description')}
                       </label>
                       <textarea
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        rows={4}
-                        className="input-field"
+                        rows={3}
+                        className="input-field text-sm sm:text-base"
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                          Phone
+                        <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                          {t('owner.places.phone')}
                         </label>
                         <input
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          className="input-field"
+                          className="input-field text-sm sm:text-base"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                          Email
+                        <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                          {t('owner.places.email')}
                         </label>
                         <input
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="input-field"
+                          className="input-field text-sm sm:text-base"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                          Website
+                        <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                          {t('owner.places.website')}
                         </label>
                         <input
                           type="url"
                           value={formData.website}
                           onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                          className="input-field"
+                          className="input-field text-sm sm:text-base"
                           placeholder="https://example.com"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                          Instagram
+                        <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                          {t('owner.places.instagram')}
                         </label>
                         <input
                           type="text"
                           value={formData.instagram}
                           onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                          className="input-field"
+                          className="input-field text-sm sm:text-base"
                           placeholder="@username"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                        Online Booking
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.onlineBooking')}
                       </label>
                       <label
-                        className={`flex items-center gap-2 p-3 rounded-lg border w-full cursor-pointer ${
+                        className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg border w-full cursor-pointer ${
                           formData.booking_enabled ? 'border-bright-blue bg-bright-blue/10' : 'border-medium-gray'
                         }`}
                       >
@@ -1347,19 +1583,38 @@ const PlacesManagement: React.FC = () => {
                           type="checkbox"
                           checked={formData.booking_enabled}
                           onChange={(e) => setFormData({ ...formData, booking_enabled: e.target.checked })}
-                          className="form-checkbox text-bright-blue focus:ring-bright-blue"
+                          className="form-checkbox text-bright-blue focus:ring-bright-blue h-4 w-4 sm:h-5 sm:w-5"
                         />
-                        <span className="text-charcoal font-body">Enable online booking</span>
+                        <span className="text-xs sm:text-sm text-charcoal font-body">{t('owner.places.enableOnlineBooking')}</span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                        {t('owner.places.messageOwnerLabel')}
+                      </label>
+                      <label
+                        className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg border w-full cursor-pointer ${
+                          (formData.messaging_enabled ?? true) ? 'border-bright-blue bg-bright-blue/10' : 'border-medium-gray'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.messaging_enabled ?? true}
+                          onChange={(e) => setFormData({ ...formData, messaging_enabled: e.target.checked })}
+                          className="form-checkbox text-bright-blue focus:ring-bright-blue h-4 w-4 sm:h-5 sm:w-5"
+                        />
+                        <span className="text-xs sm:text-sm text-charcoal font-body">{t('owner.places.enableMessageOwner')}</span>
                       </label>
                     </div>
                   </div>
 
                   {/* Middle Column - Location */}
                   <div className="xl:col-span-1">
-                    <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                      Location Pinpoint
+                    <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                      {t('owner.places.locationPinpoint')}
                     </label>
-                    <div className="w-full h-80 bg-light-gray rounded-lg overflow-hidden">
+                    <div className="w-full h-48 sm:h-80 bg-light-gray rounded-lg overflow-hidden">
                       <LocationMap
                         latitude={formData.latitude}
                         longitude={formData.longitude}
@@ -1368,28 +1623,25 @@ const PlacesManagement: React.FC = () => {
                         onLocationChange={(lat, lng) => {
                           setFormData({ ...formData, latitude: lat, longitude: lng });
                         }}
-                        onRadiusChange={(radius) => {
-                          setFormData({ ...formData, coverage_radius: radius });
-                        }}
                         isEditable={true}
                       />
                     </div>
                     <p className="text-xs text-charcoal/60 mt-2 font-body">
-                      Click on the map to set the location
+                      {t('owner.places.clickMapToSetLocation')}
                     </p>
                     {formData.latitude && formData.longitude && (
-                      <div className="mt-2 text-sm text-charcoal/60 font-body">
-                        Coordinates: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+                      <div className="mt-2 text-xs sm:text-sm text-charcoal/60 font-body">
+                        {t('owner.places.coordinates')}: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
                       </div>
                     )}
 
                     {/* Coverage Radius Control for Mobile Places */}
                     {formData.location_type === 'mobile' && (
-                      <div className="mt-4">
-                        <label className="block text-sm font-medium text-charcoal mb-2 font-body">
-                          Coverage Radius: {formData.coverage_radius} km
+                      <div className="mt-3 sm:mt-4">
+                        <label className="block text-xs sm:text-sm font-medium text-charcoal mb-2 font-body">
+                          {t('owner.places.coverageRadius')}: {formData.coverage_radius} {t('owner.places.km')}
                         </label>
-                        <div className="space-y-3">
+                        <div className="space-y-2 sm:space-y-3">
                           <input
                             type="range"
                             min="1"
@@ -1399,9 +1651,9 @@ const PlacesManagement: React.FC = () => {
                             className="w-full h-2 bg-light-gray rounded-lg appearance-none cursor-pointer slider"
                           />
                           <div className="flex justify-between text-xs text-charcoal/60 font-body">
-                            <span>1 km</span>
-                            <span>25 km</span>
-                            <span>50 km</span>
+                            <span>1 {t('owner.places.km')}</span>
+                            <span>25 {t('owner.places.km')}</span>
+                            <span>50 {t('owner.places.km')}</span>
                           </div>
                           <div className="flex gap-2">
                             <input
@@ -1410,44 +1662,44 @@ const PlacesManagement: React.FC = () => {
                               max="50"
                               value={formData.coverage_radius}
                               onChange={(e) => setFormData({ ...formData, coverage_radius: parseInt(e.target.value) || 1 })}
-                              className="w-20 px-2 py-1 bg-light-gray border border-medium-gray rounded text-charcoal text-sm font-body"
+                              className="w-20 px-2 py-1 text-sm bg-light-gray border border-medium-gray rounded text-charcoal font-body"
                             />
-                            <span className="text-sm text-charcoal self-center font-body">km</span>
+                            <span className="text-xs sm:text-sm text-charcoal self-center font-body">{t('owner.places.km')}</span>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="mt-3 sm:mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                          Latitude
+                        <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                          {t('owner.places.latitude')}
                         </label>
                         <input
                           type="number"
                           step="any"
                           value={formData.latitude || ''}
                           onChange={(e) => setFormData({ ...formData, latitude: e.target.value ? parseFloat(e.target.value) : undefined })}
-                          className="input-field"
+                          className="input-field text-sm sm:text-base"
                           placeholder="40.2033"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-charcoal mb-1 font-body">
-                          Longitude
+                        <label className="block text-xs sm:text-sm font-medium text-charcoal mb-1 font-body">
+                          {t('owner.places.longitude')}
                         </label>
                         <input
                           type="number"
                           step="any"
                           value={formData.longitude || ''}
                           onChange={(e) => setFormData({ ...formData, longitude: e.target.value ? parseFloat(e.target.value) : undefined })}
-                          className="input-field"
+                          className="input-field text-sm sm:text-base"
                           placeholder="-8.4103"
                         />
                       </div>
                     </div>
                     
-                    <div className="mt-4 flex gap-2">
+                    <div className="mt-3 sm:mt-4 flex gap-2">
                       <button
                         type="button"
                         onClick={() => {
@@ -1468,32 +1720,32 @@ const PlacesManagement: React.FC = () => {
                             alert('Geolocation is not supported by this browser.');
                           }
                         }}
-                        className="btn-outline text-sm flex-1"
+                        className="btn-outline text-xs sm:text-sm max-[412px]:text-base max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full flex-1"
                       >
-                        📍 Current Location
+                        📍 {t('owner.places.currentLocation')}
                       </button>
                     </div>
                   </div>
 
                   {/* Right Column - Images */}
-                  <div className="xl:col-span-1 space-y-4">
+                  <div className="xl:col-span-1 space-y-3 sm:space-y-4">
                     {/* Existing Images Display */}
                     {editingPlace && editingPlace.images && editingPlace.images.length > 0 && (
                       <div>
-                        <label className="block text-sm font-medium text-charcoal mb-2 font-body">
-                          Current Images
+                        <label className="block text-xs sm:text-sm font-medium text-charcoal mb-2 font-body">
+                          {t('owner.places.currentImages')}
                         </label>
-                        <div className="grid grid-cols-1 gap-3">
+                        <div className="grid grid-cols-1 gap-2 sm:gap-3">
                           {editingPlace.images.map((image) => (
                             <div key={image.id} className="relative group">
                               <img
                                 src={image.image_url}
                                 alt={image.image_alt || editingPlace.name}
-                                className="w-full h-24 object-cover rounded-lg border border-medium-gray"
+                                className="w-full h-20 sm:h-24 object-cover rounded-lg border border-medium-gray"
                               />
                               {image.is_primary && (
                                 <div className="absolute top-1 left-1 bg-bright-blue text-white text-xs px-1 py-0.5 rounded font-body">
-                                  Primary
+                                  {t('owner.places.primary')}
                                 </div>
                               )}
                             </div>
@@ -1504,34 +1756,34 @@ const PlacesManagement: React.FC = () => {
 
                     {/* File Upload Section */}
                     <div>
-                      <label className="block text-sm font-medium text-charcoal mb-2 font-body">
-                        Images/Videos (Optional)
+                      <label className="block text-xs sm:text-sm font-medium text-charcoal mb-2 font-body">
+                        {t('owner.places.imagesVideos')}
                         {editingPlace && (
-                          <span className="text-sm text-charcoal/60 ml-2 font-body">
-                            (Adding new images)
+                          <span className="text-xs sm:text-sm text-charcoal/60 ml-2 font-body">
+                            ({t('owner.places.addingNewImages')})
                           </span>
                         )}
                       </label>
-                      <div className="space-y-3">
+                      <div className="space-y-2 sm:space-y-3">
                         <input
                           type="file"
                           multiple
                           accept="image/*,video/*"
                           onChange={handleFileSelect}
-                          className="block w-full text-sm text-charcoal/60 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-bright-blue file:text-white hover:file:bg-blue-600 font-body"
+                          className="block w-full text-xs sm:text-sm text-charcoal/60 file:mr-2 sm:file:mr-4 file:py-1 sm:file:py-2 file:px-2 sm:file:px-4 file:rounded-full file:border-0 file:text-xs sm:file:text-sm file:font-semibold file:bg-bright-blue file:text-white hover:file:bg-blue-600 font-body"
                         />
                         
                         {uploadedFiles.length > 0 && (
-                          <div className="space-y-3">
-                            <p className="text-sm text-charcoal/60 font-body">Selected files:</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-2 sm:space-y-3">
+                            <p className="text-xs sm:text-sm text-charcoal/60 font-body">{t('owner.places.selectedFiles')}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                               {uploadedFiles.map((file, index) => (
-                                <div key={index} className="bg-light-gray rounded-lg p-3 border border-medium-gray">
-                                  <div className="flex items-start space-x-3">
+                                <div key={index} className="bg-light-gray rounded-lg p-2 sm:p-3 border border-medium-gray">
+                                  <div className="flex items-start space-x-2 sm:space-x-3">
                                     {/* Image Thumbnail or Video Icon */}
                                     <div className="flex-shrink-0">
                                       {file.type.startsWith('image/') ? (
-                                        <div className="w-16 h-16 rounded-lg overflow-hidden border border-medium-gray">
+                                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-medium-gray">
                                           <img
                                             src={createImageThumbnail(file)}
                                             alt={file.name}
@@ -1539,15 +1791,15 @@ const PlacesManagement: React.FC = () => {
                                           />
                                         </div>
                                       ) : (
-                                        <div className="w-16 h-16 bg-charcoal/10 rounded-lg flex items-center justify-center">
-                                          <span className="text-2xl">{getFileIcon(file)}</span>
+                                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-charcoal/10 rounded-lg flex items-center justify-center">
+                                          <span className="text-xl sm:text-2xl">{getFileIcon(file)}</span>
                                         </div>
                                       )}
                                     </div>
                                     
                                     {/* File Info */}
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-sm text-charcoal truncate font-body" title={file.name}>
+                                      <p className="text-xs sm:text-sm text-charcoal truncate font-body" title={file.name}>
                                         {file.name}
                                       </p>
                                       <p className="text-xs text-charcoal/60 font-body">
@@ -1578,7 +1830,7 @@ const PlacesManagement: React.FC = () => {
                         
                         {uploading && (
                           <div className="space-y-2">
-                            <p className="text-sm text-bright-blue font-body">Uploading files...</p>
+                            <p className="text-xs sm:text-sm text-bright-blue font-body">{t('owner.places.uploadingFiles')}</p>
                             {Object.entries(uploadProgress).map(([filename, progress]) => (
                               <div key={filename} className="w-full bg-light-gray rounded-full h-2">
                                 <div
@@ -1594,7 +1846,7 @@ const PlacesManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 max-[412px]:gap-2 sm:gap-3 sm:space-x-3 pt-3 max-[412px]:pt-2 sm:pt-4">
                   <button
                     type="button"
                     onClick={() => {
@@ -1602,18 +1854,18 @@ const PlacesManagement: React.FC = () => {
                       setEditingPlace(null);
                       resetForm();
                     }}
-                    className="btn-outline"
+                    className="btn-outline w-full sm:w-auto text-xs sm:text-sm max-[412px]:text-base max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full"
                   >
-                    Cancel
+                    {t('owner.places.cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={uploading}
-                    className={`btn-primary ${
+                    className={`btn-primary w-full sm:w-auto text-xs sm:text-sm max-[412px]:text-base max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full ${
                       uploading ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
-                    {uploading ? 'Uploading...' : (editingPlace ? 'Update' : 'Create')}
+                    {uploading ? t('owner.places.uploading') : (editingPlace ? t('owner.places.update') : t('owner.places.create'))}
                   </button>
                 </div>
               </form>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, ExclamationTriangleIcon, UserIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, ExclamationTriangleIcon, UserIcon, BuildingOfficeIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { useOwnerApi } from '../../utils/ownerApi';
-import PlaceSelector from '../../components/owner/PlaceSelector';
 
 interface Message {
   id: number;
@@ -10,8 +9,8 @@ interface Message {
   customer_name?: string;
   customer_email?: string;
   sender_id?: number;
-  sender_type: 'customer' | 'system';
-  message_type: 'inquiry' | 'booking' | 'complaint' | 'system';
+  sender_type: 'customer' | 'business' | 'system';
+  message_type: 'inquiry' | 'booking' | 'complaint' | 'system' | 'reply';
   subject?: string;
   content: string;
   is_read: boolean;
@@ -36,7 +35,7 @@ const MessagesManagement: React.FC = () => {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [replyText, setReplyText] = useState('');
   const [isReplying, setIsReplying] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'unread' | 'inquiry' | 'booking' | 'complaint' | 'system'>('all');
+  const [filter, setFilter] = useState<'all' | 'unread' | 'inquiry' | 'booking' | 'complaint' | 'system' | 'reply'>('all');
 
   const { data: places = [] } = usePlaces();
   const { data: messages = [], isLoading } = usePlaceMessages(selectedPlaceId || 0);
@@ -161,17 +160,50 @@ const MessagesManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Place Selector */}
-      <div className="bg-white p-4 rounded-lg shadow-form" style={{ borderRadius: '8px' }}>
-        <label className="block text-sm font-medium text-charcoal mb-2 font-body" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}>
+      {/* Place Selector - Horizontal Tabs */}
+      <div className="bg-white rounded-lg shadow-form p-4" style={{ borderRadius: '8px' }}>
+        <label className="block text-sm font-medium text-charcoal mb-3 font-body px-1" style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}>
           Select Place
         </label>
-        <PlaceSelector
-          places={places}
-          selectedPlaceId={selectedPlaceId || undefined}
-          onPlaceChange={setSelectedPlaceId}
-          placeholder="Choose a place to manage messages"
-        />
+        <div className="overflow-x-auto">
+          <div className="flex gap-2 -mb-px border-b border-medium-gray">
+          {places.map((place) => {
+            const isSelected = selectedPlaceId === place.id;
+            return (
+              <button
+                key={place.id}
+                type="button"
+                onClick={() => setSelectedPlaceId(place.id)}
+                className={`
+                  flex items-center gap-2 px-3 py-2.5 max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[48px] border-b-2 transition-all duration-200 font-body flex-shrink-0 rounded-lg max-[412px]:rounded-full
+                  ${isSelected 
+                    ? 'border-bright-blue text-bright-blue bg-bright-blue bg-opacity-10' 
+                    : 'border-transparent text-charcoal opacity-70 hover:opacity-100 hover:border-medium-gray hover:bg-light-gray'
+                  }
+                `}
+                style={{ 
+                  fontFamily: 'Open Sans, sans-serif', 
+                  fontWeight: isSelected ? 600 : 400,
+                  fontSize: '14px'
+                }}
+              >
+                <div className={`flex items-center justify-center rounded-lg shrink-0 size-7 ${
+                  isSelected ? 'bg-bright-blue' : 'bg-light-gray'
+                }`}>
+                  {place.location_type === 'mobile' ? (
+                    <MapPinIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                  ) : (
+                    <BuildingOfficeIcon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-bright-blue'}`} />
+                  )}
+                </div>
+                <span className="text-sm whitespace-nowrap">
+                  {place.name} ({place.location_type === 'fixed' ? 'Fixed' : 'Mobile'})
+                </span>
+              </button>
+            );
+          })}
+          </div>
+        </div>
       </div>
 
       {selectedPlaceId && (
@@ -201,6 +233,7 @@ const MessagesManagement: React.FC = () => {
                       <option value="inquiry">Inquiries</option>
                       <option value="booking">Bookings</option>
                       <option value="complaint">Complaints</option>
+                      <option value="reply">Replies</option>
                       <option value="system">System</option>
                     </select>
                   </div>
@@ -350,7 +383,7 @@ const MessagesManagement: React.FC = () => {
                       <button
                         type="submit"
                         disabled={isReplying || !replyText.trim()}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm leading-4 font-medium rounded-lg text-white bg-bright-blue hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bright-blue disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-body"
+                        className="inline-flex items-center px-4 max-[412px]:px-4 py-2 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full border border-transparent text-sm leading-4 font-medium rounded-lg text-white bg-bright-blue hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bright-blue disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-body"
                         style={{ 
                           fontFamily: 'Open Sans, sans-serif', 
                           fontWeight: 600,

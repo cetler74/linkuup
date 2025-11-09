@@ -545,7 +545,7 @@ const BookingsManagement: React.FC = () => {
                       setSelectedPlaceId(place.id);
                     }}
                     className={`
-                      flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all duration-200 font-body flex-shrink-0 rounded-lg
+                      flex items-center gap-2 px-3 py-2.5 max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[48px] border-b-2 transition-all duration-200 font-body flex-shrink-0 rounded-lg max-[412px]:rounded-full
                       ${isSelected 
                         ? 'border-bright-blue text-bright-blue bg-bright-blue bg-opacity-10' 
                         : 'border-transparent text-charcoal opacity-70 hover:opacity-100 hover:border-medium-gray hover:bg-light-gray'
@@ -579,7 +579,7 @@ const BookingsManagement: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-grow overflow-y-auto p-3 sm:p-4 lg:p-6 bg-light-gray">
+      <main className="flex-grow overflow-y-auto p-3 max-[412px]:p-2 sm:p-4 lg:p-6 bg-light-gray">
         <div className="max-w-7xl">
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-start sm:items-center gap-3 mb-4 sm:mb-6">
             <div className="flex items-center gap-2 sm:gap-4">
@@ -592,7 +592,7 @@ const BookingsManagement: React.FC = () => {
                 type="button"
                 onClick={() => setShowRecurringModal(true)}
                 disabled={!selectedPlaceId}
-                className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base px-3 sm:px-4 py-2"
+                className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base max-[412px]:text-base max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full px-3 sm:px-4 py-2"
               >
                 <CalendarIcon className="h-4 w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Recurring Booking</span>
@@ -602,7 +602,7 @@ const BookingsManagement: React.FC = () => {
                 type="button"
                 onClick={() => setShowBookingModal(true)}
                 disabled={!selectedPlaceId}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base px-3 sm:px-4 py-2"
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base max-[412px]:text-base max-[412px]:px-4 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full px-3 sm:px-4 py-2"
               >
                 <PlusIcon className="h-4 w-4 mr-1 sm:mr-2" />
                 New Booking
@@ -629,7 +629,7 @@ const BookingsManagement: React.FC = () => {
                     <div className="flex space-x-1 sm:space-x-2">
                       <button
                         onClick={() => setView('calendar')}
-                        className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded font-body ${
+                        className={`px-2 sm:px-3 max-[412px]:px-4 py-1.5 sm:py-2 max-[412px]:py-3 max-[412px]:min-h-[44px] max-[412px]:rounded-full text-xs sm:text-sm rounded font-body ${
                           view === 'calendar' 
                             ? 'bg-bright-blue text-charcoal' 
                             : 'bg-light-gray text-charcoal hover:bg-medium-gray'

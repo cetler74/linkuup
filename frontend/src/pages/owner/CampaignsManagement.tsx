@@ -354,13 +354,13 @@ const CampaignsManagement: React.FC = () => {
       {/* Header */}
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-bold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>Campaigns Management</h1>
-          <p className="mt-2 text-sm text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>Campaigns Management</h1>
+          <p className="mt-2 text-xs sm:text-sm text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
             Create and manage promotional campaigns across your places
           </p>
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <div className="flex space-x-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:space-x-3 sm:gap-0">
             <button
               type="button"
               onClick={() => {
@@ -368,21 +368,23 @@ const CampaignsManagement: React.FC = () => {
                 setEditingCampaign(null);
                 setShowModal(true);
               }}
-              className="inline-flex items-center justify-center rounded-md border border-transparent bg-[#1E90FF] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-[#1E90FF] focus:ring-offset-2 sm:w-auto"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-md max-[412px]:rounded-full border border-transparent bg-[#1E90FF] px-3 sm:px-4 max-[412px]:px-4 py-2 max-[412px]:py-3 max-[412px]:min-h-[44px] text-xs sm:text-sm font-medium text-white shadow-sm hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-[#1E90FF] focus:ring-offset-2"
               style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
             >
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Create Promotions
+              <PlusIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Create Promotions</span>
+              <span className="sm:hidden">Promotions</span>
             </button>
             
             <button
               type="button"
               onClick={() => setShowMessagingForm(true)}
-              className="inline-flex items-center justify-center rounded-md border border-transparent bg-[#FF5A5F] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#E04A4F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F] focus:ring-offset-2 sm:w-auto"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-md max-[412px]:rounded-full border border-transparent bg-[#FF5A5F] px-3 sm:px-4 max-[412px]:px-4 py-2 max-[412px]:py-3 max-[412px]:min-h-[44px] text-xs sm:text-sm font-medium text-white shadow-sm hover:bg-[#E04A4F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F] focus:ring-offset-2"
               style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
             >
-              <EnvelopeIcon className="h-4 w-4 mr-2" />
-              Create Messaging Campaign
+              <EnvelopeIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Create Messaging Campaign</span>
+              <span className="sm:hidden">Messaging</span>
             </button>
           </div>
         </div>
@@ -390,62 +392,62 @@ const CampaignsManagement: React.FC = () => {
 
       {/* Stats Cards */}
       {campaignStats && (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
+            <div className="p-3 sm:p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <MegaphoneIcon className="h-6 w-6 text-gray-400" />
+                  <MegaphoneIcon className="h-4 w-4 sm:h-6 sm:w-6 text-gray-400" />
                 </div>
-                <div className="ml-5 w-0 flex-1">
+                <div className="ml-2 sm:ml-5 w-0 flex-1 min-w-0">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Campaigns</dt>
-                    <dd className="text-lg font-medium text-gray-900">{campaignStats.total_campaigns}</dd>
+                    <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Campaigns</dt>
+                    <dd className="text-base sm:text-lg font-medium text-gray-900">{campaignStats.total_campaigns}</dd>
                   </dl>
                 </div>
               </div>
             </div>
           </div>
           <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
+            <div className="p-3 sm:p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <CheckCircleIcon className="h-6 w-6 text-green-400" />
+                  <CheckCircleIcon className="h-4 w-4 sm:h-6 sm:w-6 text-green-400" />
                 </div>
-                <div className="ml-5 w-0 flex-1">
+                <div className="ml-2 sm:ml-5 w-0 flex-1 min-w-0">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Active Campaigns</dt>
-                    <dd className="text-lg font-medium text-gray-900">{campaignStats.active_campaigns}</dd>
+                    <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Active Campaigns</dt>
+                    <dd className="text-base sm:text-lg font-medium text-gray-900">{campaignStats.active_campaigns}</dd>
                   </dl>
                 </div>
               </div>
             </div>
           </div>
           <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
+            <div className="p-3 sm:p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <ClockIcon className="h-6 w-6 text-blue-400" />
+                  <ClockIcon className="h-4 w-4 sm:h-6 sm:w-6 text-blue-400" />
                 </div>
-                <div className="ml-5 w-0 flex-1">
+                <div className="ml-2 sm:ml-5 w-0 flex-1 min-w-0">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Scheduled</dt>
-                    <dd className="text-lg font-medium text-gray-900">{campaignStats.scheduled_campaigns}</dd>
+                    <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Scheduled</dt>
+                    <dd className="text-base sm:text-lg font-medium text-gray-900">{campaignStats.scheduled_campaigns}</dd>
                   </dl>
                 </div>
               </div>
             </div>
           </div>
           <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
+            <div className="p-3 sm:p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <XCircleIcon className="h-6 w-6 text-gray-400" />
+                  <XCircleIcon className="h-4 w-4 sm:h-6 sm:w-6 text-gray-400" />
                 </div>
-                <div className="ml-5 w-0 flex-1">
+                <div className="ml-2 sm:ml-5 w-0 flex-1 min-w-0">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Expired</dt>
-                    <dd className="text-lg font-medium text-gray-900">{campaignStats.expired_campaigns}</dd>
+                    <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Expired</dt>
+                    <dd className="text-base sm:text-lg font-medium text-gray-900">{campaignStats.expired_campaigns}</dd>
                   </dl>
                 </div>
               </div>
@@ -473,30 +475,30 @@ const CampaignsManagement: React.FC = () => {
               
               return (
                 <li key={campaign.id}>
-                  <div className="px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center">
+                  <div className="px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-start sm:items-center flex-1 min-w-0">
                       <div className="flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-[#F5F5F5] flex items-center justify-center">
+                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-[#F5F5F5] flex items-center justify-center">
                           {getCampaignIcon(campaign.campaign_type)}
                         </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="flex items-center">
-                          <p className="text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>{campaign.name}</p>
-                          <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCampaignTypeColor(campaign.campaign_type)}`}>
+                      <div className="ml-2 sm:ml-4 flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                          <p className="text-xs sm:text-sm font-medium text-[#333333] truncate" style={{ fontFamily: 'Open Sans, sans-serif' }}>{campaign.name}</p>
+                          <span className={`inline-flex items-center px-1.5 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${getCampaignTypeColor(campaign.campaign_type)}`}>
                             {campaign.campaign_type.replace('_', ' ')}
                           </span>
-                          <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
-                            <StatusIcon className="h-3 w-3 mr-1" />
+                          <span className={`inline-flex items-center px-1.5 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
+                            <StatusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                             {status.status}
                           </span>
                         </div>
                         <div className="mt-1">
-                          <p className="text-sm text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>{campaign.banner_message}</p>
-                          <div className="flex items-center space-x-4 text-sm text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
-                            <span>{formatDateTime(campaign.start_datetime)} - {formatDateTime(campaign.end_datetime)}</span>
+                          <p className="text-xs sm:text-sm text-[#9E9E9E] line-clamp-1" style={{ fontFamily: 'Open Sans, sans-serif' }}>{campaign.banner_message}</p>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-[#9E9E9E] mt-1" style={{ fontFamily: 'Open Sans, sans-serif' }}>
+                            <span className="truncate">{formatDateTime(campaign.start_datetime)} - {formatDateTime(campaign.end_datetime)}</span>
                             {campaign.discount_value && (
-                              <span>
+                              <span className="whitespace-nowrap">
                                 {campaign.discount_type === 'percentage' 
                                   ? `${campaign.discount_value}% off` 
                                   : `€${campaign.discount_value} off`
@@ -504,48 +506,50 @@ const CampaignsManagement: React.FC = () => {
                               </span>
                             )}
                             {campaign.rewards_multiplier && campaign.rewards_multiplier > 1 && (
-                              <span>{campaign.rewards_multiplier}x points</span>
+                              <span className="whitespace-nowrap">{campaign.rewards_multiplier}x points</span>
                             )}
                             {campaign.rewards_bonus_points && (
-                              <span>+{campaign.rewards_bonus_points} bonus points</span>
+                              <span className="whitespace-nowrap">+{campaign.rewards_bonus_points} bonus points</span>
                             )}
                             {status.status === 'active' && daysRemaining > 0 && (
-                              <span className="text-[#FFD43B]">{daysRemaining} days left</span>
+                              <span className="text-[#FFD43B] whitespace-nowrap">{daysRemaining} days left</span>
                             )}
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-end sm:justify-start space-x-2 flex-shrink-0">
                       {campaign.campaign_type === 'messaging' && (
                         <>
                           <button
                             onClick={() => handleViewRecipients(campaign)}
-                            className="text-[#1E90FF] hover:text-[#1877D2]"
+                            className="text-[#1E90FF] hover:text-[#1877D2] p-1"
                             title="View Recipients"
                           >
-                            <EyeIcon className="h-4 w-4" />
+                            <EyeIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                           </button>
                           <button
                             onClick={() => handleSendMessagingCampaign(campaign.id)}
-                            className="text-[#A3D55D] hover:text-[#8BC34A]"
+                            className="text-[#A3D55D] hover:text-[#8BC34A] p-1"
                             title="Send Campaign"
                           >
-                            <ChatBubbleLeftRightIcon className="h-4 w-4" />
+                            <ChatBubbleLeftRightIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                           </button>
                         </>
                       )}
                       <button
                         onClick={() => handleEdit(campaign)}
-                        className="text-[#1E90FF] hover:text-[#1877D2]"
+                        className="text-[#1E90FF] hover:text-[#1877D2] p-1"
+                        title="Edit"
                       >
-                        <PencilIcon className="h-4 w-4" />
+                        <PencilIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
                       <button
                         onClick={() => handleDelete(campaign.id)}
-                        className="text-[#FF5A5F] hover:text-[#E04A4F]"
+                        className="text-[#FF5A5F] hover:text-[#E04A4F] p-1"
+                        title="Delete"
                       >
-                        <TrashIcon className="h-4 w-4" />
+                        <TrashIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
                     </div>
                   </div>
@@ -559,27 +563,27 @@ const CampaignsManagement: React.FC = () => {
       {/* Campaign Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white border-[#E0E0E0]">
-            <div className="mt-3">
-              <h3 className="text-2xl font-semibold mb-6 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+          <div className="relative top-0 sm:top-10 mx-auto p-3 sm:p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white border-[#E0E0E0] min-h-screen sm:min-h-0">
+            <div className="mt-2 sm:mt-3">
+              <h3 className="text-lg sm:text-2xl font-semibold mb-4 sm:mb-6 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 {editingCampaign ? 'Edit Campaign' : 'Create New Campaign'}
               </h3>
               
               {/* Step Indicator */}
-              <div className="mb-8">
-                <div className="flex items-center justify-center">
+              <div className="mb-4 sm:mb-8 overflow-x-auto">
+                <div className="flex items-center justify-center min-w-max sm:min-w-0">
                   {[1, 2, 3, 4, 5].map((step) => (
                     <div key={step} className="flex items-center">
                       <div className="flex flex-col items-center">
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold ${
+                        <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full text-xs sm:text-sm font-semibold ${
                           step <= currentStep 
                             ? 'bg-[#1E90FF] text-white' 
                             : 'bg-[#E0E0E0] text-[#333333]'
                         }`}>
                           {step}
                         </div>
-                        <div className="mt-2 text-sm font-medium text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                          {step === 1 && 'Basic Info'}
+                        <div className="mt-1 sm:mt-2 text-xs sm:text-sm font-medium text-[#333333] whitespace-nowrap" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                          {step === 1 && 'Basic'}
                           {step === 2 && 'Timing'}
                           {step === 3 && 'Places'}
                           {step === 4 && 'Services'}
@@ -587,7 +591,7 @@ const CampaignsManagement: React.FC = () => {
                         </div>
                       </div>
                       {step < 5 && (
-                        <div className={`w-16 h-1 mx-2 ${
+                        <div className={`w-8 sm:w-16 h-0.5 sm:h-1 mx-1 sm:mx-2 ${
                           step < currentStep ? 'bg-[#1E90FF]' : 'bg-[#E0E0E0]'
                         }`} />
                       )}
@@ -596,52 +600,52 @@ const CampaignsManagement: React.FC = () => {
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 {/* Step 1: Basic Info */}
                 {currentStep === 1 && (
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Campaign Name *</label>
+                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Campaign Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E]"
+                        className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E]"
                         style={{ fontFamily: 'Open Sans, sans-serif' }}
                         placeholder="e.g., Summer Sale 2024"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Description</label>
+                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Description</label>
                       <textarea
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         rows={3}
-                        className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent resize-none bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E]"
+                        className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent resize-none bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E]"
                         style={{ fontFamily: 'Open Sans, sans-serif' }}
                         placeholder="Campaign description..."
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Banner Message *</label>
+                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Banner Message *</label>
                       <input
                         type="text"
                         required
                         value={formData.banner_message}
                         onChange={(e) => setFormData({ ...formData, banner_message: e.target.value })}
-                        className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E]"
+                        className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E]"
                         style={{ fontFamily: 'Open Sans, sans-serif' }}
                         placeholder="e.g., Special Offer - Up to 50% Off!"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Campaign Type *</label>
+                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Campaign Type *</label>
                       <select
                         required
                         value={formData.campaign_type}
                         onChange={(e) => setFormData({ ...formData, campaign_type: e.target.value as any })}
-                        className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
+                        className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
                         style={{ fontFamily: 'Open Sans, sans-serif' }}
                       >
                         <option value="price_reduction">Price Reduction</option>
@@ -655,39 +659,39 @@ const CampaignsManagement: React.FC = () => {
 
                 {/* Step 2: Timing */}
                 {currentStep === 2 && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                       <div>
-                        <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Start Date & Time *</label>
+                        <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Start Date & Time *</label>
                         <input
                           type="datetime-local"
                           required
                           value={formData.start_datetime}
                           onChange={(e) => setFormData({ ...formData, start_datetime: e.target.value })}
-                          className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
+                          className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
                           style={{ fontFamily: 'Open Sans, sans-serif' }}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>End Date & Time *</label>
+                        <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>End Date & Time *</label>
                         <input
                           type="datetime-local"
                           required
                           value={formData.end_datetime}
                           onChange={(e) => setFormData({ ...formData, end_datetime: e.target.value })}
-                          className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
+                          className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
                           style={{ fontFamily: 'Open Sans, sans-serif' }}
                         />
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
                       <input
                         type="checkbox"
                         checked={formData.is_active}
                         onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                        className="h-5 w-5 text-[#1E90FF] focus:ring-[#1E90FF] border-[#E0E0E0] rounded bg-white"
+                        className="h-4 w-4 sm:h-5 sm:w-5 text-[#1E90FF] focus:ring-[#1E90FF] border-[#E0E0E0] rounded bg-white"
                       />
-                      <label className="block text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
+                      <label className="block text-xs sm:text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                         Campaign is active
                       </label>
                     </div>
@@ -696,22 +700,22 @@ const CampaignsManagement: React.FC = () => {
 
                 {/* Step 3: Places */}
                 {currentStep === 3 && (
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Select Places *</label>
-                      <p className="text-sm text-[#9E9E9E] mb-4" style={{ fontFamily: 'Open Sans, sans-serif' }}>Choose which places this campaign applies to</p>
-                      <div className="space-y-3 max-h-64 overflow-y-auto border border-[#E0E0E0] rounded-lg p-4 bg-white shadow-sm">
+                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Select Places *</label>
+                      <p className="text-xs sm:text-sm text-[#9E9E9E] mb-3 sm:mb-4" style={{ fontFamily: 'Open Sans, sans-serif' }}>Choose which places this campaign applies to</p>
+                      <div className="space-y-2 sm:space-y-3 max-h-48 sm:max-h-64 overflow-y-auto border border-[#E0E0E0] rounded-lg p-3 sm:p-4 bg-white shadow-sm">
                         {places.map((place) => (
-                          <label key={place.id} className="flex items-center space-x-3 p-2 hover:bg-[#F5F5F5] rounded-md transition-colors">
+                          <label key={place.id} className="flex items-center space-x-2 sm:space-x-3 p-2 hover:bg-[#F5F5F5] rounded-md transition-colors">
                             <input
                               type="checkbox"
                               checked={formData.place_ids.includes(place.id)}
                               onChange={() => handlePlaceToggle(place.id)}
-                              className="h-5 w-5 text-[#1E90FF] focus:ring-[#1E90FF] border-[#E0E0E0] rounded bg-white"
+                              className="h-4 w-4 sm:h-5 sm:w-5 text-[#1E90FF] focus:ring-[#1E90FF] border-[#E0E0E0] rounded bg-white flex-shrink-0"
                             />
-                            <span className="text-sm font-medium text-[#333333]" style={{ fontFamily: 'Open Sans, sans-serif' }}>{place.name}</span>
+                            <span className="text-xs sm:text-sm font-medium text-[#333333] truncate" style={{ fontFamily: 'Open Sans, sans-serif' }}>{place.name}</span>
                             {place.city && (
-                              <span className="text-xs text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>({place.city})</span>
+                              <span className="text-xs text-[#9E9E9E] truncate" style={{ fontFamily: 'Open Sans, sans-serif' }}>({place.city})</span>
                             )}
                           </label>
                         ))}
@@ -722,12 +726,12 @@ const CampaignsManagement: React.FC = () => {
 
                 {/* Step 4: Services */}
                 {currentStep === 4 && (
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Target Services</label>
-                      <p className="text-sm text-[#9E9E9E] mb-4" style={{ fontFamily: 'Open Sans, sans-serif' }}>Leave empty to apply to all services</p>
-                      <div className="p-4 bg-[#F5F5F5] rounded-lg border border-[#E0E0E0]">
-                        <div className="text-sm text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
+                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Target Services</label>
+                      <p className="text-xs sm:text-sm text-[#9E9E9E] mb-3 sm:mb-4" style={{ fontFamily: 'Open Sans, sans-serif' }}>Leave empty to apply to all services</p>
+                      <div className="p-3 sm:p-4 bg-[#F5F5F5] rounded-lg border border-[#E0E0E0]">
+                        <div className="text-xs sm:text-sm text-[#9E9E9E]" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                           Service selection will be available after selecting places
                         </div>
                       </div>
@@ -737,15 +741,15 @@ const CampaignsManagement: React.FC = () => {
 
                 {/* Step 5: Campaign Configuration */}
                 {currentStep === 5 && (
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     {formData.campaign_type === 'price_reduction' && (
-                      <div className="space-y-6">
+                      <div className="space-y-4 sm:space-y-6">
                         <div>
-                          <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Discount Type *</label>
+                          <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Discount Type *</label>
                           <select
                             value={formData.discount_type}
                             onChange={(e) => setFormData({ ...formData, discount_type: e.target.value as any })}
-                            className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
+                            className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
                             style={{ fontFamily: 'Open Sans, sans-serif' }}
                           >
                             <option value="percentage">Percentage</option>
@@ -753,7 +757,7 @@ const CampaignsManagement: React.FC = () => {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
+                          <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
                             Discount Value * {formData.discount_type === 'percentage' ? '(%)' : '(€)'}
                           </label>
                           <input
@@ -764,7 +768,7 @@ const CampaignsManagement: React.FC = () => {
                             step={formData.discount_type === 'percentage' ? '0.1' : '0.01'}
                             value={formData.discount_value}
                             onChange={(e) => setFormData({ ...formData, discount_value: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
+                            className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
                             style={{ fontFamily: 'Open Sans, sans-serif' }}
                           />
                         </div>
@@ -772,28 +776,28 @@ const CampaignsManagement: React.FC = () => {
                     )}
 
                     {formData.campaign_type === 'rewards_increase' && (
-                      <div className="space-y-6">
+                      <div className="space-y-4 sm:space-y-6">
                         <div>
-                          <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Points Multiplier</label>
+                          <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Points Multiplier</label>
                           <input
                             type="number"
                             min="1"
                             step="0.1"
                             value={formData.rewards_multiplier}
                             onChange={(e) => setFormData({ ...formData, rewards_multiplier: parseFloat(e.target.value) || 1 })}
-                            className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E]"
+                            className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E]"
                             style={{ fontFamily: 'Open Sans, sans-serif' }}
                             placeholder="e.g., 2.0 for 2x points"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Bonus Points</label>
+                          <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Bonus Points</label>
                           <input
                             type="number"
                             min="0"
                             value={formData.rewards_bonus_points}
                             onChange={(e) => setFormData({ ...formData, rewards_bonus_points: parseInt(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E]"
+                            className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333] placeholder-[#9E9E9E]"
                             style={{ fontFamily: 'Open Sans, sans-serif' }}
                             placeholder="e.g., 50 for 50 bonus points"
                           />
@@ -802,13 +806,13 @@ const CampaignsManagement: React.FC = () => {
                     )}
 
                     {formData.campaign_type === 'free_service' && (
-                      <div className="space-y-6">
+                      <div className="space-y-4 sm:space-y-6">
                         <div>
-                          <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Free Service Type *</label>
+                          <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Free Service Type *</label>
                           <select
                             value={formData.free_service_type}
                             onChange={(e) => setFormData({ ...formData, free_service_type: e.target.value as any })}
-                            className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
+                            className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
                             style={{ fontFamily: 'Open Sans, sans-serif' }}
                           >
                             <option value="specific_free">Specific Services Free</option>
@@ -816,26 +820,26 @@ const CampaignsManagement: React.FC = () => {
                           </select>
                         </div>
                         {formData.free_service_type === 'buy_x_get_y' && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                             <div>
-                              <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Buy Quantity</label>
+                              <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Buy Quantity</label>
                               <input
                                 type="number"
                                 min="1"
                                 value={formData.buy_quantity}
                                 onChange={(e) => setFormData({ ...formData, buy_quantity: parseInt(e.target.value) || 1 })}
-                                className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
+                                className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
                                 style={{ fontFamily: 'Open Sans, sans-serif' }}
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Get Quantity</label>
+                              <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-[#333333]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Get Quantity</label>
                               <input
                                 type="number"
                                 min="1"
                                 value={formData.get_quantity}
                                 onChange={(e) => setFormData({ ...formData, get_quantity: parseInt(e.target.value) || 1 })}
-                                className="w-full px-3 py-2 border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
+                                className="w-full px-3 py-2 text-sm sm:text-base border border-[#E0E0E0] rounded-lg focus:ring-2 focus:ring-[#1E90FF] focus:border-transparent bg-[#F5F5F5] text-[#333333]"
                                 style={{ fontFamily: 'Open Sans, sans-serif' }}
                               />
                             </div>
@@ -847,24 +851,24 @@ const CampaignsManagement: React.FC = () => {
                 )}
 
                 {/* Navigation Buttons */}
-                <div className="flex justify-between pt-8 border-t border-[#E0E0E0]">
+                <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 pt-4 sm:pt-8 border-t border-[#E0E0E0]">
                   <div>
                     {currentStep > 1 && (
                       <button
                         type="button"
                         onClick={() => setCurrentStep(currentStep - 1)}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-[#333333] bg-[#F5F5F5] border border-[#E0E0E0] rounded-lg hover:bg-[#E0E0E0]"
+                        className="w-full sm:w-auto flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-[#333333] bg-[#F5F5F5] border border-[#E0E0E0] rounded-lg hover:bg-[#E0E0E0]"
                         style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
                       >
                         Previous
                       </button>
                     )}
                   </div>
-                  <div className="flex space-x-4">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:space-x-4 sm:gap-0">
                     <button
                       type="button"
                       onClick={handleModalClose}
-                      className="px-4 py-2 text-sm font-medium text-[#333333] bg-[#F5F5F5] border border-[#E0E0E0] rounded-lg hover:bg-[#E0E0E0]"
+                      className="w-full sm:w-auto px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-[#333333] bg-[#F5F5F5] border border-[#E0E0E0] rounded-lg hover:bg-[#E0E0E0]"
                       style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
                     >
                       Cancel
@@ -873,7 +877,7 @@ const CampaignsManagement: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setCurrentStep(currentStep + 1)}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#1E90FF] rounded-lg hover:bg-[#1877D2]"
+                        className="w-full sm:w-auto flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-[#1E90FF] rounded-lg hover:bg-[#1877D2]"
                         style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
                       >
                         Next
@@ -882,7 +886,7 @@ const CampaignsManagement: React.FC = () => {
                       <button
                         type="submit"
                         disabled={createCampaignMutation.isPending || updateCampaignMutation.isPending}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#FF5A5F] rounded-lg hover:bg-[#E04A4F] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full sm:w-auto flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-[#FF5A5F] rounded-lg hover:bg-[#E04A4F] disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
                       >
                         {editingCampaign ? 'Update Campaign' : 'Create Campaign'}
@@ -899,8 +903,8 @@ const CampaignsManagement: React.FC = () => {
       {/* Messaging Campaign Form Modal */}
       {showMessagingForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-4 mx-auto p-5 border w-full max-w-6xl shadow-lg rounded-md bg-white border-[#E0E0E0]">
-            <div className="mt-3">
+          <div className="relative top-0 sm:top-4 mx-auto p-3 sm:p-5 border w-full max-w-6xl shadow-lg rounded-md bg-white border-[#E0E0E0] min-h-screen sm:min-h-0">
+            <div className="mt-2 sm:mt-3">
               <MessagingCampaignForm
                 onSubmit={handleCreateMessagingCampaign}
                 onCancel={() => setShowMessagingForm(false)}

@@ -7,12 +7,16 @@ from sqlalchemy import select, and_, or_, func, desc, case
 from sqlalchemy.orm import selectinload
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date
+import csv
+import io
+import re
 
 from models.customer_existing import CustomerPlaceAssociation
 from models.place_existing import Booking, Place, Service
 from models.user import User
 from models.rewards import CustomerReward
 from schemas.customer import CustomerResponse, CustomerListResponse
+from core.security import get_password_hash
 
 
 class CustomerService:
@@ -378,3 +382,140 @@ class CustomerService:
         
         await self.db.commit()
         return synced_count
+    
+    async def create_customer_manually(
+        self, 
+        place_id: int, 
+        name: str, 
+        email: str, 
+        phone: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Create a customer record manually (not from a booking)
+        Creates User if doesn't exist, then creates CustomerPlaceAssociation
+        """
+        # Validate email format
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            raise ValueError(f"Invalid email format: {email}")
+        
+        # Check if user exists by email
+        user_query = select(User).where(User.email == email)
+        user_result = await self.db.execute(user_query)
+        user = user_result.scalar_one_or_none()
+        
+        if not user:
+            # Create new user
+            # Generate a random password hash (user will need to reset password if they want to login)
+            user = User(
+                email=email,
+                name=name,
+                password_hash=get_password_hash(f"temp_{email}_{datetime.now().timestamp()}"),
+                user_type='customer',
+                phone=phone,
+                is_active=True
+            )
+            self.db.add(user)
+            await self.db.commit()
+            await self.db.refresh(user)
+        else:
+            # Update user info if provided
+            if name and user.name != name:
+                user.name = name
+            if phone and not user.phone:
+                user.phone = phone
+            await self.db.commit()
+            await self.db.refresh(user)
+        
+        # Check if customer-place association already exists
+        existing_query = select(CustomerPlaceAssociation).where(
+            and_(
+                CustomerPlaceAssociation.user_id == user.id,
+                CustomerPlaceAssociation.place_id == place_id
+            )
+        )
+        result = await self.db.execute(existing_query)
+        association = result.scalar_one_or_none()
+        
+        if not association:
+            # Create new association
+            association = CustomerPlaceAssociation(
+                user_id=user.id,
+                place_id=place_id,
+                total_bookings=0
+            )
+            self.db.add(association)
+            await self.db.commit()
+            await self.db.refresh(association)
+        
+        return {
+            'user_id': user.id,
+            'place_id': place_id,
+            'user_name': user.name,
+            'user_email': user.email,
+            'user_phone': user.phone or phone,
+            'success': True
+        }
+    
+    async def import_customers_from_csv(
+        self, 
+        place_id: int, 
+        csv_file: bytes
+    ) -> Dict[str, Any]:
+        """
+        Import customers from CSV file
+        CSV format: name,email,phone (phone is optional)
+        """
+        # Parse CSV file
+        csv_content = csv_file.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_content))
+        
+        # Validate CSV has required columns
+        required_columns = {'name', 'email'}
+        if not required_columns.issubset(csv_reader.fieldnames or []):
+            raise ValueError(f"CSV must contain columns: {', '.join(required_columns)}")
+        
+        total_rows = 0
+        successful = 0
+        failed = 0
+        errors = []
+        
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        
+        for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 because row 1 is header
+            total_rows += 1
+            
+            try:
+                # Extract and validate data
+                name = row.get('name', '').strip()
+                email = row.get('email', '').strip()
+                phone = row.get('phone', '').strip() or None
+                
+                # Validate required fields
+                if not name:
+                    raise ValueError("Name is required")
+                if not email:
+                    raise ValueError("Email is required")
+                
+                # Validate email format
+                if not re.match(email_pattern, email):
+                    raise ValueError(f"Invalid email format: {email}")
+                
+                # Create customer
+                await self.create_customer_manually(place_id, name, email, phone)
+                successful += 1
+                
+            except Exception as e:
+                failed += 1
+                errors.append({
+                    'row': row_num,
+                    'data': row,
+                    'error': str(e)
+                })
+        
+        return {
+            'total_rows': total_rows,
+            'successful': successful,
+            'failed': failed,
+            'errors': errors
+        }

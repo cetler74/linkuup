@@ -17,10 +17,14 @@ import {
   ShieldCheckIcon,
   BellIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  UserPlusIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 import { useOwnerApi } from '../../utils/ownerApi';
 import CustomerMessageModal from '../../components/owner/CustomerMessageModal';
+import CreateCustomerModal from '../../components/owner/CreateCustomerModal';
+import ImportCustomersModal from '../../components/owner/ImportCustomersModal';
 
 interface Customer {
   user_id: number;
@@ -57,7 +61,7 @@ interface Place {
 
 const CustomersManagement: React.FC = () => {
   const navigate = useNavigate();
-  const { usePlaces, usePlaceCustomers, usePlaceFeatureSettings, useSendMessage } = useOwnerApi();
+  const { usePlaces, usePlaceCustomers, usePlaceFeatureSettings, useSendMessage, useCreateCustomer, useImportCustomersFromCSV } = useOwnerApi();
   
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -69,6 +73,8 @@ const CustomersManagement: React.FC = () => {
   const [rewardsEnabled, setRewardsEnabled] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const { data: places = [] } = usePlaces();
   
@@ -83,6 +89,8 @@ const CustomersManagement: React.FC = () => {
   const { data: customersData, isLoading } = usePlaceCustomers(selectedPlace?.id || 0, searchParams);
   const { data: featureSettings } = usePlaceFeatureSettings(selectedPlace?.id || 0);
   const sendMessageMutation = useSendMessage();
+  const createCustomerMutation = useCreateCustomer();
+  const importCustomersMutation = useImportCustomersFromCSV();
 
   useEffect(() => {
     if (places.length > 0 && !selectedPlace) {
@@ -287,6 +295,26 @@ const CustomersManagement: React.FC = () => {
                   {selectedPlace ? `Manage customers for ${selectedPlace.name}` : 'Select a place to manage customers'}
                 </p>
               </div>
+              {selectedPlace && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-[#1E90FF] rounded-lg hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E90FF] transition-colors shadow-[0px_2px_8px_rgba(0,0,0,0.1)]"
+                    style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
+                  >
+                    <UserPlusIcon className="h-4 w-4 mr-2" />
+                    Create Customer
+                  </button>
+                  <button
+                    onClick={() => setShowImportModal(true)}
+                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-[#1E90FF] rounded-lg hover:bg-[#1877D2] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E90FF] transition-colors shadow-[0px_2px_8px_rgba(0,0,0,0.1)]"
+                    style={{ fontFamily: 'Open Sans, sans-serif', fontWeight: 500 }}
+                  >
+                    <ArrowUpTrayIcon className="h-4 w-4 mr-2" />
+                    Import CSV
+                  </button>
+                </div>
+              )}
             </div>
             
             {/* Search and Filter Bar */}
@@ -821,6 +849,42 @@ const CustomersManagement: React.FC = () => {
           onClose={closeMessageModal}
           customer={selectedCustomer}
           onSendMessage={handleSendMessage}
+        />
+      )}
+
+      {/* Create Customer Modal */}
+      {selectedPlace && (
+        <CreateCustomerModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            // Customer list will refresh automatically via query invalidation
+          }}
+          placeId={selectedPlace.id}
+          onCreateCustomer={async (data) => {
+            await createCustomerMutation.mutateAsync({
+              placeId: selectedPlace.id,
+              data
+            });
+          }}
+        />
+      )}
+
+      {/* Import Customers Modal */}
+      {selectedPlace && (
+        <ImportCustomersModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            // Customer list will refresh automatically via query invalidation
+          }}
+          placeId={selectedPlace.id}
+          onImportCSV={async (file) => {
+            return await importCustomersMutation.mutateAsync({
+              placeId: selectedPlace.id,
+              file
+            });
+          }}
         />
       )}
     </>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc
 from sqlalchemy.orm import selectinload
@@ -17,7 +17,9 @@ from schemas.customer import (
     CustomerDetailResponse, 
     CustomerListResponse,
     CustomerSearchRequest,
-    CustomerRewardAdjustment
+    CustomerRewardAdjustment,
+    CustomerCreateRequest,
+    CSVImportResponse
 )
 from schemas.rewards import RewardTransactionResponse
 from services.rewards_service import RewardsService
@@ -79,6 +81,80 @@ async def get_customer_details(
         )
     
     return CustomerDetailResponse(**customer_details)
+
+
+@router.post("/places/{place_id}/customers", response_model=CustomerResponse)
+async def create_customer(
+    place_id: int,
+    customer_data: CustomerCreateRequest,
+    current_user: User = Depends(get_current_business_owner),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a customer record manually"""
+    
+    customer_service = CustomerService(db)
+    
+    try:
+        result = await customer_service.create_customer_manually(
+            place_id=place_id,
+            name=customer_data.name,
+            email=customer_data.email,
+            phone=customer_data.phone
+        )
+        
+        # Return customer response in the same format as get_customers_for_place
+        return CustomerResponse(
+            user_id=result['user_id'],
+            place_id=result['place_id'],
+            user_name=result['user_name'],
+            user_email=result['user_email'],
+            user_phone=result['user_phone'],
+            total_bookings=0,
+            completed_bookings=0,
+            last_booking_date=None,
+            first_booking_date=None,
+            points_balance=None,
+            tier=None
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create customer: {str(e)}")
+
+
+@router.post("/places/{place_id}/customers/import-csv", response_model=CSVImportResponse)
+async def import_customers_from_csv(
+    place_id: int,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_business_owner),
+    db: AsyncSession = Depends(get_db)
+):
+    """Import customers from CSV file"""
+    
+    # Validate file type
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV file")
+    
+    # Read file content
+    try:
+        csv_content = await file.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {str(e)}")
+    
+    customer_service = CustomerService(db)
+    
+    try:
+        result = await customer_service.import_customers_from_csv(place_id, csv_content)
+        return CSVImportResponse(
+            total_rows=result['total_rows'],
+            successful=result['successful'],
+            failed=result['failed'],
+            errors=result['errors']
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to import customers: {str(e)}")
 
 
 @router.post("/places/{place_id}/customers/sync")

@@ -91,6 +91,19 @@ class CustomerRewardAdjustment(BaseModel):
     transaction_type: str = "adjusted"
 
 
+class CustomerCreateRequest(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = None
+
+
+class CSVImportResponse(BaseModel):
+    total_rows: int
+    successful: int
+    failed: int
+    errors: List[Dict[str, Any]]
+
+
 # Update forward references
 CustomerDetailResponse.model_rebuild()
 BookingHistoryItem.model_rebuild()

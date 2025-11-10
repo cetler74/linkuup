@@ -786,6 +786,14 @@ export const ownerApi = {
     return response.json();
   },
 
+  getMessageUsage: async (): Promise<{ count: number; limit: number; can_send: boolean; period_start?: string; period_end?: string; remaining: number }> => {
+    const response = await fetch(`${API_BASE_URL}/messages/usage`, {
+      headers: getAuthHeaders(),
+    });
+    await handleApiError(response, 'Failed to fetch message usage');
+    return response.json();
+  },
+
   getMessage: async (id: number): Promise<Message> => {
     const response = await fetch(`${API_BASE_URL}/messages/${id}`, {
       headers: getAuthHeaders(),
@@ -813,7 +821,12 @@ export const ownerApi = {
   },
 
   sendMessage: async (data: Partial<Message>): Promise<Message> => {
-    const response = await fetch(`${API_BASE_URL}/messages`, {
+    // Extract place_id from business_id in the data
+    const placeId = data.business_id;
+    if (!placeId) {
+      throw new Error('business_id (place_id) is required to send a message');
+    }
+    const response = await fetch(`${API_BASE_URL}/messages/places/${placeId}/messages`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -953,6 +966,37 @@ export const ownerApi = {
       headers: getAuthHeaders(),
     });
     await handleApiError(response, 'Failed to delete closed period');
+  },
+
+  // Customers
+  createCustomer: async (placeId: number, data: { name: string; email: string; phone?: string }): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/places/${placeId}/customers`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    await handleApiError(response, 'Failed to create customer');
+    return response.json();
+  },
+
+  importCustomersFromCSV: async (placeId: number, file: File): Promise<{ total_rows: number; successful: number; failed: number; errors: any[] }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      throw new Error('No authentication token found. Please log in again.');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/places/${placeId}/customers/import-csv`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    await handleApiError(response, 'Failed to import customers from CSV');
+    return response.json();
   },
 };
 
@@ -1249,6 +1293,14 @@ export const useOwnerApi = () => {
       queryKey: ['owner', 'places', placeId, 'messages', params],
       queryFn: () => ownerApi.getPlaceMessages(placeId, params),
       enabled: !!placeId,
+    });
+  };
+
+  const useMessageUsage = () => {
+    return useQuery({
+      queryKey: ['owner', 'messages', 'usage'],
+      queryFn: () => ownerApi.getMessageUsage(),
+      refetchInterval: 60000, // Refetch every minute
     });
   };
 
@@ -1571,6 +1623,29 @@ export const useOwnerApi = () => {
     });
   };
 
+  // Customer Management Hooks
+  const useCreateCustomer = () => {
+    return useMutation({
+      mutationFn: ({ placeId, data }: { placeId: number; data: { name: string; email: string; phone?: string } }) =>
+        ownerApi.createCustomer(placeId, data),
+      onSuccess: (_, { placeId }) => {
+        queryClient.invalidateQueries({ queryKey: ['place-customers', placeId] });
+        queryClient.invalidateQueries({ queryKey: ['owner', 'dashboard'] });
+      },
+    });
+  };
+
+  const useImportCustomersFromCSV = () => {
+    return useMutation({
+      mutationFn: ({ placeId, file }: { placeId: number; file: File }) =>
+        ownerApi.importCustomersFromCSV(placeId, file),
+      onSuccess: (_, { placeId }) => {
+        queryClient.invalidateQueries({ queryKey: ['place-customers', placeId] });
+        queryClient.invalidateQueries({ queryKey: ['owner', 'dashboard'] });
+      },
+    });
+  };
+
   // Messaging Campaign API functions
   const getMessagingCustomers = async (placeIds: number[], filters?: {
     filter_by?: string;
@@ -1817,6 +1892,7 @@ export const useOwnerApi = () => {
     usePlaceMessages,
     useAllMessages,
     useUnreadCount,
+    useMessageUsage,
     useMarkMessageRead,
     useSendMessage,
     useReplyToMessage,
@@ -1856,5 +1932,9 @@ export const useOwnerApi = () => {
     useAddCampaignRecipients,
     useRemoveCampaignRecipient,
     useSendMessagingCampaign,
+    
+    // Customer Management
+    useCreateCustomer,
+    useImportCustomersFromCSV,
   };
 };

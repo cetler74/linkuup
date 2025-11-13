@@ -101,7 +101,7 @@ print_status "PostgreSQL configured"
 
 # Step 10: Set up Python environment
 print_status "Setting up Python virtual environment..."
-cd ~/Linkuup
+cd /opt/linkuup
 if [ ! -d "venv" ]; then
     python3 -m venv venv
 fi
@@ -112,7 +112,7 @@ print_status "Python environment ready"
 
 # Step 11: Configure backend environment
 print_status "Configuring backend environment..."
-cd ~/Linkuup/backend
+cd /opt/linkuup/backend
 if [ ! -f ".env" ]; then
     cat > .env << 'EOF'
 # Database Configuration
@@ -161,13 +161,13 @@ fi
 # Step 12: Run database migrations
 print_status "Running database migrations..."
 source ../venv/bin/activate
-cd ~/Linkuup/backend
+cd /opt/linkuup/backend
 alembic upgrade head
 print_status "Database migrations completed"
 
 # Step 13: Set up frontend
 print_status "Setting up frontend..."
-cd ~/Linkuup/frontend
+cd /opt/linkuup/frontend
 cat > .env.production << 'EOF'
 VITE_API_BASE_URL=http://64.226.117.67/api/v1
 VITE_GOOGLE_MAPS_API_KEY=
@@ -183,8 +183,8 @@ print_status "Frontend built successfully"
 print_status "Creating directories..."
 sudo mkdir -p /var/log/linkuup
 sudo chown linkuup:linkuup /var/log/linkuup
-mkdir -p ~/Linkuup/backend/uploads
-mkdir -p ~/Linkuup/backend/image_cache
+mkdir -p /opt/linkuup/backend/uploads
+mkdir -p /opt/linkuup/backend/image_cache
 print_status "Directories created"
 
 # Step 15: Configure Nginx
@@ -197,7 +197,7 @@ server {
     client_max_body_size 20M;
     
     location / {
-        root /home/linkuup/Linkuup/frontend/dist;
+        root /opt/linkuup/frontend/dist;
         try_files $uri $uri/ /index.html;
         index index.html;
     }
@@ -217,13 +217,13 @@ server {
     }
     
     location /uploads/ {
-        alias /home/linkuup/Linkuup/backend/uploads/;
+        alias /opt/linkuup/backend/uploads/;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
     
     location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
-        root /home/linkuup/Linkuup/frontend/dist;
+        root /opt/linkuup/frontend/dist;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -243,13 +243,13 @@ print_status "Nginx configured"
 
 # Step 16: Set up PM2
 print_status "Setting up PM2..."
-cd ~/Linkuup
+cd /opt/linkuup
 cp ecosystem.config.js ~/ecosystem.config.js
 pm2 stop all 2>/dev/null || true
 pm2 delete all 2>/dev/null || true
 pm2 start ~/ecosystem.config.js
 pm2 save
-pm2 startup systemd -u linkuup --hp /home/linkuup
+pm2 startup systemd -u linkuup --hp /opt/linkuup
 print_status "PM2 configured"
 
 # Step 17: Configure firewall
@@ -267,7 +267,7 @@ print_status "Setup completed successfully!"
 print_status "========================================="
 print_status ""
 print_warning "Next steps:"
-print_warning "1. Update ~/Linkuup/backend/.env with your actual values:"
+print_warning "1. Update /opt/linkuup/backend/.env with your actual values:"
 print_warning "   - BREVO_API_KEY (for email)"
 print_warning "   - Stripe keys (if using payments)"
 print_warning "   - Database password (if you changed it)"

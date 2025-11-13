@@ -159,9 +159,18 @@ async def _handle_checkout_session_completed(db: AsyncSession, obj: dict) -> Non
         print(f"⚠️ Failed to parse registration data: {e}")
         return
     
-    # Get plan_code from metadata
+    # Get plan_code from metadata - prioritize checkout session metadata, then registration data
     plan_code = metadata.get("plan_code") or registration_data.get("selected_plan_code")
-    print(f"🔍 Plan code from metadata: {plan_code}")
+    print(f"🔍 Plan code from checkout metadata: {metadata.get('plan_code')}")
+    print(f"🔍 Plan code from registration_data: {registration_data.get('selected_plan_code')}")
+    print(f"🔍 Final plan code: {plan_code}")
+    
+    # Validate plan_code is set
+    if not plan_code:
+        print(f"❌ ERROR: plan_code is missing! Cannot create account without plan code.")
+        print(f"❌ Checkout metadata keys: {list(metadata.keys())}")
+        print(f"❌ Registration data keys: {list(registration_data.keys())}")
+        return
     
     # Check if invoice is paid before creating account
     subscription_id = obj.get("subscription")
@@ -241,15 +250,36 @@ async def _handle_invoice_payment_succeeded(db: AsyncSession, obj: dict) -> None
                     existing_user = user_res.scalar_one_or_none()
                     
                     if not existing_user:
-                        # Get plan_code from subscription metadata
-                        plan_code = subscription_metadata.get("plan_code")
+                        # Get plan_code from subscription metadata or registration data
+                        plan_code = subscription_metadata.get("plan_code") or registration_data.get("selected_plan_code")
+                        print(f"🔍 Plan code from subscription metadata: {subscription_metadata.get('plan_code')}")
+                        print(f"🔍 Plan code from registration_data: {registration_data.get('selected_plan_code')}")
+                        print(f"🔍 Final plan code for account creation: {plan_code}")
+                        
+                        # Validate plan_code is set
+                        if not plan_code:
+                            print(f"❌ ERROR: plan_code is missing from subscription metadata!")
+                            print(f"❌ Subscription metadata keys: {list(subscription_metadata.keys())}")
+                            print(f"❌ Registration data keys: {list(registration_data.keys())}")
+                            # Try to extract from subscription price ID as fallback
+                            plan_code = _extract_plan_code_from_stripe_subscription(subscription)
+                            print(f"🔍 Plan code extracted from subscription price: {plan_code}")
+                            if not plan_code:
+                                print(f"❌ CRITICAL: Cannot determine plan_code, cannot create account!")
+                                return
+                        
                         # Create user account now that payment is confirmed
-                        print(f"✅ Creating user account for {email} after invoice payment succeeded")
+                        print(f"✅ Creating user account for {email} after invoice payment succeeded with plan: {plan_code}")
                         await _create_user_from_registration_data(db, registration_data, subscription_id, plan_code)
                     else:
                         print(f"ℹ️ User {email} already exists, ensuring subscription and features")
                         # Ensure subscription is created and features are synced
-                        plan_code = subscription_metadata.get("plan_code")
+                        plan_code = subscription_metadata.get("plan_code") or registration_data.get("selected_plan_code")
+                        print(f"🔍 Plan code for existing user: {plan_code}")
+                        if not plan_code:
+                            # Try to extract from subscription price ID as fallback
+                            plan_code = _extract_plan_code_from_stripe_subscription(subscription)
+                            print(f"🔍 Plan code extracted from subscription price: {plan_code}")
                         await _ensure_subscription_and_features(db, existing_user.id, subscription_id, plan_code)
             
             # Handle upgrade - ensure subscription is active
@@ -320,24 +350,35 @@ async def _create_user_from_registration_data(db: AsyncSession, registration_dat
         return
     
     try:
+        # Prepare user data
+        user_data = {
+            "email": email,
+            "password_hash": get_password_hash(registration_data.get("password", "")),
+            "name": f"{registration_data.get('first_name', '')} {registration_data.get('last_name', '')}".strip() or email,
+            "first_name": registration_data.get("first_name"),
+            "last_name": registration_data.get("last_name"),
+            "user_type": registration_data.get("user_type", "business_owner"),
+            "is_active": True,
+            "is_admin": False,
+            "is_owner": registration_data.get("user_type") == "business_owner",
+            "is_business_owner": registration_data.get("user_type") == "business_owner",
+            "gdpr_data_processing_consent": registration_data.get("gdpr_data_processing_consent", False),
+            "gdpr_data_processing_consent_date": datetime.now() if registration_data.get("gdpr_data_processing_consent") else None,
+            "gdpr_marketing_consent": registration_data.get("gdpr_marketing_consent", False),
+            "gdpr_marketing_consent_date": datetime.now() if registration_data.get("gdpr_marketing_consent") else None,
+            "gdpr_consent_version": "1.0"
+        }
+        
+        # Add OAuth fields if present (for OAuth registrations)
+        if registration_data.get("oauth_provider"):
+            user_data["oauth_provider"] = registration_data.get("oauth_provider")
+        if registration_data.get("oauth_id"):
+            user_data["oauth_id"] = registration_data.get("oauth_id")
+        if registration_data.get("profile_picture") and hasattr(User, 'profile_picture'):
+            user_data["profile_picture"] = registration_data.get("profile_picture")
+        
         # Create user
-        user = User(
-            email=email,
-            password_hash=get_password_hash(registration_data.get("password", "")),
-            name=f"{registration_data.get('first_name', '')} {registration_data.get('last_name', '')}".strip(),
-            first_name=registration_data.get("first_name"),
-            last_name=registration_data.get("last_name"),
-            user_type=registration_data.get("user_type", "business_owner"),
-            is_active=True,
-            is_admin=False,
-            is_owner=registration_data.get("user_type") == "business_owner",
-            is_business_owner=registration_data.get("user_type") == "business_owner",
-            gdpr_data_processing_consent=registration_data.get("gdpr_data_processing_consent", False),
-            gdpr_data_processing_consent_date=datetime.now() if registration_data.get("gdpr_data_processing_consent") else None,
-            gdpr_marketing_consent=registration_data.get("gdpr_marketing_consent", False),
-            gdpr_marketing_consent_date=datetime.now() if registration_data.get("gdpr_marketing_consent") else None,
-            gdpr_consent_version="1.0"
-        )
+        user = User(**user_data)
         
         print(f"🔍 Adding user to database: {email}")
         db.add(user)
@@ -444,16 +485,24 @@ async def _ensure_subscription_and_features(db: AsyncSession, user_id: int, subs
         
         # Extract plan_code if not provided
         if not plan_code:
+            print(f"🔍 Plan code not provided, attempting to extract from subscription...")
             plan_code = _extract_plan_code_from_stripe_subscription(subscription)
+            print(f"🔍 Plan code extracted from price ID: {plan_code}")
+            
             # Also check subscription metadata
             subscription_metadata = subscription.get("metadata", {})
             if not plan_code:
                 plan_code = subscription_metadata.get("plan_code")
+                print(f"🔍 Plan code from subscription metadata: {plan_code}")
         
-        print(f"🔍 Plan code: {plan_code}")
+        print(f"🔍 Final plan code for subscription: {plan_code}")
         
         if not plan_code:
-            print("⚠️ Could not determine plan_code, cannot create subscription")
+            print("❌ ERROR: Could not determine plan_code from subscription!")
+            print(f"❌ Subscription ID: {subscription_id}")
+            print(f"❌ Subscription items: {subscription.get('items', {}).get('data', [])}")
+            print(f"❌ Subscription metadata: {subscription.get('metadata', {})}")
+            print(f"❌ Cannot create subscription without plan_code")
             return
         
         # Create or update BillingSubscription

@@ -53,6 +53,11 @@ const Header: React.FC = () => {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-3 group">
+              <img 
+                src="/logo-black.svg" 
+                alt="LinkUup" 
+                className="h-10 w-auto"
+              />
               <h1 className="text-3xl font-bold text-charcoal font-display">LinkUup.</h1>
             </Link>
           </div>
@@ -67,6 +72,11 @@ const Header: React.FC = () => {
       <div className="container mx-auto flex justify-between items-center relative overflow-visible">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-3 group">
+          <img 
+            src="/logo-black.svg" 
+            alt="LinkUup" 
+            className="h-10 w-auto"
+          />
           <h1 className="text-3xl font-bold text-charcoal font-display">LinkUup.</h1>
         </Link>
 

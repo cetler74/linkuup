@@ -81,8 +81,8 @@ async def seed():
             feature_ids[code] = await upsert_feature(db, code, meta["name"], meta["description"])
 
         # Plans
-        basic_id = await upsert_plan(db, "basic", "Basic", price_cents=0, trial_days=14)
-        pro_id = await upsert_plan(db, "pro", "Pro", price_cents=0, trial_days=14)
+        basic_id = await upsert_plan(db, "basic", "Basic", price_cents=595, trial_days=14)  # 5.95 EUR
+        pro_id = await upsert_plan(db, "pro", "Pro", price_cents=1095, trial_days=0)  # 10.95 EUR - Pro plan requires payment, no trial
 
         # Basic matrix
         await upsert_plan_feature(db, basic_id, feature_ids["booking"], True, None)

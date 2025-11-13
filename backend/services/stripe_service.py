@@ -19,13 +19,13 @@ def get_price_id_for_plan(plan_code: str) -> str:
     code = (plan_code or '').lower()
     if code == 'basic':
         if not settings.STRIPE_PRICE_BASIC:
-            raise RuntimeError("STRIPE_PRICE_BASIC not configured")
+            raise RuntimeError("Basic plan payment is not configured. Please contact support.")
         return settings.STRIPE_PRICE_BASIC
     if code == 'pro':
         if not settings.STRIPE_PRICE_PRO:
-            raise RuntimeError("STRIPE_PRICE_PRO not configured")
+            raise RuntimeError("Pro plan payment is not configured. Please contact support.")
         return settings.STRIPE_PRICE_PRO
-    raise ValueError(f"Unknown plan_code: {plan_code}")
+    raise ValueError(f"Unknown plan_code: {plan_code}. Please select a valid plan.")
 
 
 async def get_or_create_customer(db: AsyncSession, user: User) -> str:
@@ -195,8 +195,11 @@ def create_checkout_session_for_registration(plan_code: str, registration_data: 
     Account will be created after payment succeeds via webhook.
     """
     try:
+        # Check if Stripe is configured
+        if not settings.STRIPE_SECRET_KEY:
+            raise RuntimeError("Payment system is not configured. Please contact support.")
+        
         _init_stripe()
-        from core.config import settings
         
         # Validate inputs
         if not plan_code:
@@ -208,48 +211,94 @@ def create_checkout_session_for_registration(plan_code: str, registration_data: 
         
         # Validate APP_URL is set
         if not settings.APP_URL:
-            raise RuntimeError("APP_URL is not configured")
+            raise RuntimeError("Payment system configuration error. Please contact support.")
         
         price_id = get_price_id_for_plan(plan_code)
         
         if not price_id:
-            raise ValueError(f"Could not get price ID for plan_code: {plan_code}")
+            raise ValueError(f"The selected plan ({plan_code}) is not available for payment. Please contact support.")
         
         # Create checkout session in subscription mode
-        session = stripe.checkout.Session.create(
-            mode="subscription",
-            line_items=[{
-                "price": price_id,
-                "quantity": 1,
-            }],
-            success_url=f"{settings.APP_URL}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{settings.APP_URL}/register?canceled=true",
-            metadata={
-                "registration_data": json.dumps(registration_data),
-                "plan_code": plan_code,
-                "create_account_after_payment": "true",
-            },
-            customer_email=registration_data.get("email"),
-            subscription_data={
-                "metadata": {
+        print(f"🔄 Creating Stripe checkout session with price_id: {price_id}, plan_code: {plan_code}")
+        print(f"🔄 APP_URL: {settings.APP_URL}")
+        print(f"🔄 Customer email: {registration_data.get('email')}")
+        
+        try:
+            session = stripe.checkout.Session.create(
+                mode="subscription",
+                line_items=[{
+                    "price": price_id,
+                    "quantity": 1,
+                }],
+                success_url=f"{settings.APP_URL}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{settings.APP_URL}/join?canceled=true",
+                metadata={
                     "registration_data": json.dumps(registration_data),
                     "plan_code": plan_code,
+                    "create_account_after_payment": "true",
+                },
+                customer_email=registration_data.get("email"),
+                subscription_data={
+                    "metadata": {
+                        "registration_data": json.dumps(registration_data),
+                        "plan_code": plan_code,
+                    }
                 }
-            }
-        )
+            )
+            print(f"✅ Stripe checkout session created: session_id={getattr(session, 'id', 'N/A')}")
+            print(f"🔍 Session type: {type(session)}")
+            print(f"🔍 Session attributes: {[attr for attr in dir(session) if not attr.startswith('_')][:10]}")
+        except Exception as create_error:
+            error_type = type(create_error).__name__
+            error_msg = str(create_error)
+            print(f"❌ Failed to create Stripe checkout session: {error_type}: {error_msg}")
+            import traceback
+            print(f"❌ Traceback: {traceback.format_exc()}")
+            raise RuntimeError(f"Failed to create Stripe checkout session: {error_type}: {error_msg}")
         
-        if not session or not session.url:
-            raise RuntimeError("Failed to create Stripe checkout session")
+        # Check if session was created successfully
+        if not session:
+            raise RuntimeError("Stripe checkout session creation returned None")
         
-        return {"url": session.url, "session_id": session.id}
-    except stripe.error.StripeError as e:
-        error_msg = f"Stripe error: {str(e)}"
-        print(f"❌ {error_msg}")
-        raise RuntimeError(error_msg)
-    except Exception as e:
-        error_msg = f"Error creating checkout session: {str(e)}"
+        # Safely access session.url
+        try:
+            session_url = session.url
+            session_id = session.id
+        except AttributeError as attr_error:
+            print(f"❌ Session object missing required attributes: {attr_error}")
+            print(f"🔍 Session object: {session}")
+            print(f"🔍 Session type: {type(session)}")
+            print(f"🔍 Available attributes: {[attr for attr in dir(session) if not attr.startswith('_')]}")
+            raise RuntimeError(f"Stripe checkout session missing required attributes (url/id): {attr_error}")
+        
+        if not session_url:
+            raise RuntimeError("Stripe checkout session created but URL is empty")
+        
+        print(f"✅ Checkout session URL: {session_url}")
+        return {"url": session_url, "session_id": session_id}
+    except RuntimeError as e:
+        # Re-raise RuntimeError (configuration errors) as-is
+        error_msg = str(e)
         print(f"❌ {error_msg}")
         raise
+    except Exception as e:
+        # Check if this is a Stripe error (only if Stripe is initialized)
+        stripe_error = None
+        try:
+            if hasattr(stripe, 'error'):
+                stripe_error = getattr(stripe.error, 'StripeError', None)
+        except (AttributeError, KeyError):
+            pass
+        
+        if stripe_error and isinstance(e, stripe_error):
+            error_msg = f"Stripe error: {str(e)}"
+            print(f"❌ {error_msg}")
+            raise RuntimeError(error_msg)
+        
+        # For all other errors, re-raise with context
+        error_msg = f"Error creating checkout session: {str(e)}"
+        print(f"❌ {error_msg}")
+        raise RuntimeError(error_msg) from e
 
 
 def _get_subscription_item_id(sub: dict) -> Optional[str]:

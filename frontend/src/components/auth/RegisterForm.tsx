@@ -7,6 +7,7 @@ import OAuthButtons from './OAuthButtons';
 import PricingSelection from './PricingSelection';
 import type { PricingPlan } from './PricingSelection';
 import api, { ownerAPI, billingAPI } from '../../utils/api';
+import mixpanel from '../../utils/mixpanel';
 
 interface RegisterRequest {
   first_name: string;
@@ -114,12 +115,38 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
     try {
       // For business owners with Pro plan (no trial), payment must be completed BEFORE account creation
       if (formData.user_type === 'business_owner' && selectedPlan) {
+        // CRITICAL: Pro plan ALWAYS requires payment, regardless of trial_days setting
+        // This matches the backend logic which always requires payment for Pro plan
+        const planCodeLower = (selectedPlan.id || '').toLowerCase().trim();
+        const isProPlan = planCodeLower === 'pro';
         const planHasNoTrial = !selectedPlan.trialDays || selectedPlan.trialDays === 0;
         
-        if (planHasNoTrial) {
+        // CRITICAL: Pro plan ALWAYS requires payment - check by plan ID first
+        // Then also check if any plan has no trial (trial_days = 0)
+        // IMPORTANT: If plan ID is 'pro', ALWAYS require payment regardless of trialDays value
+        // Force requiresPayment to true if it's Pro plan (defensive programming)
+        const requiresPayment = isProPlan ? true : planHasNoTrial;
+        
+        console.log('🔍 Payment check:', {
+          planId: selectedPlan.id,
+          planCodeLower,
+          isProPlan,
+          trialDays: selectedPlan.trialDays,
+          planHasNoTrial,
+          requiresPayment,
+          userType: formData.user_type,
+          hasSelectedPlan: !!selectedPlan,
+          fullPlan: selectedPlan
+        });
+        
+        // CRITICAL: Always require payment for Pro plan OR any plan with no trial
+        // If this condition fails, the user will bypass payment and create account directly (BUG!)
+        if (requiresPayment) {
+          console.log('✅ Payment required - proceeding to create checkout session');
           // Create Stripe checkout session WITHOUT creating account first
           // Account will be created after payment succeeds via webhook
           try {
+            console.log('🔄 Creating Stripe checkout session for Pro plan registration...');
             const checkoutResponse = await api.post('/billing/create-checkout-session', {
               planCode: selectedPlan.id,
               registrationData: {
@@ -135,28 +162,66 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
             });
             
             if (checkoutResponse.data?.checkoutUrl) {
+              console.log('✅ Checkout session created, redirecting to Stripe...');
               // Redirect to Stripe Checkout - account will be created after payment
               window.location.href = checkoutResponse.data.checkoutUrl;
               return; // Exit early - don't create account yet
             } else {
-              throw new Error('Failed to create checkout session');
+              throw new Error('Failed to create checkout session: No checkout URL returned');
             }
           } catch (checkoutError: any) {
-            // If checkout creation fails, show error
-            const errorMessage = checkoutError?.response?.data?.detail 
-              || checkoutError?.response?.data?.message
-              || checkoutError?.message
-              || 'Failed to create payment session. Please try again.';
+            // If checkout creation fails, show user-friendly error
             console.error('❌ Checkout session creation error:', {
               error: checkoutError,
               response: checkoutError?.response,
               detail: checkoutError?.response?.data?.detail,
+              status: checkoutError?.response?.status,
             });
+            
+            let errorMessage = 'Failed to create payment session. Please try again.';
+            
+            // Provide specific error messages based on the error type
+            if (checkoutError?.response?.status === 400) {
+              const detail = checkoutError?.response?.data?.detail || '';
+              if (detail.includes('price ID') || detail.includes('plan_code')) {
+                errorMessage = 'The selected plan is not available for payment. Please contact support.';
+              } else if (detail.includes('APP_URL') || detail.includes('configured')) {
+                errorMessage = 'Payment system is not properly configured. Please contact support.';
+              } else if (detail.includes('Stripe')) {
+                errorMessage = 'Payment service error. Please try again or contact support if the problem persists.';
+              } else {
+                errorMessage = detail || 'Unable to process payment. Please try again.';
+              }
+            } else if (checkoutError?.response?.status === 500) {
+              errorMessage = 'Server error while creating payment session. Please try again later.';
+            } else if (checkoutError?.code === 'ERR_NETWORK' || checkoutError?.message?.includes('Network')) {
+              errorMessage = 'Network error. Please check your connection and try again.';
+            } else if (checkoutError?.response?.data?.detail) {
+              errorMessage = checkoutError.response.data.detail;
+            } else if (checkoutError?.message) {
+              errorMessage = checkoutError.message;
+            }
+            
             setError(errorMessage);
             setLoading(false);
             isSubmittingRef.current = false;
             return;
           }
+        } else {
+          // This should NEVER happen for Pro plan - log as error
+          console.error('❌ CRITICAL: Pro plan or no-trial plan detected but payment condition failed!', {
+            planId: selectedPlan.id,
+            planCodeLower,
+            isProPlan,
+            trialDays: selectedPlan.trialDays,
+            planHasNoTrial,
+            message: 'User will bypass payment - this is a bug!'
+          });
+        }
+      } else {
+        // Log if business owner but no plan selected (should be caught by validation above)
+        if (formData.user_type === 'business_owner') {
+          console.warn('⚠️ Business owner registration but no plan selected');
         }
       }
 
@@ -165,30 +230,88 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, skipTypeSe
         ...formData,
         selected_plan_code: formData.user_type === 'business_owner' ? selectedPlan?.id : undefined,
       };
-      await register(payload as any);
-      setUserType(payload.user_type);
-
-      // If owner and plan chosen with trial, start trial for first place
-      if (payload.user_type === 'business_owner' && selectedPlan) {
-        const planHasTrial = selectedPlan.trialDays && selectedPlan.trialDays > 0;
-        if (planHasTrial) {
-          try {
-            const places = await ownerAPI.getOwnerPlaces();
-            const firstPlace = Array.isArray(places) ? places[0] : undefined;
-            if (firstPlace?.id) {
-              await api.post('/subscriptions/start-trial', {
-                place_id: firstPlace.id,
-                plan_code: selectedPlan.id,
-              });
-            }
-          } catch (e) {
-            // Non-blocking; user can start trial after creating a place
-          }
+      
+      // Call register API directly to check for payment requirement
+      try {
+        const response = await api.post('/auth/register', payload);
+        
+        // Check if payment is required (backend returns checkout URL)
+        if (response.data?.requiresPayment && response.data?.checkoutUrl) {
+          console.log('✅ Payment required, redirecting to Stripe checkout...');
+          window.location.href = response.data.checkoutUrl;
+          return; // Exit early - don't process as normal registration
         }
+        
+        // Normal registration response (AuthResponse) - process it directly
+        // The response should have user and tokens
+        if (response.data?.user && response.data?.tokens) {
+          // We already have the response, so handle it directly to avoid duplicate API call
+          // Store tokens
+          localStorage.setItem('auth_token', response.data.tokens.access_token);
+          localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+          
+          // Note: We can't set user in context directly here, but tokens are stored
+          // The user context will be updated on next page navigation or API call
+          // For now, we'll track the registration and continue
+          setUserType(payload.user_type);
+          
+          // Track registration in Mixpanel
+          try {
+            mixpanel.identify(String(response.data.user.id));
+            mixpanel.people.set({
+              $email: response.data.user.email,
+              $name: response.data.user.first_name || response.data.user.email,
+              user_type: response.data.user.user_type,
+              is_admin: response.data.user.is_admin,
+            });
+            mixpanel.track('User Registered', {
+              user_type: response.data.user.user_type,
+              is_admin: response.data.user.is_admin,
+            });
+          } catch (e) {
+            console.warn('Failed to track registration in Mixpanel:', e);
+          }
+          
+          // If owner and plan chosen with trial, start trial for first place
+          if (payload.user_type === 'business_owner' && selectedPlan) {
+            const planHasTrial = selectedPlan.trialDays && selectedPlan.trialDays > 0;
+            if (planHasTrial) {
+              try {
+                const places = await ownerAPI.getOwnerPlaces();
+                const firstPlace = Array.isArray(places) ? places[0] : undefined;
+                if (firstPlace?.id) {
+                  await api.post('/subscriptions/start-trial', {
+                    place_id: firstPlace.id,
+                    plan_code: selectedPlan.id,
+                  });
+                }
+              } catch (e) {
+                // Non-blocking; user can start trial after creating a place
+              }
+            }
+          }
+          
+          setSuccess(true);
+          setCurrentStep('success');
+        } else {
+          // Fallback to using register function from context
+          await register(payload as any);
+          setUserType(payload.user_type);
+          setSuccess(true);
+          setCurrentStep('success');
+        }
+      } catch (registrationError: any) {
+        // If it's a payment-related error, show it
+        // Otherwise, try the old register function as fallback
+        if (registrationError?.response?.data?.detail) {
+          throw registrationError; // Re-throw to be caught by outer catch
+        }
+        // Fallback to old method
+        await register(payload as any);
+        setUserType(payload.user_type);
+        setSuccess(true);
+        setCurrentStep('success');
       }
-
-      setSuccess(true);
-      setCurrentStep('success');
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || err.message || 'Registration failed';
       setError(errorMessage);

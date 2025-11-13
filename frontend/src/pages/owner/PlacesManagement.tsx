@@ -338,7 +338,7 @@ const PlacesManagement: React.FC = () => {
   const fetchFeatureSettings = async (placeId: number) => {
     setLoadingFeatures(true);
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
       const token = localStorage.getItem('auth_token');
       const response = await fetch(`${apiBase}/owner/places/${placeId}/settings`, {
         headers: {
@@ -602,7 +602,7 @@ const PlacesManagement: React.FC = () => {
       
       // Save messaging_enabled via feature settings endpoint
       try {
-        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+        const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
         const token = localStorage.getItem('auth_token');
         
         // First, get current feature settings to preserve other settings
@@ -683,7 +683,7 @@ const PlacesManagement: React.FC = () => {
     // Fetch feature settings to get messaging_enabled
     let messagingEnabled = true; // Default to true
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v1';
       const token = localStorage.getItem('auth_token');
       const response = await fetch(`${apiBase}/owner/places/${place.id}/settings`, {
         headers: {

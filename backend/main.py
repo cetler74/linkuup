@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -83,15 +83,23 @@ app.add_middleware(
 )
 
 # Global exception handler to ensure CORS headers are always sent
+# Note: HTTPException is handled by FastAPI automatically, so we exclude it here
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle all unhandled exceptions and ensure CORS headers are included"""
+    # Don't handle HTTPException - let FastAPI handle it
+    if isinstance(exc, HTTPException):
+        # Re-raise to let FastAPI handle it with proper status code
+        raise exc
+    
+    # Log the actual error for debugging
     print(f"🔥 Unhandled exception: {type(exc).__name__}: {str(exc)}")
     print(f"🔥 Traceback: {traceback.format_exc()}")
     
+    # Return error with CORS headers
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Internal server error"},
+        content={"detail": f"Internal server error: {str(exc)}"},
         headers={
             "Access-Control-Allow-Origin": request.headers.get("Origin", "*"),
             "Access-Control-Allow-Credentials": "true",
@@ -222,16 +230,29 @@ async def seed_plans_and_features(db):
     basic_result = await db.execute(select(Plan).where(Plan.code == "basic"))
     basic_plan = basic_result.scalar_one_or_none()
     if not basic_plan:
-        basic_plan = Plan(code="basic", name="Basic", price_cents=0, trial_days=14, is_active=True)
+        basic_plan = Plan(code="basic", name="Basic", price_cents=595, trial_days=14, is_active=True)
         db.add(basic_plan)
         await db.flush()
+    else:
+        # Ensure Basic plan has correct price (5.95 EUR = 595 cents)
+        if basic_plan.price_cents != 595:
+            basic_plan.price_cents = 595
+            await db.flush()
     
     pro_result = await db.execute(select(Plan).where(Plan.code == "pro"))
     pro_plan = pro_result.scalar_one_or_none()
     if not pro_plan:
-        pro_plan = Plan(code="pro", name="Pro", price_cents=0, trial_days=14, is_active=True)
+        pro_plan = Plan(code="pro", name="Pro", price_cents=1095, trial_days=0, is_active=True)
         db.add(pro_plan)
         await db.flush()
+    else:
+        # Ensure Pro plan always has trial_days=0 (requires payment) and correct price (10.95 EUR = 1095 cents)
+        if pro_plan.trial_days != 0:
+            pro_plan.trial_days = 0
+        if pro_plan.price_cents != 1095:
+            pro_plan.price_cents = 1095
+        if pro_plan.trial_days != 0 or pro_plan.price_cents != 1095:
+            await db.flush()
     
     # Helper function to upsert plan features
     async def upsert_plan_feature(plan_id: int, feature_id: int, enabled: bool, limit_value: int | None):

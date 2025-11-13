@@ -30,11 +30,20 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
   // Check for error message in URL query parameters (from OAuth callback)
   useEffect(() => {
     const errorParam = searchParams.get('error');
+    const emailParam = searchParams.get('email');
     if (errorParam) {
-      setError(decodeURIComponent(errorParam));
+      // Handle user_exists error with custom message
+      if (errorParam === 'user_exists' && emailParam) {
+        setError(`An account with email ${decodeURIComponent(emailParam)} already exists. Please login to access your account.`);
+        // Pre-fill the email field
+        setFormData(prev => ({ ...prev, email: decodeURIComponent(emailParam) }));
+      } else {
+        setError(decodeURIComponent(errorParam));
+      }
       // Remove error from URL to clean it up
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('error');
+      newSearchParams.delete('email');
       setSearchParams(newSearchParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);

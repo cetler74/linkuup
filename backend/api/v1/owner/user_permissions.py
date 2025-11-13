@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Dict, Any
+import traceback
 
 from core.database import get_db
 from core.dependencies import get_current_business_owner
@@ -16,39 +17,62 @@ async def get_user_feature_permissions(
     db: AsyncSession = Depends(get_db)
 ):
     """Get user-level feature permissions for navigation and billing"""
-    
-    # Get all permissions for the current user
-    query = select(UserFeaturePermission).where(
-        UserFeaturePermission.user_id == current_user.id
-    )
-    result = await db.execute(query)
-    permissions = result.scalars().all()
-    
-    # Convert to dictionary format
-    feature_permissions = {}
-    for perm in permissions:
-        feature_permissions[perm.feature_name] = perm.is_enabled
-    
-    # Ensure all features have default values
-    # Only basic features enabled by default, premium features require subscription
-    default_features = {
-        'bookings': True,        # Basic feature - always enabled
-        'rewards': False,        # Premium feature - requires subscription
-        'time_off': False,       # Premium feature - requires subscription
-        'campaigns': False,      # Premium feature - requires subscription
-        'messaging': False,      # Premium feature - requires subscription
-        'notifications': True    # Basic feature - always enabled
-    }
-    
-    # Merge with defaults
-    for feature, default_value in default_features.items():
-        if feature not in feature_permissions:
-            feature_permissions[feature] = default_value
-    
-    return {
-        "user_id": current_user.id,
-        "feature_permissions": feature_permissions
-    }
+    try:
+        # Validate user ID
+        if not current_user or not current_user.id:
+            print(f"❌ Invalid user: {current_user}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user"
+            )
+        
+        print(f"🔍 Fetching feature permissions for user {current_user.id}")
+        
+        # Get all permissions for the current user
+        query = select(UserFeaturePermission).where(
+            UserFeaturePermission.user_id == current_user.id
+        )
+        result = await db.execute(query)
+        permissions = result.scalars().all()
+        
+        print(f"✅ Found {len(permissions)} permission records for user {current_user.id}")
+        
+        # Convert to dictionary format
+        feature_permissions = {}
+        for perm in permissions:
+            feature_permissions[perm.feature_name] = perm.is_enabled
+        
+        # Ensure all features have default values
+        # Only basic features enabled by default, premium features require subscription
+        default_features = {
+            'bookings': True,        # Basic feature - always enabled
+            'rewards': False,        # Premium feature - requires subscription
+            'time_off': False,       # Premium feature - requires subscription
+            'campaigns': False,      # Premium feature - requires subscription
+            'messaging': False,      # Premium feature - requires subscription
+            'notifications': True    # Basic feature - always enabled
+        }
+        
+        # Merge with defaults
+        for feature, default_value in default_features.items():
+            if feature not in feature_permissions:
+                feature_permissions[feature] = default_value
+        
+        return {
+            "user_id": current_user.id,
+            "feature_permissions": feature_permissions
+        }
+    except HTTPException:
+        # Re-raise HTTP exceptions (they should be handled by FastAPI)
+        raise
+    except Exception as e:
+        # Log the actual error for debugging
+        print(f"❌ Error in get_user_feature_permissions: {type(e).__name__}: {str(e)}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching feature permissions: {str(e)}"
+        )
 
 @router.put("/user/feature-permissions")
 async def update_user_feature_permissions(

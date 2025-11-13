@@ -83,3 +83,12 @@ class UpdateLanguagePreferenceRequest(BaseModel):
 class UpdateLanguagePreferenceResponse(BaseModel):
     message: str = "Language preference updated successfully."
     language: str
+
+class UpdateProfileRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+
+class UpdateProfileResponse(BaseModel):
+    message: str = "Profile updated successfully."
+    user: UserResponse

@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import json
+import os
+from pathlib import Path
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "LinkUup API"
@@ -78,16 +80,36 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: str = ""
     STRIPE_PRICE_BASIC: str = ""
     STRIPE_PRICE_PRO: str = ""
-    APP_URL: str = "http://linkuup.portugalexpatdirectory.com"
+    APP_URL: str = "https://linkuup.com"
     
     # Server Configuration
     HOST: str = "0.0.0.0"
     PORT: int = 5001
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(Path(__file__).parent.parent / ".env"),
         env_file_encoding="utf-8",
-        case_sensitive=True
+        case_sensitive=True,
+        env_ignore_empty=True
     )
 
 settings = Settings()
+
+# Debug: Log the actual BASE_URL being used
+import os
+if os.getenv("BASE_URL"):
+    print(f"🔧 BASE_URL from environment: {os.getenv('BASE_URL')}")
+print(f"🔧 BASE_URL from settings: {settings.BASE_URL}")
+if settings.BASE_URL == "http://localhost:5001":
+    print(f"⚠️ WARNING: BASE_URL is using default localhost value! Check .env file and environment variables.")
+
+# Debug: Log Stripe configuration status
+env_file_path = Path(__file__).parent.parent / ".env"
+print(f"🔧 Looking for .env file at: {env_file_path}")
+print(f"🔧 .env file exists: {env_file_path.exists()}")
+print(f"🔧 STRIPE_SECRET_KEY configured: {bool(settings.STRIPE_SECRET_KEY)}")
+if settings.STRIPE_SECRET_KEY:
+    print(f"🔧 STRIPE_SECRET_KEY starts with: {settings.STRIPE_SECRET_KEY[:7]}...")
+else:
+    print(f"⚠️ WARNING: STRIPE_SECRET_KEY is not configured! Check .env file.")
+print(f"🔧 APP_URL: {settings.APP_URL}")

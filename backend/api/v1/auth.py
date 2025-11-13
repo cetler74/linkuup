@@ -5,11 +5,12 @@ from datetime import datetime, timedelta, timezone
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 import os
 import json
 import urllib.parse
 import httpx
+import asyncio
 
 try:
     from core.database import get_db
@@ -48,11 +49,96 @@ limiter = Limiter(key_func=get_remote_address)
 async def register(user_in: RegisterRequest, db: AsyncSession = Depends(get_db)):
     """Register a new user with GDPR consent"""
     
-    # Check if user already exists
+    # FIRST: Check if user already exists - this must happen before any payment logic
     result = await db.execute(select(User).where(User.email == user_in.email))
-    if result.scalar_one_or_none():
+    existing_user = result.scalar_one_or_none()
+    if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # ONLY if user does NOT exist, check if payment is required
+    # For business owners with Pro plan (or any plan with trial_days=0), require payment first
+    if user_in.user_type == "business_owner" and user_in.selected_plan_code:
+        from models.subscription import Plan
+        from services import stripe_service
+        
+        plan_code_lower = user_in.selected_plan_code.lower().strip()
+        is_pro_plan = plan_code_lower == "pro"
+        
+        # Check if plan requires payment (Pro plan or trial_days=0)
+        requires_payment = False
+        if is_pro_plan:
+            requires_payment = True
+            print(f"🔍 Pro plan registration detected - requires payment before account creation")
+        else:
+            # Check trial_days for other plans
+            plan_result = await db.execute(
+                select(Plan).where(Plan.code == user_in.selected_plan_code, Plan.is_active == True)
+            )
+            plan = plan_result.scalar_one_or_none()
+            if plan and plan.trial_days == 0:
+                requires_payment = True
+                print(f"🔍 Plan {user_in.selected_plan_code} has no trial - requires payment before account creation")
+        
+        if requires_payment:
+            # Check if Stripe is configured
+            if not settings.STRIPE_SECRET_KEY:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Payment system is not configured. Pro plan registration requires payment setup. Please contact support."
+                )
+            
+            # Create Stripe checkout session WITHOUT creating account
+            # Account will be created after payment succeeds via webhook
+            try:
+                print(f"🔄 Creating Stripe checkout session for {user_in.selected_plan_code} plan registration...")
+                
+                registration_data = {
+                    "first_name": user_in.first_name,
+                    "last_name": user_in.last_name,
+                    "email": user_in.email,
+                    "password": user_in.password,
+                    "user_type": user_in.user_type,
+                    "gdpr_data_processing_consent": user_in.gdpr_data_processing_consent,
+                    "gdpr_marketing_consent": user_in.gdpr_marketing_consent,
+                    "selected_plan_code": user_in.selected_plan_code,
+                    "language_preference": user_in.language_preference or "en",
+                }
+                
+                result = await asyncio.to_thread(
+                    stripe_service.create_checkout_session_for_registration,
+                    plan_code=user_in.selected_plan_code,
+                    registration_data=registration_data
+                )
+                
+                if result and result.get("url"):
+                    print(f"✅ Checkout session created, returning checkout URL")
+                    # Return checkout URL - frontend will redirect
+                    return JSONResponse(
+                        status_code=200,
+                        content={
+                            "requiresPayment": True,
+                            "checkoutUrl": result["url"],
+                            "message": "Payment required before account creation"
+                        }
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Failed to create payment checkout session. Please try again."
+                    )
+            except HTTPException:
+                raise
+            except Exception as e:
+                import traceback
+                error_detail = str(e)
+                print(f"❌ Error creating checkout session: {error_detail}")
+                print(f"❌ Traceback: {traceback.format_exc()}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to create payment session: {error_detail}"
+                )
+    
+    # Continue with normal registration if payment is not required
     # Validate language preference
     valid_languages = ['en', 'pt', 'es', 'fr', 'de', 'it']
     language_preference = user_in.language_preference or 'en'
@@ -429,7 +515,40 @@ async def _issue_tokens_for_user(
     """
     Find-or-create user by email/provider and return (access_token, refresh_token, is_new_user).
     For business owners, handles trial and subscription setup.
+    
+    IMPORTANT: This function should NEVER be called for Pro plan registrations during OAuth.
+    Pro plan users must go through payment first, and accounts are created via webhook.
     """
+    # SAFETY CHECK: Prevent creating users for Pro plan or any plan that requires payment
+    # This should never happen if the OAuth flow is correct, but adding as a safety measure
+    if selected_plan_code and user_type == "business_owner":
+        # Check if this is Pro plan or any plan with no trial (requires payment)
+        if selected_plan_code.lower() == "pro":
+            print(f"❌ CRITICAL ERROR: _issue_tokens_for_user called with Pro plan for {email}")
+            print(f"❌ Pro plan users must go through payment first. This is a bug in the OAuth flow.")
+            raise HTTPException(
+                status_code=400, 
+                detail="Pro plan registration requires payment. Please complete the payment process first."
+            )
+        
+        # Also check if plan has trial_days = 0 (requires payment)
+        try:
+            from models.subscription import Plan
+            plan_result = await db.execute(select(Plan).where(Plan.code == selected_plan_code, Plan.is_active == True))
+            plan = plan_result.scalar_one_or_none()
+            if plan and plan.trial_days == 0:
+                print(f"❌ CRITICAL ERROR: _issue_tokens_for_user called with no-trial plan '{selected_plan_code}' for {email}")
+                print(f"❌ Plans with no trial must go through payment first. This is a bug in the OAuth flow.")
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"{selected_plan_code.title()} plan registration requires payment. Please complete the payment process first."
+                )
+        except HTTPException:
+            raise  # Re-raise the HTTPException we just created
+        except Exception as e:
+            # If we can't check the plan, log but don't block (better to allow than block incorrectly)
+            print(f"⚠️ Could not verify plan trial_days for safety check: {e}")
+    
     # Try to query user, but handle case where profile_picture column doesn't exist
     try:
         result = await db.execute(select(User).where(User.email == email))
@@ -669,7 +788,8 @@ def _callback_success_html(access_token: str, refresh_token: str, redirect_path:
     # Ensure redirect_path is a full URL (not relative)
     if not redirect_path.startswith("http://") and not redirect_path.startswith("https://"):
         # If it's relative, we need to use the frontend base URL
-        redirect_path = f"http://linkuup.portugalexpatdirectory.com{redirect_path}"
+        frontend_url = settings.FRONTEND_BASE_URL or os.getenv("FRONTEND_BASE_URL", "https://linkuup.com")
+        redirect_path = f"{frontend_url}{redirect_path}"
     
     # Redirect to frontend with tokens in query params - frontend will extract and store
     tokens = urllib.parse.urlencode({
@@ -819,9 +939,14 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
                 selected_plan_code = state_data.get("selected_plan_code")
                 action = state_data.get("action", "register")  # 'login' or 'register'
                 redirect_uri_from_state = state_data.get("redirect_uri")  # Get stored redirect_uri
+                print(f"🔍 Decoded state - user_type: {user_type}, selected_plan_code: {selected_plan_code}, action: {action}")
             except Exception as e:
                 print(f"⚠️ Failed to decode state: {e}")
+                import traceback
+                print(f"⚠️ Traceback: {traceback.format_exc()}")
                 pass  # Use defaults if state decode fails
+        else:
+            print(f"⚠️ No state parameter in OAuth callback")
 
         client_id = settings.GOOGLE_CLIENT_ID or os.getenv("GOOGLE_CLIENT_ID", "")
         client_secret = settings.GOOGLE_CLIENT_SECRET or os.getenv("GOOGLE_CLIENT_SECRET", "")
@@ -877,21 +1002,43 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
                 token_resp = await client.post(token_url, data=data)
                 if token_resp.status_code != 200:
                     error_text = token_resp.text
-                    error_msg = f"Failed to obtain Google access token: {token_resp.status_code} - {error_text}"
-                    print(f"❌ {error_msg}")
+                    print(f"❌ Failed to obtain Google access token: {token_resp.status_code} - {error_text}")
                     print(f"❌ Request redirect_uri: {redirect_uri}")
                     print(f"❌ Client ID: {client_id}")
                     print(f"❌ Client Secret length: {len(client_secret)}")
                     print(f"❌ Client Secret starts with: {client_secret[:10]}")
                     
-                    # Check if redirect_uri matches what was sent in authorization
-                    print(f"❌ Verify in Google Console:")
-                    print(f"   1. Redirect URI should be: {redirect_uri}")
-                    print(f"   2. Client ID should be: {client_id}")
-                    print(f"   3. Application type should be: Web application")
-                    print(f"   4. Client secret should match the one in .env")
-                    
-                    raise HTTPException(status_code=400, detail=error_msg)
+                    # Parse error response to provide better error messages
+                    try:
+                        error_json = token_resp.json()
+                        error_type = error_json.get("error", "unknown_error")
+                        error_description = error_json.get("error_description", "")
+                        
+                        # Provide user-friendly error messages
+                        if error_type == "invalid_client":
+                            user_msg = (
+                                "Google OAuth configuration error. Please contact support. "
+                                f"The redirect URI '{redirect_uri}' may not be registered in Google Cloud Console, "
+                                "or the OAuth credentials may be incorrect."
+                            )
+                        elif error_type == "invalid_grant":
+                            user_msg = (
+                                "The authorization code has expired or is invalid. "
+                                "Please try signing in again."
+                            )
+                        else:
+                            user_msg = f"Authentication error: {error_description or error_type}"
+                        
+                        print(f"❌ Verify in Google Console:")
+                        print(f"   1. Redirect URI should be: {redirect_uri}")
+                        print(f"   2. Client ID should be: {client_id}")
+                        print(f"   3. Application type should be: Web application")
+                        print(f"   4. Client secret should match the one in .env")
+                        
+                        raise HTTPException(status_code=400, detail=user_msg)
+                    except (ValueError, KeyError):
+                        # If we can't parse the error, use the raw error text
+                        raise HTTPException(status_code=400, detail=f"Authentication failed: {error_text}")
                 
                 token_json = token_resp.json()
                 access_token_google = token_json.get("access_token")
@@ -931,40 +1078,180 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
                 print(f"❌ {error_msg}")
                 raise HTTPException(status_code=500, detail=error_msg)
 
-        # If action is 'login', check if user exists first
-        if action == "login":
-            from core.database import AsyncSessionLocal
-            from sqlalchemy import select
-            async with AsyncSessionLocal() as db:
+        # ALWAYS check if user exists first (for both login and register)
+        from core.database import AsyncSessionLocal
+        from sqlalchemy import select
+        user_exists = False
+        async with AsyncSessionLocal() as db:
+            try:
+                result = await db.execute(select(User).where(User.email == email))
+                existing_user = result.scalar_one_or_none()
+                user_exists = existing_user is not None
+                print(f"🔍 User existence check - email: {email}, exists: {user_exists}")
+            except Exception as e:
+                # If there's an error checking (e.g., column doesn't exist), try raw SQL
                 try:
-                    result = await db.execute(select(User).where(User.email == email))
-                    existing_user = result.scalar_one_or_none()
-                    if not existing_user:
-                        error_msg = f"No account found with email {email}. Please register first."
-                        print(f"❌ {error_msg}")
-                        raise HTTPException(status_code=404, detail=error_msg)
-                    print(f"✅ User exists for login - email: {email}")
-                except HTTPException:
-                    raise
-                except Exception as e:
-                    # If there's an error checking (e.g., column doesn't exist), try raw SQL
-                    try:
-                        from sqlalchemy import text
-                        query_text = text("SELECT id, email FROM users WHERE email = :email")
-                        result = await db.execute(query_text, {"email": email})
-                        row = result.first()
-                        if not row:
-                            error_msg = f"No account found with email {email}. Please register first."
-                            print(f"❌ {error_msg}")
-                            raise HTTPException(status_code=404, detail=error_msg)
-                        print(f"✅ User exists for login - email: {email}")
-                    except HTTPException:
-                        raise
-                    except Exception as check_error:
-                        # If we can't check, log and proceed (better to allow than block)
-                        print(f"⚠️ Could not verify user existence: {check_error}")
-                        pass
+                    from sqlalchemy import text
+                    query_text = text("SELECT id, email FROM users WHERE email = :email")
+                    result = await db.execute(query_text, {"email": email})
+                    row = result.first()
+                    user_exists = row is not None
+                    print(f"🔍 User existence check (raw SQL) - email: {email}, exists: {user_exists}")
+                except Exception as check_error:
+                    # If we can't check, log and proceed (better to allow than block)
+                    print(f"⚠️ Could not verify user existence: {check_error}")
+                    pass
+        
+        # Handle based on action and user existence
+        if action == "login":
+            if not user_exists:
+                error_msg = (
+                    f"No account found with email {email}. "
+                    "Please register first by selecting 'register' instead of 'Sign in'."
+                )
+                print(f"❌ {error_msg}")
+                raise HTTPException(status_code=404, detail=error_msg)
+            print(f"✅ User exists for login - email: {email}")
+        elif action == "register":
+            if user_exists:
+                error_msg = (
+                    f"An account with email {email} already exists. "
+                    "Please use the login option to access your account."
+                )
+                print(f"❌ {error_msg}")
+                # Return HTML error page that redirects to login
+                frontend_url = _get_frontend_base_url(request, use_referer=False)
+                error_html = _callback_error_html(
+                    error_msg, 
+                    redirect_path=f"{frontend_url}/login?error=user_exists&email={email}"
+                )
+                return HTMLResponse(content=error_html, media_type="text/html")
 
+        # Check if this is a Pro plan registration that requires payment
+        # For Pro plan (or any plan with no trial), redirect to Stripe checkout instead of creating account
+        # IMPORTANT: This check must happen BEFORE creating the account
+        requires_payment = False
+        print(f"🔍 Checking payment requirements - action: {action}, selected_plan_code: {selected_plan_code}, user_type: {user_type}")
+        print(f"🔍 selected_plan_code type: {type(selected_plan_code)}, value: {repr(selected_plan_code)}")
+        
+        # CRITICAL: For business owner registration, we MUST have a plan selected
+        # If no plan is selected, this is an error - user should not be able to register without selecting a plan
+        if action == "register" and user_type == "business_owner":
+            if not selected_plan_code:
+                error_msg = "No plan selected. Please select a plan before registering as a business owner."
+                print(f"❌ {error_msg}")
+                frontend_url = _get_frontend_base_url(request, use_referer=False)
+                error_html = _callback_error_html(
+                    error_msg,
+                    redirect_path=f"{frontend_url}/join?error=no_plan_selected"
+                )
+                return HTMLResponse(content=error_html, media_type="text/html")
+            
+            print(f"🔍 Plan code check passed - proceeding to check if payment required")
+            # Always require payment for Pro plan, regardless of trial_days setting
+            plan_code_lower = selected_plan_code.lower().strip() if selected_plan_code else ""
+            print(f"🔍 Comparing plan code: '{plan_code_lower}' == 'pro'")
+            if plan_code_lower == "pro":
+                requires_payment = True
+                print(f"🔍 ✅ Pro plan registration detected - requires payment before account creation")
+            else:
+                # For other plans, check if they have no trial
+                print(f"🔍 Plan code '{plan_code_lower}' is not 'pro', checking trial_days...")
+                try:
+                    from models.subscription import Plan
+                    from core.database import AsyncSessionLocal
+                    async with AsyncSessionLocal() as db:
+                        plan_result = await db.execute(select(Plan).where(Plan.code == selected_plan_code, Plan.is_active == True))
+                        plan = plan_result.scalar_one_or_none()
+                        if plan:
+                            print(f"🔍 Plan found: {plan.code}, trial_days: {plan.trial_days}")
+                            if plan.trial_days == 0:
+                                requires_payment = True
+                                print(f"🔍 Plan {plan.code} has no trial - requires payment before account creation")
+                        else:
+                            print(f"⚠️ Plan not found for code: {selected_plan_code}")
+                except Exception as e:
+                    print(f"⚠️ Error checking plan requirements: {e}")
+                    import traceback
+                    print(f"⚠️ Traceback: {traceback.format_exc()}")
+        
+        print(f"🔍 Final payment requirement check: requires_payment={requires_payment}")
+        
+        # CRITICAL SAFETY CHECK: If Pro plan is selected but payment is not required, this is a bug
+        if action == "register" and selected_plan_code and selected_plan_code.lower().strip() == "pro" and not requires_payment:
+            error_msg = f"CRITICAL ERROR: Pro plan selected but payment not required. This is a bug. selected_plan_code={selected_plan_code}, requires_payment={requires_payment}"
+            print(f"❌ {error_msg}")
+            frontend_url = _get_frontend_base_url(request, use_referer=False)
+            error_html = _callback_error_html(
+                "System error: Pro plan registration requires payment. Please contact support.",
+                redirect_path=f"{frontend_url}/register?error=system_error"
+            )
+            return HTMLResponse(content=error_html, media_type="text/html")
+        
+        # If Pro plan registration, redirect to payment checkout instead of creating account
+        # User account will ONLY be created AFTER successful payment via webhook
+        # This MUST happen before calling _issue_tokens_for_user
+        if requires_payment:
+            print(f"🔍 Redirecting Pro plan OAuth registration to payment checkout")
+            
+            # CRITICAL: Check if Stripe is configured BEFORE attempting payment
+            # If not configured, fail immediately - DO NOT create user account
+            if not settings.STRIPE_SECRET_KEY:
+                error_msg = "Payment system is not configured. Pro plan registration requires payment setup. Please contact support."
+                print(f"❌ {error_msg}")
+                frontend_url = _get_frontend_base_url(request, use_referer=False)
+                error_html = _callback_error_html(
+                    error_msg,
+                    redirect_path=f"{frontend_url}/register?error=payment_not_configured"
+                )
+                return HTMLResponse(content=error_html, media_type="text/html")
+            
+            try:
+                from services import stripe_service
+                import json
+                
+                # Prepare registration data for payment checkout (no password for OAuth users)
+                registration_data = {
+                    "email": email,
+                    "first_name": given_name,
+                    "last_name": family_name,
+                    "user_type": user_type,
+                    "selected_plan_code": selected_plan_code,
+                    "password": "",  # No password for OAuth-only accounts
+                    "oauth_provider": "google",
+                    "oauth_id": sub,
+                    "profile_picture": picture,
+                    "gdpr_data_processing_consent": True,  # OAuth consent implied
+                    "gdpr_marketing_consent": False,  # User can opt-in later
+                }
+                
+                # Create payment checkout session (Stripe/Strike)
+                # User will be created ONLY after successful payment
+                result = await asyncio.to_thread(
+                    stripe_service.create_checkout_session_for_registration,
+                    plan_code=selected_plan_code,
+                    registration_data=registration_data
+                )
+                
+                checkout_url = result.get("url")
+                if checkout_url:
+                    print(f"✅ Payment checkout session created, redirecting to: {checkout_url}")
+                    return RedirectResponse(url=checkout_url)
+                else:
+                    raise ValueError("No checkout URL returned from payment provider")
+            except Exception as e:
+                error_msg = f"Failed to create payment checkout session: {str(e)}"
+                print(f"❌ {error_msg}")
+                print(f"❌ Traceback: {traceback.format_exc()}")
+                # Show error to user - DO NOT create account if payment setup fails
+                frontend_url = _get_frontend_base_url(request, use_referer=False)
+                error_html = _callback_error_html(
+                    "Payment setup failed. Please try again or contact support.",
+                    redirect_path=f"{frontend_url}/register?error=payment_setup_failed"
+                )
+                return HTMLResponse(content=error_html, media_type="text/html")
+        
+        # For Basic plan or existing users, proceed with normal OAuth flow
         # Issue our app tokens
         from core.database import AsyncSessionLocal
         try:
@@ -1137,7 +1424,10 @@ async def facebook_oauth_callback(request: Request, code: str | None = None, sta
                     result = await db.execute(select(User).where(User.email == email))
                     existing_user = result.scalar_one_or_none()
                     if not existing_user:
-                        error_msg = f"No account found with email {email}. Please register first."
+                        error_msg = (
+                            f"No account found with email {email}. "
+                            "Please register first by selecting 'register' instead of 'Sign in'."
+                        )
                         print(f"❌ {error_msg}")
                         raise HTTPException(status_code=404, detail=error_msg)
                     print(f"✅ User exists for login - email: {email}")
@@ -1151,7 +1441,10 @@ async def facebook_oauth_callback(request: Request, code: str | None = None, sta
                         result = await db.execute(query_text, {"email": email})
                         row = result.first()
                         if not row:
-                            error_msg = f"No account found with email {email}. Please register first."
+                            error_msg = (
+                            f"No account found with email {email}. "
+                            "Please register first by selecting 'register' instead of 'Sign in'."
+                        )
                             print(f"❌ {error_msg}")
                             raise HTTPException(status_code=404, detail=error_msg)
                         print(f"✅ User exists for login - email: {email}")

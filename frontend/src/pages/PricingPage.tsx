@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -22,6 +22,8 @@ import Header from '../components/common/Header';
 import SEOHead from '../components/seo/SEOHead';
 import StructuredData from '../components/seo/StructuredData';
 import { billingAPI } from '../utils/api';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Badge } from '../components/ui/badge';
 
 const PricingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -36,7 +38,54 @@ const PricingPage: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
-  const [plans, setPlans] = useState<Array<{ code: string; trial_days: number }>>([]);
+  const [plans, setPlans] = useState<Array<{ code: string; trial_days: number; price_cents: number; currency: string }>>([]);
+  const [frequency, setFrequency] = useState<'monthly' | 'yearly'>('monthly');
+
+  // Calculate discount percentage for annual plans
+  const calculateDiscount = (monthlyPrice: number, yearlyPrice: number): number => {
+    const monthlyYearly = monthlyPrice * 12;
+    const discount = ((monthlyYearly - yearlyPrice) / monthlyYearly) * 100;
+    return Math.round(discount);
+  };
+
+  // Recalculate prices when plans change
+  const { basicMonthlyPrice, basicYearlyPrice, proMonthlyPrice, proYearlyPrice, basicDiscount, proDiscount } = useMemo(() => {
+    // Get prices from backend plans, prioritize new codes over legacy codes
+    const getPlanPrice = (planCode: string, fallbackCode?: string): number => {
+      // First try the primary plan code
+      let plan = plans.find(p => p.code === planCode);
+      // If not found and fallback provided, try fallback
+      if (!plan && fallbackCode) {
+        plan = plans.find(p => p.code === fallbackCode);
+      }
+      if (plan && plan.price_cents) {
+        return plan.price_cents / 100; // Convert cents to euros
+      }
+      // Only use hardcoded fallback if no plans are loaded at all
+      if (plans.length === 0) {
+        if (planCode === 'basic_month' || planCode === 'basic') return 5.95;
+        if (planCode === 'basic_annual') return 71;
+        if (planCode === 'pro_month' || planCode === 'pro') return 10.95;
+        if (planCode === 'pro_annual') return 131;
+      }
+      return 0;
+    };
+
+    // Prioritize new monthly/annual codes, with legacy codes as fallback
+    const basicMonth = getPlanPrice('basic_month', 'basic');
+    const basicAnnual = getPlanPrice('basic_annual');
+    const proMonth = getPlanPrice('pro_month', 'pro');
+    const proAnnual = getPlanPrice('pro_annual');
+    
+    return {
+      basicMonthlyPrice: basicMonth || 5.95,
+      basicYearlyPrice: basicAnnual || 71,
+      proMonthlyPrice: proMonth || 10.95,
+      proYearlyPrice: proAnnual || 131,
+      basicDiscount: calculateDiscount(basicMonth || 5.95, basicAnnual || 71),
+      proDiscount: calculateDiscount(proMonth || 10.95, proAnnual || 131)
+    };
+  }, [plans]);
 
   // Parallax scroll effect - hero section scrolls at half speed
   useEffect(() => {
@@ -61,8 +110,18 @@ const PricingPage: React.FC = () => {
     (async () => {
       try {
         const plansData = await billingAPI.getPlans();
-        setPlans(plansData.plans);
-      } catch (_) {}
+        const mappedPlans = plansData.plans.map((p: any) => ({
+          code: p.code,
+          trial_days: p.trial_days,
+          price_cents: p.price_cents,
+          currency: p.currency
+        }));
+        console.log('Loaded plans from API:', mappedPlans);
+        setPlans(mappedPlans);
+      } catch (error) {
+        console.error('Failed to load plans from API:', error);
+        // Silently fail, will use fallback hardcoded prices
+      }
     })();
   }, []);
 
@@ -70,10 +129,19 @@ const PricingPage: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (pricingSectionRef.current) {
-        pricingSectionRef.current.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        });
+        // Scroll to show the toggle buttons at the top
+        const toggleElement = pricingSectionRef.current.querySelector('[role="tablist"]');
+        if (toggleElement) {
+          toggleElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        } else {
+          pricingSectionRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
       }
     }, 100); // Small delay to ensure the page is fully loaded
 
@@ -188,6 +256,29 @@ const PricingPage: React.FC = () => {
       <section ref={pricingSectionRef} className="py-16 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
+            {/* Monthly/Annual Toggle - Sticky */}
+            <div className="sticky top-0 z-10 flex justify-center items-center mb-8 pt-4 pb-4 bg-transparent -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+              <Tabs value={frequency} onValueChange={(value) => setFrequency(value as 'monthly' | 'yearly')} className="w-full flex justify-center">
+                <TabsList className="!rounded-full inline-flex h-12 items-center justify-center bg-gray-100 p-1.5 shadow-inner border border-gray-200">
+                  <TabsTrigger 
+                    value="monthly"
+                    className="!rounded-full px-6 py-2.5 text-base font-semibold transition-all duration-200 min-w-[120px] hover:bg-gray-200 [&.active]:!bg-bright-blue [&.active]:!text-white [&.active]:!shadow-md [&.active]:!font-bold"
+                    style={frequency === 'monthly' ? { backgroundColor: '#1E90FF', color: 'white', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' } : {}}
+                  >
+                    Monthly
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="yearly"
+                    className="!rounded-full px-6 py-2.5 text-base font-semibold transition-all duration-200 min-w-[120px] hover:bg-gray-200 [&.active]:!bg-bright-blue [&.active]:!text-white [&.active]:!shadow-md [&.active]:!font-bold"
+                    style={frequency === 'yearly' ? { backgroundColor: '#1E90FF', color: 'white', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' } : {}}
+                  >
+                    Yearly
+                    <Badge variant="secondary" className="ml-2 text-xs">Save up to 20%</Badge>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               
               {/* Basic Plan */}
@@ -195,11 +286,29 @@ const PricingPage: React.FC = () => {
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold text-charcoal mb-2">{t('pricing.basic')}</h3>
                   <div className="mb-4">
-                    <div className="text-4xl font-bold text-charcoal">€5,95</div>
-                    <div className="text-charcoal/70">{t('pricing.perMonth')}</div>
+                    {frequency === 'yearly' && basicDiscount > 0 && (
+                      <div className="mb-2">
+                        <Badge variant="secondary" className="bg-lime-green/20 text-lime-green border-lime-green/30">
+                          Save {basicDiscount}%
+                        </Badge>
+                      </div>
+                    )}
+                    <div className="text-4xl font-bold text-charcoal">
+                      €{frequency === 'monthly' 
+                        ? basicMonthlyPrice.toFixed(2).replace('.', ',') 
+                        : basicYearlyPrice.toFixed(2).replace('.', ',')}
+                    </div>
+                    <div className="text-charcoal/70">
+                      /{frequency === 'monthly' ? 'month' : 'year'}
+                      {frequency === 'yearly' && (
+                        <span className="text-xs block mt-1">
+                          (€{(basicYearlyPrice / 12).toFixed(2).replace('.', ',')}/month)
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {(() => {
-                    const basicPlan = plans.find(p => p.code === 'basic');
+                    const basicPlan = plans.find(p => p.code === 'basic_month' || p.code === 'basic');
                     const trialDays = basicPlan?.trial_days ?? 0;
                     if (trialDays > 0) {
                       return (
@@ -241,7 +350,7 @@ const PricingPage: React.FC = () => {
 
                 <div className="mt-auto">
                   <Link 
-                    to="/join" 
+                    to={`/join?plan=${frequency === 'monthly' ? 'basic_month' : 'basic_annual'}`}
                     className="btn-primary w-full text-center inline-flex items-center justify-center gap-2"
                   >
                     {t('pricing.startNow')}
@@ -261,11 +370,29 @@ const PricingPage: React.FC = () => {
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold text-charcoal mb-2">{t('pricing.pro')}</h3>
                   <div className="mb-4">
-                    <div className="text-4xl font-bold text-charcoal">€10,95</div>
-                    <div className="text-charcoal/70">{t('pricing.perMonth')}</div>
+                    {frequency === 'yearly' && proDiscount > 0 && (
+                      <div className="mb-2">
+                        <Badge variant="secondary" className="bg-lime-green/20 text-lime-green border-lime-green/30">
+                          Save {proDiscount}%
+                        </Badge>
+                      </div>
+                    )}
+                    <div className="text-4xl font-bold text-charcoal">
+                      €{frequency === 'monthly' 
+                        ? proMonthlyPrice.toFixed(2).replace('.', ',') 
+                        : proYearlyPrice.toFixed(2).replace('.', ',')}
+                    </div>
+                    <div className="text-charcoal/70">
+                      /{frequency === 'monthly' ? 'month' : 'year'}
+                      {frequency === 'yearly' && (
+                        <span className="text-xs block mt-1">
+                          (€{(proYearlyPrice / 12).toFixed(2).replace('.', ',')}/month)
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {(() => {
-                    const proPlan = plans.find(p => p.code === 'pro');
+                    const proPlan = plans.find(p => p.code === 'pro_month' || p.code === 'pro');
                     const trialDays = proPlan?.trial_days ?? 0;
                     if (trialDays > 0) {
                       return (
@@ -319,7 +446,7 @@ const PricingPage: React.FC = () => {
 
                 <div className="mt-auto">
                   <Link 
-                    to="/join" 
+                    to={`/join?plan=${frequency === 'monthly' ? 'pro_month' : 'pro_annual'}`}
                     className="btn-primary w-full text-center inline-flex items-center justify-center gap-2"
                   >
                     {t('pricing.startNow')}
